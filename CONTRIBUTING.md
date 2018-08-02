@@ -32,4 +32,6 @@ You must use your real name (sorry, no pseudonyms, and no anonymous contribution
 The [README](README.md) contains instructions to help you get started with `recc`. For a more
 detailed description of what `recc` does and how to customize its behavior, run `recc --help`.
 
-If you need more or different information, please create an [Issue](../../issues).
+If you need more or different information, please create an [Issue][].
+
+[issue]: https://gitlab.com/bloomberg/recc/issues
