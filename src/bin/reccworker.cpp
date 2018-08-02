@@ -33,6 +33,7 @@
 #include <grpcpp/security/credentials.h>
 #include <mutex>
 #include <set>
+#include <stdexcept>
 #include <stdlib.h>
 #include <thread>
 #include <unistd.h>
@@ -167,27 +168,38 @@ void worker_thread(proto::BotSession *session, set<string> *activeJobs,
                    mutex *sessionMutex, condition_variable *sessionCondition,
                    shared_ptr<grpc::Channel> casChannel, string leaseID)
 {
-    proto::Action action;
-    {
-        // Get the Action to execute from the session.
-        lock_guard<mutex> lock(*sessionMutex);
-        bool foundLease = false;
-        for (auto &lease : session->leases()) {
-            if (lease.id() == leaseID) {
-                lease.payload().UnpackTo(&action);
-                foundLease = true;
-                break;
-            }
-        }
-        if (!foundLease) {
-            return;
-        }
-    }
-
     proto::ActionResult result;
 
     try {
         CASClient casClient(casChannel, RECC_INSTANCE);
+        proto::Action action;
+        {
+            // Get the Action to execute from the session.
+            lock_guard<mutex> lock(*sessionMutex);
+            bool foundLease = false;
+            for (auto &lease : session->leases()) {
+                if (lease.id() == leaseID) {
+                    if (lease.payload().Is<proto::Action>()) {
+                        lease.payload().UnpackTo(&action);
+                    }
+                    else if (lease.payload().Is<proto::Digest>()) {
+                        proto::Digest actionDigest;
+                        lease.payload().UnpackTo(&actionDigest);
+                        action = casClient.fetch_message<proto::Action>(
+                            actionDigest);
+                    }
+                    else {
+                        throw runtime_error("Invalid lease payload type");
+                    }
+                    foundLease = true;
+                    break;
+                }
+            }
+            if (!foundLease) {
+                return;
+            }
+        }
+
         result = execute_action(action, casClient);
     }
     catch (const exception &e) {
@@ -332,7 +344,8 @@ int main(int argc, char *argv[])
         for (auto &lease : *session.mutable_leases()) {
             if (lease.state() == proto::LeaseState::PENDING) {
                 RECC_LOG_VERBOSE("Got lease: " << lease.DebugString());
-                if (lease.payload().Is<proto::Action>()) {
+                if (lease.payload().Is<proto::Action>() ||
+                    lease.payload().Is<proto::Digest>()) {
                     if (activeJobs.size() < RECC_MAX_CONCURRENT_JOBS) {
                         // Accept the lease, but wait for the server's ack
                         // before actually starting work on it.
