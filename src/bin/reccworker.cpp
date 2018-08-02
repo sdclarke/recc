@@ -79,17 +79,6 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
 
     string pathPrefix = string(tmpdir.name()) + "/";
 
-    // Create parent directories for the Action's output files
-    for (auto &file : action.output_files()) {
-        if (file.find("/") != string::npos) {
-            create_directory_recursive(
-                (pathPrefix + file.substr(0, file.rfind("/"))).c_str());
-        }
-    }
-    for (auto &directory : action.output_directories()) {
-        create_directory_recursive((pathPrefix + directory).c_str());
-    }
-
     // Fetch command from CAS and read it
     auto commandProto =
         casClient.fetch_message<proto::Command>(action.command_digest());
@@ -100,6 +89,17 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
     map<string, string> env;
     for (auto &envVar : commandProto.environment_variables()) {
         env[envVar.name()] = envVar.value();
+    }
+
+    // Create parent directories for the Command's output files
+    for (auto &file : commandProto.output_files()) {
+        if (file.find("/") != string::npos) {
+            create_directory_recursive(
+                (pathPrefix + file.substr(0, file.rfind("/"))).c_str());
+        }
+    }
+    for (auto &directory : commandProto.output_directories()) {
+        create_directory_recursive((pathPrefix + directory).c_str());
     }
 
     RECC_LOG_VERBOSE("Running command " << commandProto.DebugString());
@@ -115,7 +115,7 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
     unordered_map<proto::Digest, string> filesToUpload;
 
     // Add any output files that exist to ActionResult and filesToUpload
-    for (auto &outputFilename : action.output_files()) {
+    for (auto &outputFilename : commandProto.output_files()) {
         auto outputPath = pathPrefix + outputFilename;
         if (access(outputPath.c_str(), R_OK) == 0) {
             RECC_LOG_VERBOSE("Making digest for " << outputPath);
@@ -125,15 +125,12 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
             fileProto->set_path(outputFilename);
             fileProto->set_is_executable(file.executable);
             *fileProto->mutable_digest() = file.digest;
-            if (file.digest.size_bytes() < 1024) {
-                fileProto->set_content(get_file_contents(outputPath.c_str()));
-            }
         }
     }
 
     // Construct output directory trees, add them to ActionResult and
     // blobsToUpload
-    for (auto &directory : action.output_directories()) {
+    for (auto &directory : commandProto.output_directories()) {
         auto directoryPath = pathPrefix + directory;
         if (access(directoryPath.c_str(), R_OK) == 0) {
             auto tree =

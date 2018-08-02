@@ -16,9 +16,9 @@
 #include <fileutils.h>
 #include <merklize.h>
 
+#include <build/bazel/remote/execution/v2/remote_execution_mock.grpc.pb.h>
 #include <gmock/gmock.h>
 #include <google/bytestream/bytestream_mock.grpc.pb.h>
-#include <google/devtools/remoteexecution/v1test/remote_execution_mock.grpc.pb.h>
 #include <google/protobuf/util/message_differencer.h>
 #include <grpcpp/test/mock_stream.h>
 #include <gtest/gtest.h>
@@ -50,10 +50,10 @@ MATCHER_P(HasBlobDigest, blob_digest, "")
     return false;
 }
 
-MATCHER_P2(HasUpdateBlobRequest, content_digest, data, "")
+MATCHER_P2(HasUpdateBlobRequest, digest, data, "")
 {
     for (int i = 0; i < arg.requests_size(); ++i) {
-        if (arg.requests(i).content_digest() == content_digest) {
+        if (arg.requests(i).digest() == digest) {
             EXPECT_EQ(arg.requests(i).data(), data);
             return true;
         }
@@ -135,8 +135,7 @@ TEST(CASClientTest, NewBlobUpload)
         .WillOnce(DoAll(SetArgPointee<2>(response), Return(grpc::Status::OK)));
 
     proto::BatchUpdateBlobsResponse updateBlobsResponse;
-    *updateBlobsResponse.add_responses()->mutable_blob_digest() =
-        make_digest(defg);
+    *updateBlobsResponse.add_responses()->mutable_digest() = make_digest(defg);
     EXPECT_CALL(
         *stub,
         BatchUpdateBlobs(_, HasUpdateBlobRequest(make_digest(defg), defg), _))
@@ -165,8 +164,7 @@ TEST(CASClientTest, NewFileUpload)
         .WillOnce(DoAll(SetArgPointee<2>(response), Return(grpc::Status::OK)));
 
     proto::BatchUpdateBlobsResponse updateBlobsResponse;
-    *updateBlobsResponse.add_responses()->mutable_blob_digest() =
-        make_digest(abc);
+    *updateBlobsResponse.add_responses()->mutable_digest() = make_digest(abc);
     EXPECT_CALL(*stub, BatchUpdateBlobs(
                            _, HasUpdateBlobRequest(make_digest(abc), abc), _))
         .WillOnce(DoAll(SetArgPointee<2>(updateBlobsResponse),

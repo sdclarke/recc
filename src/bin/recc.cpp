@@ -195,6 +195,17 @@ int main(int argc, char *argv[])
         envVar->set_name(envIter.first);
         envVar->set_value(envIter.second);
     }
+    for (const auto &product : products) {
+        commandProto.add_output_files(product);
+    }
+    for (const auto &directory : RECC_OUTPUT_DIRECTORIES_OVERRIDE) {
+        commandProto.add_output_directories(directory);
+    }
+    for (const auto &platformIter : RECC_REMOTE_PLATFORM) {
+        auto property = commandProto.mutable_platform()->add_properties();
+        property->set_name(platformIter.first);
+        property->set_value(platformIter.second);
+    }
     RECC_LOG_VERBOSE("Command: " << commandProto.ShortDebugString());
     auto commandDigest = make_digest(commandProto);
     blobs[commandDigest] = commandProto.SerializeAsString();
@@ -202,19 +213,10 @@ int main(int argc, char *argv[])
     proto::Action action;
     *action.mutable_command_digest() = commandDigest;
     *action.mutable_input_root_digest() = directoryDigest;
-    for (const auto &product : products) {
-        action.add_output_files(product);
-    }
-    for (const auto &directory : RECC_OUTPUT_DIRECTORIES_OVERRIDE) {
-        action.add_output_directories(directory);
-    }
-    for (const auto &platformIter : RECC_REMOTE_PLATFORM) {
-        auto property = action.mutable_platform()->add_properties();
-        property->set_name(platformIter.first);
-        property->set_value(platformIter.second);
-    }
     action.set_do_not_cache(RECC_ACTION_UNCACHEABLE);
     RECC_LOG_VERBOSE("Action: " << action.ShortDebugString());
+    auto actionDigest = make_digest(action);
+    blobs[actionDigest] = action.SerializeAsString();
 
     auto channel =
         grpc::CreateChannel(RECC_SERVER, grpc::InsecureChannelCredentials());
@@ -224,7 +226,7 @@ int main(int argc, char *argv[])
     RECC_LOG_VERBOSE("Uploading resources...");
     client.upload_resources(blobs, filenames);
     RECC_LOG_VERBOSE("Executing action...");
-    auto result = client.execute_action(action, RECC_SKIP_CACHE);
+    auto result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
 
     cout << client.get_outputblob(result.stdOut);
     cerr << client.get_outputblob(result.stdErr);

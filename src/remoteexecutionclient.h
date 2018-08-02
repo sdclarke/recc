@@ -16,10 +16,9 @@
 #define INCLUDED_REMOTEEXECUTIONCLIENT
 
 #include <casclient.h>
+#include <merklize.h>
 #include <protos.h>
 
-#include <google/longrunning/operations.grpc.pb.h>
-#include <google/watcher/v1/watch.grpc.pb.h>
 #include <map>
 
 namespace BloombergLP {
@@ -48,38 +47,24 @@ struct OutputBlob {
     }
 };
 
-/**
- * Represents a single file returned by the Remote Execution service.
- */
-struct OutputFile {
-    OutputBlob content;
-    bool executable;
-};
-
 struct ActionResult {
     OutputBlob stdOut;
     OutputBlob stdErr;
     int exitCode;
-    std::map<std::string, OutputFile> outputFiles;
+    std::map<std::string, File> outputFiles;
 };
 
 class RemoteExecutionClient : public CASClient {
   private:
     std::unique_ptr<proto::Execution::StubInterface> stub;
-    std::unique_ptr<google::longrunning::Operations::StubInterface>
-        operationsStub;
-    std::unique_ptr<google::watcher::v1::Watcher::StubInterface> watcherStub;
 
   public:
     RemoteExecutionClient(
         proto::Execution::StubInterface *stub,
-        google::longrunning::Operations::StubInterface *operationsStub,
-        google::watcher::v1::Watcher::StubInterface *watcherStub,
         proto::ContentAddressableStorage::StubInterface *casStub,
         google::bytestream::ByteStream::StubInterface *byteStreamStub,
         std::string instance)
-        : CASClient(casStub, byteStreamStub, instance), stub(stub),
-          operationsStub(operationsStub), watcherStub(watcherStub)
+        : CASClient(casStub, byteStreamStub, instance), stub(stub)
     {
     }
 
@@ -87,40 +72,29 @@ class RemoteExecutionClient : public CASClient {
                           std::shared_ptr<grpc::Channel> casChannel,
                           std::string instance)
         : CASClient(casChannel, instance),
-          stub(proto::Execution::NewStub(channel)),
-          operationsStub(google::longrunning::Operations::NewStub(channel)),
-          watcherStub(google::watcher::v1::Watcher::NewStub(channel))
+          stub(proto::Execution::NewStub(channel))
     {
     }
 
     RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel,
                           std::string instance)
         : CASClient(channel, instance),
-          stub(proto::Execution::NewStub(channel)),
-          operationsStub(google::longrunning::Operations::NewStub(channel)),
-          watcherStub(google::watcher::v1::Watcher::NewStub(channel))
+          stub(proto::Execution::NewStub(channel))
     {
     }
 
     RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel)
-        : CASClient(channel), stub(proto::Execution::NewStub(channel)),
-          operationsStub(google::longrunning::Operations::NewStub(channel)),
-          watcherStub(google::watcher::v1::Watcher::NewStub(channel))
+        : CASClient(channel), stub(proto::Execution::NewStub(channel))
     {
     }
 
     /**
-     * Wait synchronously for the given Operation to complete, then return its
-     * ActionResult message.
+     * Run the action with the given digest on the given server, waiting
+     * synchronously for it to complete. The Action must already be present in
+     * the server's CAS.
      */
-    proto::ActionResult
-    wait_operation(google::longrunning::Operation operation);
-
-    /**
-     * Run the given action on the given server, waiting synchronously for it
-     * to complete.
-     */
-    ActionResult execute_action(proto::Action action, bool skipCache = false);
+    ActionResult execute_action(proto::Digest actionDigest,
+                                bool skipCache = false);
 
     /**
      * Get the contents of the given OutputBlob.
