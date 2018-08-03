@@ -26,16 +26,16 @@ endforeach(proto)
 file(MAKE_DIRECTORY ${PROTO_GEN_PATH})
 add_custom_command(
     OUTPUT ${proto_srcs} ${proto_headers} ${grpc_srcs} ${grpc_headers} ${grpc_mock_headers}
-    COMMAND $<TARGET_FILE:protobuf::protoc>
+    COMMAND ${Protobuf_PROTOC_EXECUTABLE}
     ARGS "--grpc_out=generate_mock_code=true:${PROTO_GEN_PATH}"
          --cpp_out "${PROTO_GEN_PATH}"
          -I "${PROTO_PATH}"
          -I "${PROTOBUF_INCLUDE_DIR}"
-         --plugin=protoc-gen-grpc="$<TARGET_FILE:gRPC::grpc_cpp_plugin>"
+         --plugin=protoc-gen-grpc="${GRPC_CPP_PLUGIN}"
          ${proto_files}
     DEPENDS ${proto_files})
  
 
 add_library(reccproto ${grpc_srcs} ${proto_srcs})
 target_include_directories(reccproto PUBLIC ${PROTO_GEN_PATH})
-target_link_libraries(reccproto gRPC::grpc++_unsecure protobuf::libprotobuf)
+target_link_libraries(reccproto ${GRPC_TARGET} ${Protobuf_LIBRARIES})

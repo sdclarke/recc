@@ -1,0 +1,17 @@
+image: grpc/cxx:1.12.0
+
+build:
+  stage: build
+  before_script: 
+    - apt-get update && apt-get install -y make cmake build-essential pkg-config libssl-dev googletest
+    - cd /usr/src/googletest
+    - cmake . && make install
+    - cd $CI_PROJECT_DIR
+  script: 
+    - mkdir build
+    - cd build
+    - cmake .. && make && make test
+  artifacts:
+    paths:
+      - build/bin/recc
+      - build/bin/reccworker
