@@ -8,7 +8,7 @@ find_package(GTest REQUIRED)
 string(REPLACE "gtest" "gmock" GMOCK_LIBRARY ${GTEST_LIBRARY})
 string(REPLACE "gtest" "gmock" GMOCK_INCLUDE_DIRS ${GTEST_INCLUDE_DIRS})
 
-add_library(GMock::GMock ${GTEST_LIBRARY_TYPE} IMPORTED)
+add_library(GMock::GMock UNKNOWN IMPORTED)
 set_target_properties(GMock::GMock PROPERTIES
     IMPORTED_LOCATION ${GMOCK_LIBRARY}
     INTERFACE_INCLUDE_DIRECTORIES "${GTEST_INCLUDE_DIRS}"
