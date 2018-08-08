@@ -33,15 +33,21 @@ with a compile command.
 
 ### Setting up a Remote Execution server
 
-`recc` is fully compatible with [Bazel Buildfarm][], so follow the instructions
-there to start a server and a worker or two.
+`recc` should be compatible with any server that implements Bazel's
+[Remote Execution API][] V2. It is primarily tested against [BuildGrid][],
+so follow the instructions there to start a server.
 
-The [BuildGrid][] project is also working on a Remote Execution server, but at
-the time of writing, it does not implement the Watcher API and thus cannot be
-used with `recc` without modifications.
+You'll also need to set up a build worker to actually run the build jobs
+you submit. BuildGrid provides one you can use, or alternatively, you can
+use [`reccworker` (see below)](#running-reccworker).
 
-[bazel buildfarm]: https://github.com/bazelbuild/bazel-buildfarm
+The [Bazel Buildfarm][] project is also working on a Remote Execution server,
+but at time of writing it uses version 1 of the API and so cannot be used with
+`recc`.
+
+[remote execution api]: https://github.com/bazelbuild/remote-apis
 [buildgrid]: https://gitlab.com/BuildGrid/buildgrid
+[bazel buildfarm]: https://github.com/bazelbuild/bazel-buildfarm
 
 ### Setting environment variables
 
@@ -104,8 +110,8 @@ the full privileges of the user who ran `reccworker`) and does not enforce
 timeouts.
 
 Bazel Buildfarm does not support the Remote Workers API, so you'll need to
-use BuildGrid to run `reccworker`. Depending on the version of BuildGrid you're
-using, you might also need to [patch it][bgd-patch] to support the Watcher API.
+use BuildGrid to run `reccworker`. Just like with `recc`, you can tell
+`reccworker` where your server is using the `RECC_SERVER` environment variable.
 
 You will probably also want to set `RECC_MAX_CONCURRENT_JOBS` to the number of
 simultaneous build jobs you want the worker to run. (By default, it runs jobs
@@ -116,8 +122,6 @@ Once you've set up the servers and environment, start the worker by running
 `reccworker`. You can optionally specify a parent (the default is `bgd_test`)
 and bot name (the default is the computer's hostname) by passing them as
 arguments.
-
-[bgd-patch]: https://gitlab.com/bloomberg/buildgrid/commit/0ccfcf9c006cce9f34c915491633c45ef006a06f
 
 ## Additional utilities
 

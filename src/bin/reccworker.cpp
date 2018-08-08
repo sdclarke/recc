@@ -33,6 +33,7 @@
 #include <grpcpp/security/credentials.h>
 #include <mutex>
 #include <set>
+#include <stdexcept>
 #include <stdlib.h>
 #include <thread>
 #include <unistd.h>
@@ -79,17 +80,6 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
 
     string pathPrefix = string(tmpdir.name()) + "/";
 
-    // Create parent directories for the Action's output files
-    for (auto &file : action.output_files()) {
-        if (file.find("/") != string::npos) {
-            create_directory_recursive(
-                (pathPrefix + file.substr(0, file.rfind("/"))).c_str());
-        }
-    }
-    for (auto &directory : action.output_directories()) {
-        create_directory_recursive((pathPrefix + directory).c_str());
-    }
-
     // Fetch command from CAS and read it
     auto commandProto =
         casClient.fetch_message<proto::Command>(action.command_digest());
@@ -100,6 +90,17 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
     map<string, string> env;
     for (auto &envVar : commandProto.environment_variables()) {
         env[envVar.name()] = envVar.value();
+    }
+
+    // Create parent directories for the Command's output files
+    for (auto &file : commandProto.output_files()) {
+        if (file.find("/") != string::npos) {
+            create_directory_recursive(
+                (pathPrefix + file.substr(0, file.rfind("/"))).c_str());
+        }
+    }
+    for (auto &directory : commandProto.output_directories()) {
+        create_directory_recursive((pathPrefix + directory).c_str());
     }
 
     RECC_LOG_VERBOSE("Running command " << commandProto.DebugString());
@@ -115,7 +116,7 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
     unordered_map<proto::Digest, string> filesToUpload;
 
     // Add any output files that exist to ActionResult and filesToUpload
-    for (auto &outputFilename : action.output_files()) {
+    for (auto &outputFilename : commandProto.output_files()) {
         auto outputPath = pathPrefix + outputFilename;
         if (access(outputPath.c_str(), R_OK) == 0) {
             RECC_LOG_VERBOSE("Making digest for " << outputPath);
@@ -125,15 +126,12 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
             fileProto->set_path(outputFilename);
             fileProto->set_is_executable(file.executable);
             *fileProto->mutable_digest() = file.digest;
-            if (file.digest.size_bytes() < 1024) {
-                fileProto->set_content(get_file_contents(outputPath.c_str()));
-            }
         }
     }
 
     // Construct output directory trees, add them to ActionResult and
     // blobsToUpload
-    for (auto &directory : action.output_directories()) {
+    for (auto &directory : commandProto.output_directories()) {
         auto directoryPath = pathPrefix + directory;
         if (access(directoryPath.c_str(), R_OK) == 0) {
             auto tree =
@@ -170,27 +168,38 @@ void worker_thread(proto::BotSession *session, set<string> *activeJobs,
                    mutex *sessionMutex, condition_variable *sessionCondition,
                    shared_ptr<grpc::Channel> casChannel, string leaseID)
 {
-    proto::Action action;
-    {
-        // Get the Action to execute from the session.
-        lock_guard<mutex> lock(*sessionMutex);
-        bool foundLease = false;
-        for (auto &lease : session->leases()) {
-            if (lease.id() == leaseID) {
-                lease.payload().UnpackTo(&action);
-                foundLease = true;
-                break;
-            }
-        }
-        if (!foundLease) {
-            return;
-        }
-    }
-
     proto::ActionResult result;
 
     try {
         CASClient casClient(casChannel, RECC_INSTANCE);
+        proto::Action action;
+        {
+            // Get the Action to execute from the session.
+            lock_guard<mutex> lock(*sessionMutex);
+            bool foundLease = false;
+            for (auto &lease : session->leases()) {
+                if (lease.id() == leaseID) {
+                    if (lease.payload().Is<proto::Action>()) {
+                        lease.payload().UnpackTo(&action);
+                    }
+                    else if (lease.payload().Is<proto::Digest>()) {
+                        proto::Digest actionDigest;
+                        lease.payload().UnpackTo(&actionDigest);
+                        action = casClient.fetch_message<proto::Action>(
+                            actionDigest);
+                    }
+                    else {
+                        throw runtime_error("Invalid lease payload type");
+                    }
+                    foundLease = true;
+                    break;
+                }
+            }
+            if (!foundLease) {
+                return;
+            }
+        }
+
         result = execute_action(action, casClient);
     }
     catch (const exception &e) {
@@ -335,7 +344,8 @@ int main(int argc, char *argv[])
         for (auto &lease : *session.mutable_leases()) {
             if (lease.state() == proto::LeaseState::PENDING) {
                 RECC_LOG_VERBOSE("Got lease: " << lease.DebugString());
-                if (lease.payload().Is<proto::Action>()) {
+                if (lease.payload().Is<proto::Action>() ||
+                    lease.payload().Is<proto::Digest>()) {
                     if (activeJobs.size() < RECC_MAX_CONCURRENT_JOBS) {
                         // Accept the lease, but wait for the server's ack
                         // before actually starting work on it.
