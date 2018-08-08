@@ -18,6 +18,8 @@
 #include <logging.h>
 #include <merklize.h>
 
+#include <google/longrunning/operations.grpc.pb.h>
+
 using namespace std;
 
 namespace BloombergLP {
@@ -48,53 +50,6 @@ proto::ActionResult get_actionresult(google::longrunning::Operation operation)
     return executeResponse.result();
 }
 
-proto::ActionResult
-RemoteExecutionClient::wait_operation(google::longrunning::Operation operation)
-{
-    if (operation.done()) {
-        return get_actionresult(operation);
-    }
-    google::watcher::v1::Request watcherRequest;
-    watcherRequest.set_target(operation.name());
-
-    grpc::ClientContext context;
-    auto reader = watcherStub->Watch(&context, watcherRequest);
-    google::watcher::v1::ChangeBatch changeBatch;
-    while (reader->Read(&changeBatch)) {
-        RECC_LOG_VERBOSE(
-            "Got changebatch: " << changeBatch.ShortDebugString());
-        for (int i = 0; i < changeBatch.changes_size(); ++i) {
-            auto change = changeBatch.changes(i);
-            if (change.data().Is<google::rpc::Status>()) {
-                google::rpc::Status status;
-                if (change.data().UnpackTo(&status)) {
-                    ensure_ok(status);
-                }
-                else {
-                    throw runtime_error("ChangeBatch error unpacking failed");
-                }
-            }
-            else if (change.data().Is<google::longrunning::Operation>()) {
-                if (!change.data().UnpackTo(&operation)) {
-                    throw runtime_error(
-                        "ChangeBatch Operation unpacking failed");
-                }
-                if (operation.done()) {
-                    ensure_ok(reader->Finish());
-                    return get_actionresult(operation);
-                }
-            }
-            else {
-                throw runtime_error("Invalid ChangeBatch data: " +
-                                    change.data().ShortDebugString());
-            }
-        }
-    }
-    ensure_ok(reader->Finish());
-    throw runtime_error(
-        "Reader message stream ended without Operation completing");
-}
-
 /**
  * Add the files from the given directory (and its subdirectories, recursively)
  * to the given outputFiles map.
@@ -103,13 +58,13 @@ RemoteExecutionClient::wait_operation(google::longrunning::Operation operation)
  * will be used to look up child directories.
  */
 void add_from_directory(
-    map<string, OutputFile> *outputFiles, proto::Directory directory,
-    string prefix, unordered_map<proto::Digest, proto::Directory> digestMap)
+    map<string, File> *outputFiles, proto::Directory directory, string prefix,
+    unordered_map<proto::Digest, proto::Directory> digestMap)
 {
     for (int i = 0; i < directory.files_size(); ++i) {
-        OutputFile file;
+        File file;
+        file.digest = directory.files(i).digest();
         file.executable = directory.files(i).is_executable();
-        file.content = OutputBlob(directory.files(i).digest());
         (*outputFiles)[prefix + directory.files(i).name()] = file;
     }
 
@@ -121,19 +76,29 @@ void add_from_directory(
     }
 }
 
-ActionResult RemoteExecutionClient::execute_action(proto::Action action,
+ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
                                                    bool skipCache)
 {
     proto::ExecuteRequest executeRequest;
     executeRequest.set_instance_name(instance);
-    *executeRequest.mutable_action() = action;
+    *executeRequest.mutable_action_digest() = actionDigest;
     executeRequest.set_skip_cache_lookup(skipCache);
 
     grpc::ClientContext context;
-    google::longrunning::Operation operation;
-    ensure_ok(stub->Execute(&context, executeRequest, &operation));
+    auto reader = stub->Execute(&context, executeRequest);
 
-    auto resultProto = wait_operation(operation);
+    google::longrunning::Operation operation;
+    while (reader->Read(&operation)) {
+        if (operation.done()) {
+            break;
+        }
+    }
+    ensure_ok(reader->Finish());
+
+    if (!operation.done()) {
+        throw runtime_error("Server closed stream before Operation finished");
+    }
+    auto resultProto = get_actionresult(operation);
 
     ActionResult result;
     result.exitCode = resultProto.exit_code();
@@ -144,9 +109,7 @@ ActionResult RemoteExecutionClient::execute_action(proto::Action action,
 
     for (int i = 0; i < resultProto.output_files_size(); ++i) {
         auto fileProto = resultProto.output_files(i);
-        OutputFile file;
-        file.executable = fileProto.is_executable();
-        file.content = OutputBlob(fileProto.content(), fileProto.digest());
+        File file(fileProto.digest(), fileProto.is_executable());
         result.outputFiles[fileProto.path()] = file;
     }
 
@@ -171,8 +134,7 @@ void RemoteExecutionClient::write_files_to_disk(ActionResult result,
     for (const auto &fileIter : result.outputFiles) {
         string path = string(root) + "/" + fileIter.first;
         RECC_LOG_VERBOSE("Writing " << path);
-        auto blob = get_outputblob(fileIter.second.content);
-        write_file(path.c_str(), get_outputblob(fileIter.second.content));
+        write_file(path.c_str(), fetch_blob(fileIter.second.digest));
         if (fileIter.second.executable) {
             make_executable(path.c_str());
         }

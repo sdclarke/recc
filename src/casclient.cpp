@@ -203,9 +203,9 @@ void CASClient::upload_resources(
             batchSize = 0;
         }
 
-        proto::UpdateBlobRequest *updateRequest =
+        proto::BatchUpdateBlobsRequest_Request *updateRequest =
             batchUpdateRequest.add_requests();
-        *updateRequest->mutable_content_digest() = digest;
+        *updateRequest->mutable_digest() = digest;
         updateRequest->set_data(blob);
         batchSize += digest.size_bytes();
         batchSize += digest.hash().length();

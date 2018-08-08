@@ -15,10 +15,10 @@
 #ifndef INCLUDED_PROTOS
 #define INCLUDED_PROTOS
 
+#include <build/bazel/remote/execution/v2/remote_execution.grpc.pb.h>
+#include <build/bazel/remote/execution/v2/remote_execution.pb.h>
 #include <google/bytestream/bytestream.grpc.pb.h>
 #include <google/bytestream/bytestream.pb.h>
-#include <google/devtools/remoteexecution/v1test/remote_execution.grpc.pb.h>
-#include <google/devtools/remoteexecution/v1test/remote_execution.pb.h>
 #include <google/devtools/remoteworkers/v1test2/bots.grpc.pb.h>
 #include <google/devtools/remoteworkers/v1test2/bots.pb.h>
 #include <google/devtools/remoteworkers/v1test2/worker.grpc.pb.h>
@@ -29,7 +29,7 @@
 namespace BloombergLP {
 namespace recc {
 namespace proto {
-using namespace google::devtools::remoteexecution::v1test;
+using namespace build::bazel::remote::execution::v2;
 using namespace google::devtools::remoteworkers::v1test2;
 } // namespace proto
 
@@ -65,17 +65,19 @@ template <> struct hash<BloombergLP::recc::proto::Digest> {
 };
 } // namespace std
 
-namespace google {
-namespace devtools {
-namespace remoteexecution {
-namespace v1test {
+namespace build {
+namespace bazel {
+namespace remote {
+namespace execution {
+namespace v2 {
 inline bool operator==(const BloombergLP::recc::proto::Digest &a,
                        const BloombergLP::recc::proto::Digest &b)
 {
     return a.hash() == b.hash() && a.size_bytes() == b.size_bytes();
 }
-} // namespace v1test
-} // namespace remoteexecution
-} // namespace devtools
-} // namespace google
+} // namespace v2
+} // namespace execution
+} // namespace remote
+} // namespace bazel
+} // namespace build
 #endif
