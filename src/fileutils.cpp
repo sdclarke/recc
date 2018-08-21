@@ -24,6 +24,8 @@
 #include <sys/types.h>
 #include <system_error>
 
+#include <unistd.h>
+
 using namespace std;
 
 namespace BloombergLP {
@@ -103,8 +105,8 @@ string get_file_contents(const char *path)
     fileStream.seekg(start);
     if (fileStream) {
         fileStream.read(&contents[0], contents.length());
-        return contents;
     }
+    return contents;
 }
 
 void write_file(const char *path, std::string contents)
