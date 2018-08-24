@@ -237,7 +237,7 @@ string get_hostname()
 
 int main(int argc, char *argv[])
 {
-    string bot_parent("bgd_test");
+    string bot_parent("main");
     string bot_id = get_hostname();
 
     // Parse command-line arguments.
@@ -301,12 +301,6 @@ int main(int argc, char *argv[])
         auto deviceProperty = device->add_properties();
         deviceProperty->set_key(platformPair.first);
         deviceProperty->set_key(platformPair.second);
-    }
-
-    // BuildGrid seems to expect workers to add empty leases to determine the
-    // number of concurrent build jobs.
-    for (int i = 0; i < RECC_MAX_CONCURRENT_JOBS; ++i) {
-        session.add_leases();
     }
 
     {
