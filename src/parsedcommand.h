@@ -16,6 +16,7 @@
 #define INCLUDED_PARSEDCOMMAND
 
 #include <initializer_list>
+#include <logging.h>
 #include <set>
 #include <string>
 #include <vector>
@@ -30,10 +31,17 @@ static std::vector<std::string> vector_from_argv(const char *const *argv)
 {
     std::vector<std::string> result;
     int i = 0;
+
+    RECC_LOG_VERBOSE("Parsing command: ");
+
     while (argv[i] != nullptr) {
-        result.push_back(std::string(argv[i]));
+        std::string argstr = std::string(argv[i]);
         ++i;
+
+        RECC_LOG_VERBOSE("argv[" << i << "] = " << argstr);
+        result.push_back(argstr);
     }
+
     return result;
 }
 
