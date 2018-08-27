@@ -303,12 +303,6 @@ int main(int argc, char *argv[])
         deviceProperty->set_key(platformPair.second);
     }
 
-    // BuildGrid seems to expect workers to add empty leases to determine the
-    // number of concurrent build jobs.
-    for (int i = 0; i < RECC_MAX_CONCURRENT_JOBS; ++i) {
-        session.add_leases();
-    }
-
     {
         // Send the initial request to create the bot session.
         grpc::ClientContext context;
