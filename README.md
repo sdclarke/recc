@@ -1,6 +1,8 @@
 # recc
 Compiler wrapper client for the Remote Execution API.
 
+For information regarding contributing to this project, please read the [Contribution guide](CONTRIBUTING.md).
+
 # Installation
 
 ## Dependencies

@@ -7,7 +7,8 @@ you have any questions about this process or any other aspect of contributing to
 source project, feel free to send an email to opensource@bloomberg.net and we'll get your questions
 answered as quickly as we can.
 
-Before committing your changes, please run `clang-format` on them.
+Before committing your changes, please make sure to run `clang-format` on them. For more information
+take a look at the [Code Formatting](#code-formatting) section.
 
 ## Contribution Licensing
 
@@ -35,3 +36,20 @@ detailed description of what `recc` does and how to customize its behavior, run 
 If you need more or different information, please create an [Issue][].
 
 [issue]: https://gitlab.com/bloomberg/recc/issues
+
+## Contribution tips
+
+### Code Formatting
+
+This project uses `clang-format` to ensure consistent code formatting. 
+Please make sure you have installed `clang-format` version `>= 6` and that `git-clang-format`
+is in your `$PATH`.
+
+A git pre-commit hook is provided with the repo to make it easy for all the contributors to
+automatically fix possible formatting issues. To install the pre-commit hook, simply run:
+
+```sh
+cd /path/to/recc # Use appropriate path
+chmod +x scripts/install-hooks.sh && ./scripts/install-hooks.sh
+```
+
