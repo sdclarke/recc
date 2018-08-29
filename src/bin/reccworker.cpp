@@ -237,7 +237,7 @@ string get_hostname()
 
 int main(int argc, char *argv[])
 {
-    string bot_parent("bgd_test");
+    string bot_parent("main");
     string bot_id = get_hostname();
 
     // Parse command-line arguments.
