@@ -19,6 +19,14 @@ $ cd build
 $ cmake .. && make
 ```
 
+### Debugging options
+
+You can define `RECC_DEBUG` while running `cmake` to include additional debugging info in the final binaries.
+Just include `-DRECC_DEBUG` when invoking `cmake`.
+
+Compiling with this flag will include the function name and line number every time `RECC_LOG_VERBOSE` is called.
+(Note that you still need to run in verbose mode to receive the output)
+
 ## Running tests
 
 To run tests, first compile the project (see above), then run
