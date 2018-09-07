@@ -22,9 +22,9 @@
 #include <logging.h>
 #include <merklize.h>
 #include <protos.h>
+#include <reccdefaults.h>
 #include <subprocess.h>
 
-#include <chrono>
 #include <condition_variable>
 #include <cstring>
 #include <dirent.h>
@@ -72,7 +72,7 @@ const string HELP(
  */
 proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
 {
-    TemporaryDirectory tmpdir("reccworker");
+    TemporaryDirectory tmpdir(DEFAULT_RECC_WORKER_TMP_PREFIX);
     RECC_LOG_VERBOSE("Starting build in temporary directory "
                      << tmpdir.name());
 
@@ -237,7 +237,7 @@ string get_hostname()
 
 int main(int argc, char *argv[])
 {
-    string bot_parent("main");
+    string bot_parent(DEFAULT_RECC_INSTANCE);
     string bot_id = get_hostname();
 
     // Parse command-line arguments.
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
     // Set environment variables and defaults
     parse_environment();
     if (RECC_SERVER.empty()) {
-        RECC_SERVER = "localhost:8085";
+        RECC_SERVER = DEFAULT_RECC_SERVER;
         cerr << "Warning: no RECC_SERVER environment variable specified."
              << endl;
         cerr << "Using default server (" << RECC_SERVER << ")" << endl;
@@ -272,8 +272,9 @@ int main(int argc, char *argv[])
     }
     if (RECC_MAX_CONCURRENT_JOBS <= 0) {
         cerr << "Warning: no RECC_MAX_CONCURRENT_JOBS specified." << endl;
-        cerr << "Running only one job at a time." << endl;
-        RECC_MAX_CONCURRENT_JOBS = 1;
+        cerr << "Running " << DEFAULT_RECC_MAX_CONCURRENT_JOBS
+             << " job(s) at a time (default option)." << endl;
+        RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
     }
 
     RECC_LOG_VERBOSE("Starting build worker...");
@@ -290,7 +291,7 @@ int main(int argc, char *argv[])
 
     auto worker = session.mutable_worker();
     auto device = worker->add_devices();
-    device->set_handle("main");
+    device->set_handle(DEFAULT_RECC_INSTANCE);
 
     for (auto &platformPair : RECC_REMOTE_PLATFORM) {
         // TODO Differentiate worker properties and device properties?
@@ -307,10 +308,14 @@ int main(int argc, char *argv[])
         // Send the initial request to create the bot session.
         grpc::ClientContext context;
         proto::CreateBotSessionRequest createRequest;
+        RECC_LOG_VERBOSE("Setting parent");
         createRequest.set_parent(bot_parent);
         *createRequest.mutable_bot_session() = session;
+        RECC_LOG_VERBOSE("Setting session");
         ensure_ok(stub->CreateBotSession(&context, createRequest, &session));
     }
+
+    RECC_LOG_VERBOSE("Bot Session created. Now waiting for jobs.");
 
     mutex sessionMutex;
     condition_variable sessionCondition;
@@ -323,7 +328,7 @@ int main(int argc, char *argv[])
         }
         else {
             // Wait for a build job to finish or 250 ms (whichever comes first)
-            sessionCondition.wait_for(lock, chrono::milliseconds(250));
+            sessionCondition.wait_for(lock, DEFAULT_RECC_WORKER_POLL_WAIT);
         }
         {
             // Update the bot session (send our state to the server, then

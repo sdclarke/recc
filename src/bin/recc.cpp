@@ -21,6 +21,7 @@
 #include <env.h>
 #include <logging.h>
 #include <merklize.h>
+#include <reccdefaults.h>
 #include <remoteexecutionclient.h>
 
 #include <cstdio>
@@ -105,7 +106,7 @@ int main(int argc, char *argv[])
     parse_environment();
 
     if (RECC_SERVER.empty()) {
-        RECC_SERVER = "localhost:8085";
+        RECC_SERVER = DEFAULT_RECC_SERVER;
         cerr << "Warning: no RECC_SERVER environment variable specified."
              << endl;
         cerr << "Using default server (" << RECC_SERVER << ")" << endl;

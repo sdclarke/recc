@@ -15,6 +15,7 @@
 #ifndef INCLUDED_FILEUTILS
 #define INCLUDED_FILEUTILS
 
+#include <reccdefaults.h>
 #include <string>
 
 namespace BloombergLP {
@@ -26,7 +27,7 @@ class TemporaryDirectory {
      * Create a temporary directory on disk. If a prefix is specified, it
      * will be included in the name of the temporary directory.
      */
-    TemporaryDirectory(const char *prefix = "recc");
+    TemporaryDirectory(const char *prefix = DEFAULT_RECC_TMP_PREFIX);
 
     /**
      * Delete the temporary directory.

@@ -21,6 +21,7 @@
 #include <grpcpp/create_channel.h>
 #include <grpcpp/security/credentials.h>
 #include <iostream>
+#include <reccdefaults.h>
 
 using namespace BloombergLP::recc;
 using namespace std;
@@ -55,7 +56,7 @@ int main(int argc, char *argv[])
 
     if (RECC_CAS_SERVER.empty()) {
         if (RECC_SERVER.empty()) {
-            RECC_CAS_SERVER = "localhost:8085";
+            RECC_CAS_SERVER = DEFAULT_RECC_SERVER;
             cerr << "Warning: no RECC_SERVER environment variable specified."
                  << endl;
             cerr << "Using default server (" << RECC_CAS_SERVER << ")" << endl;
