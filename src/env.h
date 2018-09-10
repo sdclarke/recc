@@ -43,7 +43,7 @@ extern std::string RECC_INSTANCE;
  *
  * If both this and RECC_DEPS_OVERRIDE are set, the directory value is used.
  */
-extern std::string RECC_DEPS_OVERRIDE_DIRECTORY;
+extern std::string RECC_DEPS_DIRECTORY_OVERRIDE;
 
 /**
  * The location to store temporary files. (Currently used only by the worker.)

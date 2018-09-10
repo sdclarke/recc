@@ -130,10 +130,10 @@ int main(int argc, char *argv[])
     unordered_map<proto::Digest, string> filenames;
 
     std::set<std::string> products = RECC_OUTPUT_FILES_OVERRIDE;
-    if (!RECC_DEPS_OVERRIDE_DIRECTORY.empty()) {
+    if (!RECC_DEPS_DIRECTORY_OVERRIDE.empty()) {
         RECC_LOG_VERBOSE("Building Merkle tree using directory override");
         nestedDirectory = make_nesteddirectory(
-            RECC_DEPS_OVERRIDE_DIRECTORY.c_str(), &filenames);
+            RECC_DEPS_DIRECTORY_OVERRIDE.c_str(), &filenames);
     }
     else {
         set<string> deps = RECC_DEPS_OVERRIDE;

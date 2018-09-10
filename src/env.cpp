@@ -24,7 +24,7 @@ namespace recc {
 string RECC_SERVER;
 string RECC_CAS_SERVER;
 string RECC_INSTANCE;
-string RECC_DEPS_OVERRIDE_DIRECTORY;
+string RECC_DEPS_DIRECTORY_OVERRIDE;
 string TMPDIR("/tmp");
 
 bool RECC_VERBOSE;
@@ -116,7 +116,7 @@ void parse_environment(const char *const *environ)
         STRVAR(RECC_SERVER)
         STRVAR(RECC_CAS_SERVER)
         STRVAR(RECC_INSTANCE)
-        STRVAR(RECC_DEPS_OVERRIDE_DIRECTORY)
+        STRVAR(RECC_DEPS_DIRECTORY_OVERRIDE)
         STRVAR(TMPDIR)
 
         BOOLVAR(RECC_VERBOSE)
