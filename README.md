@@ -1,17 +1,43 @@
 # recc
 Compiler wrapper client for the Remote Execution API.
 
-## Compiling
+## Installing Dependencies
+Currently recc relies on: 
 
-`recc` depends on [gRPC][], [Protobuf][], [OpenSSL][], and [CMake][], so you'll
-need to install those first using your operating system's package manager.
+* [gRPC][]
+* [Protobuf][] 
+* [OpenSSL][]
+* [CMake][]
+* [GoogleTest][]
 
+Some package managers(apt) include all these dependencies while others(brew) require manual installation of some. Please follow the relevant guides for your OS.  
+
+# macOS
+Install [gRPC][], [Protobuf][], [OpenSSL][], [CMake][] through brew:
+```sh
+$ brew install openssl cmake grpc pkg-config protobuf
+```
+[GoogleTest][] is not avaliable with brew. If you have write access to **/usr/local/** directory, then the easiest way is to use the install script located [here](https://gist.github.com/butuzov/e7df782c31171f9563057871d0ae444a).**
+
+**This script uses version Google Test 1.8.0, adapt it to your needs, use at your own risk! 
+
+Otherwise, you can follow the build instructions on the [Google Test](https://github.com/google/googletest/blob/master/googletest/README.md) site. Which will require you to build GoogleTest and GoogleMock. Then you can specify the include/lib directories for Google Test/Mock in your cmake build command using the -D flag.
+
+You can now compile `recc`.
+
+<!-- # Linux -->
+<!-- UPDATE ME -->
+
+
+<!-- Reference links -->
 [grpc]: https://grpc.io/
 [protobuf]: https://github.com/google/protobuf/
 [openssl]: https://www.openssl.org/
 [cmake]: https://cmake.org/
+[googletest]: https://github.com/google/googletest
 
-Once you've done that, you can compile `recc` using the following commands:
+## Compiling
+Once you've [installed the dependencies](#Installing-Dependencies), you can compile `recc` using the following commands:
 
 ```sh
 $ mkdir build
