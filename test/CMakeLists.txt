@@ -26,9 +26,17 @@ add_executable(casclient_tests casclient.cpp main.cpp)
 target_link_libraries(casclient_tests GMock::GMock remoteexecution)
 add_test(NAME casclient_tests COMMAND casclient_tests)
 
-add_executable(env_tests env.cpp main.cpp)
-target_link_libraries(env_tests GTest::GTest remoteexecution)
-add_test(NAME env_tests COMMAND env_tests)
+add_executable(env_set_test env/env_set.cpp main.cpp)
+target_link_libraries(env_set_test GTest::GTest remoteexecution)
+add_test(NAME env_set_test COMMAND env_set_test)
+
+add_executable(env_default_cas_test env/env_default_cas.cpp main.cpp)
+target_link_libraries(env_default_cas_test GTest::GTest remoteexecution)
+add_test(NAME env_default_cas_test COMMAND env_default_cas_test)
+
+add_executable(env_different_cas_test env/env_different_cas.cpp main.cpp)
+target_link_libraries(env_different_cas_test GTest::GTest remoteexecution)
+add_test(NAME env_different_cas_test COMMAND env_different_cas_test)
 
 add_executable(remoteexecutionclient_tests remoteexecutionclient.cpp main.cpp)
 target_link_libraries(remoteexecutionclient_tests GMock::GMock remoteexecution)

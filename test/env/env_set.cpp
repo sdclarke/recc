@@ -19,9 +19,10 @@
 using namespace BloombergLP::recc;
 using namespace std;
 
-TEST(EnvTest, EnvTest)
+TEST(EnvTest, EnvSetTest)
 {
-    const char *testEnviron[] = {"RECC_FORCE_REMOTE=1",
+    const char *testEnviron[] = {"RECC_SERVER=server:1234",
+                                 "RECC_FORCE_REMOTE=1",
                                  "RECC_DEPS_OVERRIDE=oneitem",
                                  "RECC_OUTPUT_FILES_OVERRIDE=one,two,three",
                                  "RECC_REMOTE_ENV_key=val",
@@ -29,12 +30,14 @@ TEST(EnvTest, EnvTest)
                                  "RECC_MAX_CONCURRENT_JOBS=15",
                                  "TMPDIR=/some/tmp/dir",
                                  nullptr};
+    string expectedServer = "server:1234";
     set<string> expectedDeps = {"oneitem"};
     set<string> expectedOutputFiles = {"one", "two", "three"};
     map<string, string> expectedRemoteEnv = {{"key", "val"},
                                              {"anotherkey", "anotherval"}};
     parse_environment(testEnviron);
 
+    EXPECT_EQ(expectedServer, RECC_SERVER);
     EXPECT_TRUE(RECC_FORCE_REMOTE);
     EXPECT_EQ(expectedDeps, RECC_DEPS_OVERRIDE);
     EXPECT_EQ(expectedOutputFiles, RECC_OUTPUT_FILES_OVERRIDE);

@@ -54,16 +54,6 @@ int main(int argc, char *argv[])
 
     parse_environment();
 
-    if (RECC_CAS_SERVER.empty()) {
-        if (RECC_SERVER.empty()) {
-            RECC_CAS_SERVER = DEFAULT_RECC_SERVER;
-            cerr << "Warning: no RECC_SERVER environment variable specified."
-                 << endl;
-            cerr << "Using default server (" << RECC_CAS_SERVER << ")" << endl;
-        }
-        RECC_CAS_SERVER = RECC_SERVER;
-    }
-
     NestedDirectory nestedDirectory;
     unordered_map<proto::Digest, string> blobs;
     unordered_map<proto::Digest, string> filenames;
