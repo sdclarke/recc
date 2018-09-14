@@ -147,9 +147,10 @@ simultaneous build jobs you want the worker to run. (By default, it runs jobs
 one at a time.) Run `reccworker --help` for the full list of environment
 variables `reccworker` accepts.
 
-Once you've set up the servers and environment, start the worker by running
-`reccworker`. You can optionally specify a parent (the default is `bgd_test`)
-and bot name (the default is the computer's hostname) by passing them as
+Once you've set up the servers and environment, start the worker by
+running `reccworker`. You can optionally specify a parent (the default
+is `bgd_test`) and bot name (the default is the computer's hostname
+and the pid of the process separated by a '-') by passing them as
 arguments.
 
 ## Additional utilities
