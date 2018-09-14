@@ -47,7 +47,7 @@ const string HELP(
     "Start a remote worker with the given parent and id. If the id is\n"
     "unspecified, the computer's hostname is used.\n"
     "\n"
-    "The following environment variables can be used to change reccserver's\n"
+    "The following environment variables can be used to change reccworker's\n"
     "behavior:\n"
     "\n"
     "RECC_SERVER - the URI of the server to use (e.g. localhost:8085)\n"
@@ -242,8 +242,8 @@ int main(int argc, char *argv[])
 
     // Parse command-line arguments.
     if (argc > 3) {
-        cerr << "USAGE: reccserver [parent] [id]" << endl << endl;
-        cerr << "(run \"reccserver --help\" for details)" << endl;
+        cerr << "USAGE: " << argv[0] << " [parent] [id]" << endl << endl;
+        cerr << "(run \"" << argv[0] << " --help\" for details)" << endl;
         return 1;
     }
     for (int i = 1; i < argc; ++i) {
