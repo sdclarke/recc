@@ -232,7 +232,7 @@ string get_hostname()
 {
     char hostname[256] = {0};
     gethostname(hostname, sizeof(hostname));
-    return string(hostname);
+    return string(hostname) + "-" + to_string(getpid());
 }
 
 int main(int argc, char *argv[])
@@ -277,7 +277,7 @@ int main(int argc, char *argv[])
         RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
     }
 
-    RECC_LOG_VERBOSE("Starting build worker...");
+    RECC_LOG_VERBOSE("Starting build worker with bot_id=[" + bot_id + "]");
 
     auto channel =
         grpc::CreateChannel(RECC_SERVER, grpc::InsecureChannelCredentials());
