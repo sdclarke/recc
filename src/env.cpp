@@ -16,6 +16,8 @@
 
 #include <cstring>
 
+#include <iostream>
+
 #include <reccdefaults.h>
 
 using namespace std;
@@ -23,8 +25,13 @@ using namespace std;
 namespace BloombergLP {
 namespace recc {
 
-string RECC_SERVER = DEFAULT_RECC_SERVER;
-string RECC_CAS_SERVER = DEFAULT_RECC_CAS_SERVER;
+// Leave those empty so that parse_environment can print warnings if not
+// specified
+string RECC_SERVER = "";
+string RECC_CAS_SERVER = "";
+
+// Include default values for the following, no need to print warnings if not
+// specified
 string RECC_INSTANCE = DEFAULT_RECC_INSTANCE;
 string RECC_DEPS_DIRECTORY_OVERRIDE = DEFAULT_RECC_DEPS_DIRECTORY_OVERRIDE;
 string TMPDIR = DEFAULT_RECC_TMPDIR;
@@ -100,6 +107,7 @@ void parse_environment(const char *const *environ)
         name[key] = string(equals + 1);                                       \
     }
 
+    // Parse all the options from ENV
     for (int i = 0; environ[i] != nullptr; ++i) {
         VARS_START()
         STRVAR(RECC_SERVER)
@@ -123,6 +131,21 @@ void parse_environment(const char *const *environ)
         MAPVAR(RECC_DEPS_ENV)
         MAPVAR(RECC_REMOTE_ENV)
         MAPVAR(RECC_REMOTE_PLATFORM)
+    }
+
+    // Handle special default cases
+
+    if (RECC_SERVER.empty()) {
+        RECC_SERVER = DEFAULT_RECC_SERVER;
+        cerr << "Warning: no RECC_SERVER environment variable specified."
+             << "Using default server (" << RECC_SERVER << ")" << endl;
+    }
+
+    if (RECC_CAS_SERVER.empty()) {
+        RECC_CAS_SERVER = RECC_SERVER;
+        cerr << "Warning: no RECC_CAS_SERVER environment variable specified."
+             << "Using the same as RECC_SERVER (" << RECC_CAS_SERVER << ")"
+             << endl;
     }
 }
 } // namespace recc

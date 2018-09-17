@@ -105,16 +105,6 @@ int main(int argc, char *argv[])
 
     parse_environment();
 
-    if (RECC_SERVER.empty()) {
-        RECC_SERVER = DEFAULT_RECC_SERVER;
-        cerr << "Warning: no RECC_SERVER environment variable specified."
-             << endl;
-        cerr << "Using default server (" << RECC_SERVER << ")" << endl;
-    }
-    if (RECC_CAS_SERVER.empty()) {
-        RECC_CAS_SERVER = RECC_SERVER;
-    }
-
     ParsedCommand command(&argv[1]);
 
     if (!command.is_compiler_command() && !RECC_FORCE_REMOTE) {

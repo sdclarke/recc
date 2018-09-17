@@ -259,17 +259,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Set environment variables and defaults
+    // Parse configuration from environment variables and defaults
     parse_environment();
-    if (RECC_SERVER.empty()) {
-        RECC_SERVER = DEFAULT_RECC_SERVER;
-        cerr << "Warning: no RECC_SERVER environment variable specified."
-             << endl;
-        cerr << "Using default server (" << RECC_SERVER << ")" << endl;
-    }
-    if (RECC_CAS_SERVER.empty()) {
-        RECC_CAS_SERVER = RECC_SERVER;
-    }
+
     if (RECC_MAX_CONCURRENT_JOBS <= 0) {
         cerr << "Warning: no RECC_MAX_CONCURRENT_JOBS specified." << endl;
         cerr << "Running " << DEFAULT_RECC_MAX_CONCURRENT_JOBS
