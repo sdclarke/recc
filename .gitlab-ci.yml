@@ -1,21 +1,9 @@
-image: grpc/cxx:1.12.0
+
+image: grpc/cxx:1.12.0 # default image runs debian:stretch
 
 stages:
     - build
     - test
-
-check_formatting:
-    image: ubuntu:bionic
-    stage: build
-    before_script:
-        - apt-get update && apt-get install -y clang-format-6.0 git-core
-    script:
-        - echo `which clang-format-6.0`
-        - ln -s `which clang-format-6.0` /usr/bin/clang-format
-        - cd "$CI_PROJECT_DIR"
-        - linter_errors=$(git-clang-format-6.0 --commit "HEAD~1" -q --diff --style file | grep -v --color=never "no modified files to format" || true)
-        - echo "$linter_errors"
-        - if [ ! -z "$linter_errors" ]; then echo "Detected formatting issues; please fix"; exit 1; else echo "Formatting is correct"; exit 0; fi
 
 build:
   stage: build
@@ -34,25 +22,45 @@ build:
       - build/bin/reccworker
       - test/data/hello.cpp
 
+check_formatting:
+    image: ubuntu:bionic
+    stage: test
+    before_script:
+        - apt-get update && apt-get install -y clang-format-6.0 git-core
+    script:
+        - echo `which clang-format-6.0`
+        - ln -s `which clang-format-6.0` /usr/bin/clang-format
+        - cd "$CI_PROJECT_DIR"
+        - linter_errors=$(git-clang-format-6.0 --commit "HEAD~1" -q --diff --style file | grep -v --color=never "no modified files to format" || true)
+        - echo "$linter_errors"
+        - if [ ! -z "$linter_errors" ]; then echo "Detected formatting issues; please fix"; exit 1; else echo "Formatting is correct"; exit 0; fi
+
 e2e:
     stage: test
     dependencies: 
         - build
     before_script:
-        - apt-get update && apt-get install -y python3 python3-pip git-core
+        - apt-get update && apt-get install -y python3 python3-pip git-core net-tools procps
     script:
         - git clone https://gitlab.com/BuildGrid/buildgrid.git && cd buildgrid
         - pip3 install -e . # install buildgrid system wide
         - export LC_ALL=C.UTF-8 
         - export LANG=C.UTF-8
-        - bgd -v server start --cas lru --cas-lru-size 20M --allow-insecure --port 50051 &
+        - bgd -v server start "$CI_PROJECT_DIR/test/data/bgdconfig.yml" &
         - sleep 5 # Give server some time to boot
-        - export RECC_SERVER="localhost:50051"
+        - netstat -pln | grep 50051 || exit 1
+        - export RECC_SERVER="localhost:50051" # port recc connects to buildgrid.
+        - export RECC_CAS_SERVER="localhost:50051" # port cas server is hosted. By default BuildGrid creates a cas server.
         - export RECC_VERBOSE=1
         - export RECC_FORCE_REMOTE=1 
-        - export RECC_OUTPUT_FILES_OVERRIDE=$CI_PROJECT_DIR/test/data/hello.o
-        - export RECC_DEPS_OVERRIDE=$CI_PROJECT_DIR/test/data/hello.cpp   
-        - chmod +x $CI_PROJECT_DIR/build/bin/reccworker
-        - chmod +x $CI_PROJECT_DIR/build/bin/recc
+        - export RECC_OUTPUT_FILES_OVERRIDE="hello.o"
+        - export RECC_DEPS_OVERRIDE="hello.cpp"
+        - chmod +x "$CI_PROJECT_DIR/build/bin/reccworker"
+        - chmod +x "$CI_PROJECT_DIR/build/bin/recc"
         - $CI_PROJECT_DIR/build/bin/reccworker &
-        - $CI_PROJECT_DIR/build/bin/recc gcc -c $CI_PROJECT_DIR/test/data/hello.cpp -o $CI_PROJECT_DIR/test/data/hello.o
+        - sleep 5
+        - ps aux | grep reccworker || exit 1
+        - cd "$CI_PROJECT_DIR/test/data/"
+        - $CI_PROJECT_DIR/build/bin/recc gcc "hello.cpp" -o "hello.o"
+        - chmod +x "hello.o"
+        - if [ "$("./hello.o")" == "hello_world" ]; then echo "Correct output"; exit 0; else exit 1; fi
