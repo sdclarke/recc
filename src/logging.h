@@ -19,10 +19,19 @@
 
 #include <iostream>
 
+#ifdef RECC_DEBUG
+#define RECC_LOG_VERBOSE(x)                                                   \
+    if (RECC_VERBOSE) {                                                       \
+        std::clog << __FILE__ << ":" << __PRETTY_FUNCTION__ << ":"            \
+                  << __LINE__ << " ";                                         \
+        std::clog << x << std::endl;                                          \
+    }
+#else
 #define RECC_LOG_VERBOSE(x)                                                   \
     if (RECC_VERBOSE) {                                                       \
         std::clog << x << std::endl;                                          \
     }
+#endif
 
 using BloombergLP::recc::RECC_VERBOSE;
 
