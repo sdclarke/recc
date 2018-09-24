@@ -70,6 +70,9 @@ void NestedDirectory::add(File file, const char *relativePath)
 proto::Digest NestedDirectory::to_digest(
     unordered_map<proto::Digest, string> *digestMap) const
 {
+    // The 'files' and 'subdirs' maps make sure everything is sorted by name
+    // thus the iterators will iterate lexicographically
+
     proto::Directory directoryMessage;
     for (const auto &fileIter : files) {
         *directoryMessage.add_files() =

@@ -53,9 +53,11 @@ struct File {
  * Represents a directory that, optionally, has other directories inside.
  */
 struct NestedDirectory {
+    // Important to use a sorted map to keep subdirectories ordered by name
     typedef std::map<std::string, NestedDirectory> subdir_map;
 
     std::unique_ptr<subdir_map> subdirs;
+    // Important to use a sorted map to keep files ordered by name
     std::map<std::string, File> files;
 
     NestedDirectory() : subdirs(new subdir_map){};
