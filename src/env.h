@@ -15,6 +15,7 @@
 #ifndef INCLUDED_ENV
 #define INCLUDED_ENV
 
+#include <deque>
 #include <map>
 #include <set>
 #include <string>
@@ -91,6 +92,12 @@ extern bool RECC_SERVER_AUTH_GOOGLEAPI;
 extern int RECC_MAX_CONCURRENT_JOBS;
 
 /**
+ * Defined by cmake when building.
+ * On linux defaults to: /usr/local
+ */
+extern std::string RECC_INSTALL_DIR;
+
+/**
  * A comma-separated list of input file paths to send to the build server. If
  * this isn't set, deps is called to determine the input files.
  */
@@ -132,24 +139,45 @@ extern std::map<std::string, std::string> RECC_REMOTE_ENV;
 extern std::map<std::string, std::string> RECC_REMOTE_PLATFORM;
 
 /**
+ * Used to specify absolute paths for finding recc.conf.
+ * If specifing absolute path, only include up until directory containing
+ * config, no trailing "/". Additions to the list should be in order of
+ * priority: LEAST-> MOST important.
+ *
+ * Additional locations based on the runtime environment are included in:
+ * env.cpp:find_and_parse_config_files()
+ */
+extern std::deque<std::string> RECC_CONFIG_LOCATIONS;
+
+/**
  * Parse the given environment and store it in the corresponding global
  * variables.
  *
  * environ should be an array of "VARIABLE=value" strings whose last entry is
  * nullptr.
  */
-void parse_environment(const char *const *environ);
+void parse_config_variables(const char *const *environ);
 
 /**
- * Parse configuration file, only set values that haven't been set by
- * environment, calls parse_environment()
+ * Finds config files specified in RECC_CONFIG_LOCATIONS and passes variables
+ * to parse_config_variables
  */
-void parse_config_file();
+void find_and_parse_config_files();
 
 /**
  * Handles the case that RECC_SERVER and RECC_CAS_SERVER have not been set.
  */
 void handle_special_defaults();
+
+/*
+ * Append default location to look for recc.conf files by default looks in
+ * these locations:
+ *
+ * 1. ${cwd}/recc/recc.conf
+ * 2. ${HOME}/.recc/recc.conf
+ * 3. ${INSTALL_DIR}/../etc/recc/recc.conf
+ */
+void add_default_locations();
 
 /**
  * The process environment.
@@ -157,13 +185,14 @@ void handle_special_defaults();
 extern "C" char **environ;
 
 /**
- * Parse the config file first, then the environment, then checks wether
- * important fields empty, and store it in the corresponding global variables.
+ * Add default recc locations, parse the config files, then the
+ * environment, and then checks whether important fields are empty.
  */
-inline void parse_environment()
+inline void parse_config_variables()
 {
-    parse_config_file();
-    parse_environment(environ);
+    add_default_locations();
+    find_and_parse_config_files();
+    parse_config_variables(environ);
     handle_special_defaults();
 }
 } // namespace recc

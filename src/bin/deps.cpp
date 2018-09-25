@@ -30,7 +30,7 @@ const string HELP(
 
 int main(int argc, char *argv[])
 {
-    parse_environment();
+    parse_config_variables();
 
     if (argc <= 1 || strcmp(argv[1], "--help") == 0 ||
         strcmp(argv[1], "-h") == 0) {

@@ -35,7 +35,7 @@ TEST(EnvTest, EnvSetTest)
     set<string> expectedOutputFiles = {"one", "two", "three"};
     map<string, string> expectedRemoteEnv = {{"key", "val"},
                                              {"anotherkey", "anotherval"}};
-    parse_environment(testEnviron);
+    parse_config_variables(testEnviron);
 
     EXPECT_EQ(expectedServer, RECC_SERVER);
     EXPECT_TRUE(RECC_FORCE_REMOTE);

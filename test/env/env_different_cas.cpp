@@ -28,7 +28,7 @@ TEST(EnvTest, DifferentCASServerTest)
     string expectedReccServer = "somehost:1234";
     string expectedCasServer = "someotherhost:5678";
 
-    parse_environment(testEnviron);
+    parse_config_variables(testEnviron);
 
     EXPECT_EQ(expectedReccServer, RECC_SERVER);
     EXPECT_EQ(expectedCasServer, RECC_CAS_SERVER);

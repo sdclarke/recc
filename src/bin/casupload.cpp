@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    parse_environment();
+    parse_config_variables();
 
     NestedDirectory nestedDirectory;
     unordered_map<proto::Digest, string> blobs;
