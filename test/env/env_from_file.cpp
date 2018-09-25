@@ -19,15 +19,16 @@
 using namespace BloombergLP::recc;
 using namespace std;
 
-TEST(EnvTest, CasDefaultsToServerTest)
+TEST(EnvTest, ENVFROMFILE)
 {
-    const char *testEnviron[] = {"RECC_SERVER=somehost:1234", nullptr};
-    string expectedReccServer = "somehost:1234";
+    // should be set from file
+    string expectedReccServer = "localhost:99999";
+    string expectedRecCasServer = "localhost:66666";
+    string expectedTMPDIR = "/tmp/dir";
 
-    parse_environment(testEnviron);
-    // need this for testing, since we are calling parse_environment directly.
-    handle_special_defaults();
+    parse_environment();
 
     EXPECT_EQ(expectedReccServer, RECC_SERVER);
-    EXPECT_EQ(expectedReccServer, RECC_CAS_SERVER);
+    EXPECT_EQ(expectedRecCasServer, RECC_CAS_SERVER);
+    EXPECT_EQ(expectedTMPDIR, TMPDIR);
 }

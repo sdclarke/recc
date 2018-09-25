@@ -141,15 +141,31 @@ extern std::map<std::string, std::string> RECC_REMOTE_PLATFORM;
 void parse_environment(const char *const *environ);
 
 /**
+ * Parse configuration file, only set values that haven't been set by
+ * environment, calls parse_environment()
+ */
+void parse_config_file();
+
+/**
+ * Handles the case that RECC_SERVER and RECC_CAS_SERVER have not been set.
+ */
+void handle_special_defaults();
+
+/**
  * The process environment.
  */
 extern "C" char **environ;
 
 /**
- * Parse the process environment and store it in the corresponding global
- * variables.
+ * Parse the config file first, then the environment, then checks wether
+ * important fields empty, and store it in the corresponding global variables.
  */
-inline void parse_environment() { parse_environment(environ); }
+inline void parse_environment()
+{
+    parse_config_file();
+    parse_environment(environ);
+    handle_special_defaults();
+}
 } // namespace recc
 } // namespace BloombergLP
 
