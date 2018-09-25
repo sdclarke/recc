@@ -1,9 +1,11 @@
 server:
-  port: 50051
-  tls-server-key: null
-  tls-server-cert: null
-  tls-client-certs: null
-  insecure-mode: true
+  - !channel
+    port: 50051
+    insecure_mode: true
+#    credentials:
+#      tls-server-key: null
+#      tls-server-cert: null
+#      tls-client-certs: null
 
 description: |
   A single default instance
@@ -15,7 +17,7 @@ instances:
 
     storages:
         - !disk-storage &main-storage
-          path: ~/cas/
+          path: !expand-path $HOME/cas/
 
     services:
       - !action-cache &main-action
@@ -32,3 +34,4 @@ instances:
 
       - !bytestream
         storage: *main-storage
+
