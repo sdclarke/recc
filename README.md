@@ -41,11 +41,20 @@ You can now compile `recc`.
 [googletest]: https://github.com/google/googletest
 
 ## Compiling
-Once you've [installed the dependencies](#Dependencies), you can compile `recc` using the following commands:
+Once you've [installed the dependencies](#dependencies), you can compile `recc` using the following commands:
 
 ```sh
 $ mkdir build
 $ cd build
+```
+
+#### On macOS, specify constants OPENSSL_ROOT_DIR and OPENSSL_LIBRARIES and run:
+```sh
+$ cmake -DOPENSSL_ROOT_DIR=/usr/local/Cellar/openssl/1.0.2p -DOPENSSL_LIBRARIES=/usr/local/Cellar/openssl/1.0.2p/lib .. && make
+```
+**Note the version number might not be 1.0.2p, update it to the version installed on your device. 
+#### Otherwise run:
+```sh
 $ cmake .. && make
 ```
 
