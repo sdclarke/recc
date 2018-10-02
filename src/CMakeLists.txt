@@ -3,7 +3,7 @@ include_directories(.)
 set(SRCS merklize.cpp casclient.cpp subprocess.cpp remoteexecutionclient.cpp deps.cpp env.cpp parsedcommand.cpp fileutils.cpp)
 
 add_library(remoteexecution ${SRCS})
-target_link_libraries(remoteexecution reccproto ${Protobuf_LIBRARIES} ${GRPC_TARGET} OpenSSL::Crypto ${CMAKE_DL_LIBS})
+target_link_libraries(remoteexecution reccproto ${Protobuf_LIBRARIES} ${GRPC_TARGET} OpenSSL::Crypto ${CMAKE_DL_LIBS} ${gRPC_STATIC_LDFLAGS})
 
 if (CMAKE_SYSTEM_NAME MATCHES "SunOS")
     target_link_libraries(remoteexecution socket nsl)

@@ -23,7 +23,7 @@ add_test(NAME merklize_tests
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/merklize)
 
 add_executable(casclient_tests casclient.cpp main.cpp)
-target_link_libraries(casclient_tests GMock::GMock remoteexecution)
+target_link_libraries(casclient_tests GMock::GMock GTest::GTest remoteexecution)
 add_test(NAME casclient_tests COMMAND casclient_tests)
 
 add_executable(env_set_test env/env_set.cpp main.cpp)
@@ -39,7 +39,7 @@ target_link_libraries(env_different_cas_test GTest::GTest remoteexecution)
 add_test(NAME env_different_cas_test COMMAND env_different_cas_test)
 
 add_executable(remoteexecutionclient_tests remoteexecutionclient.cpp main.cpp)
-target_link_libraries(remoteexecutionclient_tests GMock::GMock remoteexecution)
+target_link_libraries(remoteexecutionclient_tests GMock::GMock GTest::GTest remoteexecution)
 add_test(NAME remoteexecutionclient_tests COMMAND remoteexecutionclient_tests)
 
 add_executable(fileutils_tests fileutils.cpp main.cpp)
