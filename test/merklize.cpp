@@ -211,3 +211,56 @@ TEST(NestedDirectoryTest, MakeNestedDirectory)
               get_file_contents(
                   fileMap[subdirectory->files["abc.txt"].digest].c_str()));
 }
+
+// Make sure the digest is calculated correctly regardless of the order in
+// which the files are added. Important for caching.
+TEST(NestedDirectoryTest, ConsistentDigestRegardlessOfFileOrder)
+{
+    int N = 5;
+    // Get us some mock files
+    File files[N];
+    for (int i = 0; i < N; i++) {
+        files[i].digest.set_hash("HASH_" + to_string(i));
+    }
+
+    // Create Nested Directory and add everything in-order
+    NestedDirectory directory1;
+    for (int i = 0; i < N; i++) {
+        string fn = "subdir_" + to_string(i) + "/file_" + to_string(i);
+        directory1.add(files[i], fn.c_str());
+    }
+
+    // Create another Nested Directory and add everything in reverse order
+    NestedDirectory directory2;
+    for (int i = N - 1; i >= 0; i--) {
+        string fn = "subdir_" + to_string(i) + "/file_" + to_string(i);
+        directory2.add(files[i], fn.c_str());
+    }
+
+    // Make sure the actual digests of those two directories are identical
+    EXPECT_EQ(directory1.to_digest().hash(), directory2.to_digest().hash());
+}
+
+// Make sure digests of directories containing different files are different
+TEST(NestedDirectoryTest, NestedDirectoryDigestsReallyBasedOnFiles)
+{
+    int N = 5;
+    // Get us some mock files
+    File files_dir1[N]; // Files to add in the first directory
+    File files_dir2[N]; // Files to add in the second directory
+    for (int i = 0; i < N; i++) {
+        files_dir1[i].digest.set_hash("HASH_DIR1_" + to_string(i));
+        files_dir2[i].digest.set_hash("HASH_DIR2_" + to_string(i));
+    }
+
+    // Create Nested Directories and add everything in-order
+    NestedDirectory directory1, directory2;
+    for (int i = 0; i < N; i++) {
+        string fn = "subdir_" + to_string(i) + "/file_" + to_string(i);
+        directory1.add(files_dir1[i], fn.c_str());
+        directory2.add(files_dir2[i], fn.c_str());
+    }
+
+    // Make sure the digests are different
+    EXPECT_NE(directory1.to_digest().hash(), directory2.to_digest().hash());
+}
