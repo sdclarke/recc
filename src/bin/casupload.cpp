@@ -66,8 +66,14 @@ int main(int argc, char *argv[])
 
     auto directoryDigest = nestedDirectory.to_digest(&blobs);
 
-    auto channel = grpc::CreateChannel(RECC_CAS_SERVER,
-                                       grpc::InsecureChannelCredentials());
+    std::shared_ptr<grpc::ChannelCredentials> creds;
+    if (RECC_SERVER_AUTH_GOOGLEAPI) {
+        creds = grpc::GoogleDefaultCredentials();
+    }
+    else {
+        creds = grpc::InsecureChannelCredentials();
+    }
+    auto channel = grpc::CreateChannel(RECC_CAS_SERVER, creds);
     CASClient(channel, RECC_INSTANCE).upload_resources(blobs, filenames);
 
     cout << directoryDigest.hash() << endl;

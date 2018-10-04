@@ -49,6 +49,10 @@ const string HELP(
     "RECC_CAS_SERVER - the URI of the CAS server to use (by default, we\n"
     "                  use RECC_SERVER)\n"
     "\n"
+    "RECC_SERVER_AUTH_GOOGLEAPI - use default google authentication when\n"
+    "                             communicating over gRPC, instead of\n"
+    "                             using an insecure connection\n"
+    "\n"
     "RECC_INSTANCE - the instance name to pass to the server\n"
     "\n"
     "RECC_VERBOSE - enable verbose output\n"
@@ -208,11 +212,15 @@ int main(int argc, char *argv[])
     RECC_LOG_VERBOSE("Action: " << action.ShortDebugString());
     auto actionDigest = make_digest(action);
     blobs[actionDigest] = action.SerializeAsString();
-
-    auto channel =
-        grpc::CreateChannel(RECC_SERVER, grpc::InsecureChannelCredentials());
-    auto casChannel = grpc::CreateChannel(RECC_CAS_SERVER,
-                                          grpc::InsecureChannelCredentials());
+    std::shared_ptr<grpc::ChannelCredentials> creds;
+    if (RECC_SERVER_AUTH_GOOGLEAPI) {
+        creds = grpc::GoogleDefaultCredentials();
+    }
+    else {
+        creds = grpc::InsecureChannelCredentials();
+    }
+    auto channel = grpc::CreateChannel(RECC_SERVER, creds);
+    auto casChannel = grpc::CreateChannel(RECC_CAS_SERVER, creds);
     RemoteExecutionClient client(channel, casChannel, RECC_INSTANCE);
     RECC_LOG_VERBOSE("Uploading resources...");
     client.upload_resources(blobs, filenames);
