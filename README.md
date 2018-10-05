@@ -1,7 +1,9 @@
 # recc
 Compiler wrapper client for the Remote Execution API.
 
-## Installing Dependencies
+# Installation
+
+## Dependencies
 Currently recc relies on: 
 
 * [gRPC][]
@@ -12,7 +14,7 @@ Currently recc relies on:
 
 Some package managers (apt) include all these dependencies while others (brew) require manual installation of some. Please follow the relevant guides for your OS.  
 
-# macOS
+### Installing on macOS
 
 Install [gRPC][], [Protobuf][], [OpenSSL][], [CMake][] through brew:
 
@@ -31,7 +33,6 @@ You can now compile `recc`.
 <!-- # Linux -->
 <!-- UPDATE ME -->
 
-
 <!-- Reference links -->
 [grpc]: https://grpc.io/
 [protobuf]: https://github.com/google/protobuf/
@@ -40,7 +41,7 @@ You can now compile `recc`.
 [googletest]: https://github.com/google/googletest
 
 ## Compiling
-Once you've [installed the dependencies](#Installing-Dependencies), you can compile `recc` using the following commands:
+Once you've [installed the dependencies](#Dependencies), you can compile `recc` using the following commands:
 
 ```sh
 $ mkdir build
@@ -53,20 +54,22 @@ $ cmake .. && make
 You can define `RECC_DEBUG` while running `cmake` to include additional debugging info in the final binaries.
 Just include `-DRECC_DEBUG` when invoking `cmake`.
 
-Compiling with this flag will include the function name and line number every time `RECC_LOG_VERBOSE` is called.
+Compiling with this flag will include the _function name_ and _line number_ every time `RECC_LOG_VERBOSE` is called.
 (Note that you still need to run in verbose mode to receive the output)
 
-## Running tests
+### Running tests
 
-To run tests, first compile the project (see above), then run
-`make test`.
+To run tests, first compile the project (see above), then run:
+```sh
+$ make test
+```
 
 ## Running `recc`
 
 `recc` is a command-line utility that runs compile commands on a Remote
-Execution server. To run it, you'll first need to set up a server for it to
-talk to. Then, set the appropriate environment variables and call `recc`
-with a compile command.
+Execution server. To run it, you'll first need to set up an execution server 
+for it to talk to. Then, set the appropriate configuration options
+and call `recc` with a compile command.
 
 ### Setting up a Remote Execution server
 
