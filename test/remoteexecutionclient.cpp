@@ -19,6 +19,7 @@
 #include <build/bazel/remote/execution/v2/remote_execution_mock.grpc.pb.h>
 #include <gmock/gmock.h>
 #include <google/bytestream/bytestream_mock.grpc.pb.h>
+#include <google/longrunning/operations_mock.grpc.pb.h>
 #include <google/protobuf/util/message_differencer.h>
 #include <grpcpp/test/mock_stream.h>
 #include <gtest/gtest.h>
@@ -35,9 +36,10 @@ const string emptyString;
 #define WITH_CLIENT()                                                         \
     auto executionStub = new proto::MockExecutionStub();                      \
     auto casStub = new proto::MockContentAddressableStorageStub();            \
+    auto operationsStub = new google::longrunning::MockOperationsStub();      \
     auto byteStreamStub = new google::bytestream::MockByteStreamStub;         \
-    RemoteExecutionClient client(executionStub, casStub, byteStreamStub,      \
-                                 string())
+    RemoteExecutionClient client(executionStub, casStub, operationsStub,      \
+                                 byteStreamStub, string())
 
 MATCHER_P(MessageEq, expected, "")
 {

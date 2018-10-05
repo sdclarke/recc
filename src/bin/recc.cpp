@@ -94,10 +94,6 @@ const string HELP(
     "                             which the build server uses to select\n"
     "                             the build worker\n");
 
-void sigintHandler(int signum) {
-    
-}
-
 int main(int argc, char *argv[])
 {
     if (argc <= 1) {

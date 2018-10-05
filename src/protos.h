@@ -25,11 +25,14 @@
 #include <google/devtools/remoteworkers/v1test2/worker.pb.h>
 #include <google/rpc/code.pb.h>
 #include <google/rpc/status.pb.h>
+#include <google/longrunning/operations.grpc.pb.h>
+#include <google/longrunning/operations.pb.h>
 
 namespace BloombergLP {
 namespace recc {
 namespace proto {
 using namespace build::bazel::remote::execution::v2;
+using namespace google::longrunning;
 using namespace google::devtools::remoteworkers::v1test2;
 } // namespace proto
 
