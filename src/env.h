@@ -79,6 +79,12 @@ extern bool RECC_SKIP_CACHE;
 extern bool RECC_DONT_SAVE_OUTPUT;
 
 /**
+ * Use Google's authentication to talk to the build server. Also applies to the
+ * CAS server. Not setting this implies insecure communication.
+ */
+extern bool RECC_SERVER_AUTH_GOOGLEAPI;
+
+/**
  * The maximum number of execution jobs to run concurrently. (Used only by the
  * worker.)
  */

@@ -55,6 +55,10 @@ const string HELP(
     "RECC_CAS_SERVER - the URI of the CAS server to use (by default, we\n"
     "                  use RECC_SERVER)\n"
     "\n"
+    "RECC_SERVER_AUTH_GOOGLEAPI - use default google authentication when\n"
+    "                             communicating over gRPC, instead of\n"
+    "                             using an insecure connection\n"
+    "\n"
     "RECC_MAX_CONCURRENT_JOBS - number of jobs to run simultaneously\n"
     "\n"
     "RECC_INSTANCE - the instance name to pass to the server\n"
@@ -271,10 +275,16 @@ int main(int argc, char *argv[])
 
     RECC_LOG_VERBOSE("Starting build worker with bot_id=[" + bot_id + "]");
 
-    auto channel =
-        grpc::CreateChannel(RECC_SERVER, grpc::InsecureChannelCredentials());
-    auto casChannel = grpc::CreateChannel(RECC_CAS_SERVER,
-                                          grpc::InsecureChannelCredentials());
+    std::shared_ptr<grpc::ChannelCredentials> creds;
+    if (RECC_SERVER_AUTH_GOOGLEAPI) {
+        creds = grpc::GoogleDefaultCredentials();
+    }
+    else {
+        creds = grpc::InsecureChannelCredentials();
+    }
+
+    auto channel = grpc::CreateChannel(RECC_SERVER, creds);
+    auto casChannel = grpc::CreateChannel(RECC_CAS_SERVER, creds);
     auto stub = proto::Bots::NewStub(channel);
 
     proto::BotSession session;
