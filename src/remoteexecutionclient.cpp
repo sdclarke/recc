@@ -92,7 +92,7 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
     struct sigaction sa;
     sa.sa_handler = RemoteExecutionClient::cancel_task;
     sigemptyset(&sa.sa_mask);
-    if(sigaction(SIGINT, &sa, NULL) == -1) {
+    if (sigaction(SIGINT, &sa, NULL) == -1) {
         cerr << "Unable to handle SIGINT" << endl;
         exit(1);
     }
@@ -143,7 +143,8 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
     return result;
 }
 
-void RemoteExecutionClient::cancel_operation(const std::string &operationName) {
+void RemoteExecutionClient::cancel_operation(const std::string &operationName)
+{
     proto::CancelOperationRequest cancelRequest;
     cancelRequest.set_name(operationName);
 
