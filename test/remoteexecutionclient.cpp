@@ -193,3 +193,33 @@ TEST(RemoteExecutionClientTest, WriteFilesToDisk)
     EXPECT_TRUE(is_executable(expectedPath.c_str()));
     EXPECT_EQ(get_file_contents(expectedPath.c_str()), "Test file content!");
 }
+
+TEST(RemoteExecutionClientTest, CancelOperation)
+{
+    WITH_CLIENT();
+
+    // Construct the Digest we're passing in, and the ExecuteRequest we expect
+    // the RemoteExecutionClient to send as a result.
+    proto::Digest actionDigest;
+    actionDigest.set_hash("Action digest hash here");
+    proto::ExecuteRequest expectedExecuteRequest;
+    *expectedExecuteRequest.mutable_action_digest() = actionDigest;
+
+    // Return a completed Operation when the client sends the Execute request.
+    google::longrunning::Operation operation;
+    operation.set_done(true);
+    auto operationReader =
+        new grpc::testing::MockClientReader<google::longrunning::Operation>();
+    EXPECT_CALL(*executionStub,
+                ExecuteRaw(_, MessageEq(expectedExecuteRequest)))
+        .WillOnce(Return(operationReader));
+    EXPECT_CALL(*operationReader, Read(_))
+        .WillOnce(DoAll(SetArgPointee<0>(operation), Return(true)));
+
+    // We will be cancelling the request, so expect a call to CancelOperation
+    EXPECT_CALL(*operationsStub, CancelOperation(_,_,_)).WillOnce(Return(grpc::Status::OK));
+
+    RemoteExecutionClient::set_cancelled_flag(SIGINT);
+
+    client.execute_action(actionDigest);
+}

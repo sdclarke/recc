@@ -88,9 +88,9 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
 
     grpc::ClientContext context;
 
-    // Set up signal handling for the Execute() request
+    /* Set up signal handling for the Execute() request */
     struct sigaction sa;
-    sa.sa_handler = RemoteExecutionClient::cancel_task;
+    sa.sa_handler = RemoteExecutionClient::set_cancelled_flag;
     sigemptyset(&sa.sa_mask);
     if (sigaction(SIGINT, &sa, NULL) == -1) {
         cerr << "Unable to handle SIGINT" << endl;
@@ -102,7 +102,11 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
     while (reader->Read(&operation)) {
         if (RemoteExecutionClient::cancelled) {
             cancel_operation(operation.name());
-            exit(130); // Ctrl-C exit code
+
+            /* Create and return a dummy ActionResult to denote cancellation */
+            ActionResult result;
+            result.exitCode = 130; //Ctrl+C exit code
+            return result;
         }
         if (operation.done()) {
             break;
@@ -148,13 +152,14 @@ void RemoteExecutionClient::cancel_operation(const std::string &operationName)
     proto::CancelOperationRequest cancelRequest;
     cancelRequest.set_name(operationName);
 
-    // Can't use the same context for simultaneous async RPCs
+    /* Can't use the same context for simultaneous async RPCs */
     grpc::ClientContext cancelContext;
 
-    // Just send the cancellation request. No need to check on the
-    // result since it's a best effort attempt and the API doesn't
-    // guarantee success.
-    operationsStub->CancelOperation(&cancelContext, cancelRequest, nullptr);
+    /* Send the execution request and report any errors */
+    grpc::Status s = operationsStub->CancelOperation(&cancelContext, cancelRequest, nullptr);
+    if(!s.ok()) {
+        cerr << s.error_message() << endl;
+    }
 }
 
 void RemoteExecutionClient::write_files_to_disk(ActionResult result,

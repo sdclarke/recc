@@ -20,6 +20,7 @@
 #include <protos.h>
 
 #include <map>
+#include <csignal>
 
 namespace BloombergLP {
 namespace recc {
@@ -59,14 +60,6 @@ class RemoteExecutionClient : public CASClient {
     std::unique_ptr<proto::Execution::StubInterface> stub;
     std::unique_ptr<proto::Operations::StubInterface> operationsStub;
     static volatile sig_atomic_t cancelled;
-
-    /**
-     * Signal handler to mark the remote execution task for cancellation
-     */
-    static inline void cancel_task(int signum)
-    {
-        RemoteExecutionClient::cancelled = 1;
-    }
 
     /**
      * Sends the CancelOperation RPC
@@ -129,6 +122,14 @@ class RemoteExecutionClient : public CASClient {
      * Write the given ActionResult's output files to disk.
      */
     void write_files_to_disk(ActionResult result, const char *root = ".");
+
+    /**
+     * Signal handler to mark the remote execution task for cancellation
+     */
+    static inline void set_cancelled_flag(int signum)
+    {
+        RemoteExecutionClient::cancelled = 1;
+    }
 
 };
 } // namespace recc
