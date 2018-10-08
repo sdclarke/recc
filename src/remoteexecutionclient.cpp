@@ -105,7 +105,7 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
 
             /* Create and return a dummy ActionResult to denote cancellation */
             ActionResult result;
-            result.exitCode = 130; //Ctrl+C exit code
+            result.exitCode = 130; // Ctrl+C exit code
             return result;
         }
         if (operation.done()) {
@@ -156,8 +156,9 @@ void RemoteExecutionClient::cancel_operation(const std::string &operationName)
     grpc::ClientContext cancelContext;
 
     /* Send the execution request and report any errors */
-    grpc::Status s = operationsStub->CancelOperation(&cancelContext, cancelRequest, nullptr);
-    if(!s.ok()) {
+    grpc::Status s = operationsStub->CancelOperation(&cancelContext,
+                                                     cancelRequest, nullptr);
+    if (!s.ok()) {
         cerr << s.error_message() << endl;
     }
 }

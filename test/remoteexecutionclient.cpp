@@ -217,7 +217,8 @@ TEST(RemoteExecutionClientTest, CancelOperation)
         .WillOnce(DoAll(SetArgPointee<0>(operation), Return(true)));
 
     // We will be cancelling the request, so expect a call to CancelOperation
-    EXPECT_CALL(*operationsStub, CancelOperation(_,_,_)).WillOnce(Return(grpc::Status::OK));
+    EXPECT_CALL(*operationsStub, CancelOperation(_, _, _))
+        .WillOnce(Return(grpc::Status::OK));
 
     RemoteExecutionClient::set_cancelled_flag(SIGINT);
 
