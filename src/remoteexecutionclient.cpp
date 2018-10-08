@@ -93,14 +93,14 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
     sa.sa_handler = RemoteExecutionClient::set_cancelled_flag;
     sigemptyset(&sa.sa_mask);
     if (sigaction(SIGINT, &sa, NULL) == -1) {
-        cerr << "Unable to handle SIGINT" << endl;
-        exit(1);
+        cerr << "Warning: unable to register cancellation handler" << endl;
     }
     auto reader = stub->Execute(&context, executeRequest);
 
     google::longrunning::Operation operation;
     while (reader->Read(&operation)) {
         if (RemoteExecutionClient::cancelled) {
+            RECC_LOG_VERBOSE("Cancelling job");
             cancel_operation(operation.name());
 
             /* Create and return a dummy ActionResult to denote cancellation */
@@ -159,7 +159,11 @@ void RemoteExecutionClient::cancel_operation(const std::string &operationName)
     grpc::Status s = operationsStub->CancelOperation(&cancelContext,
                                                      cancelRequest, nullptr);
     if (!s.ok()) {
-        cerr << s.error_message() << endl;
+        cerr << "Failed to cancel job " << operationName << ": "
+             << s.error_message() << endl;
+    }
+    else {
+        cout << "Cancelled job " << operationName << endl;
     }
 }
 
