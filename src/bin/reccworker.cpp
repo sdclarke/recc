@@ -332,16 +332,6 @@ int main(int argc, char *argv[])
             // Wait for a build job to finish or 250 ms (whichever comes first)
             sessionCondition.wait_for(lock, DEFAULT_RECC_WORKER_POLL_WAIT);
         }
-        {
-            // Update the bot session (send our state to the server, then
-            // replace our state with the server's response)
-            grpc::ClientContext context;
-            proto::UpdateBotSessionRequest updateRequest;
-            updateRequest.set_name(session.name());
-            *updateRequest.mutable_bot_session() = session;
-            ensure_ok(
-                stub->UpdateBotSession(&context, updateRequest, &session));
-        }
         for (auto &lease : *session.mutable_leases()) {
             if (lease.state() == proto::LeaseState::PENDING) {
                 RECC_LOG_VERBOSE("Got lease: " << lease.DebugString());
@@ -372,6 +362,16 @@ int main(int argc, char *argv[])
                     // it's done)
                 }
             }
+        }
+        {
+            // Update the bot session (send our state to the server, then
+            // replace our state with the server's response)
+            grpc::ClientContext context;
+            proto::UpdateBotSessionRequest updateRequest;
+            updateRequest.set_name(session.name());
+            *updateRequest.mutable_bot_session() = session;
+            ensure_ok(
+                stub->UpdateBotSession(&context, updateRequest, &session));
         }
     }
 }
