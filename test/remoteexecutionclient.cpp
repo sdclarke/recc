@@ -27,6 +27,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <unistd.h>
 using namespace BloombergLP::recc;
 using namespace std;
 using namespace testing;
@@ -211,17 +212,51 @@ TEST(RemoteExecutionClientTest, CancelOperation)
     operation.set_name("fake-operation");
     auto operationReader =
         new grpc::testing::MockClientReader<google::longrunning::Operation>();
+
+    int msgPipe[2];
+    pipe(msgPipe);
+
+    // This lambda replaces the behavior of Execute()
+    // It closes the pipe to indicate to the parent that it has called this RPC
+    // This means that the signal handler has already been set up in execute_action, so we can test it
     EXPECT_CALL(*executionStub,
                 ExecuteRaw(_, MessageEq(expectedExecuteRequest)))
-        .WillOnce(Return(operationReader));
+        .WillOnce(testing::InvokeWithoutArgs(
+                    [&msgPipe, &operationReader](){
+                        // sigset_t set;
+                        // sigemptyset(&set);
+                        // sigaddset(&set, SIGINT);
+                        // pthread_sigmask(SIG_BLOCK, &set, NULL);
+                        cerr << "Closing pipe" << endl;
+                        close(msgPipe[0]);
+                        sleep(2);
+                        return operationReader;
+                    }
+        ));
     EXPECT_CALL(*operationReader, Read(_))
         .WillOnce(DoAll(SetArgPointee<0>(operation), Return(true)));
-
     // We will be cancelling the request, so expect a call to CancelOperation
     EXPECT_CALL(*operationsStub, CancelOperation(_, _, _))
         .WillOnce(Return(grpc::Status::OK));
+    
+    pid_t pid = fork();
 
-    RemoteExecutionClient::set_cancelled_flag(SIGINT);
+    if(pid) {
+        close(msgPipe[0]);
 
-    client.execute_action(actionDigest);
+        // Wait for the child to close the pipe before sending the signal
+        FILE *stream = fdopen(msgPipe[1], "r");
+        cerr << "Reading from pipe" << endl;
+        while(fgetc(stream) != EOF) break;
+        cerr << "Pipe was closed" << endl;
+        fclose(stream);
+        kill(pid, SIGINT);
+        waitpid(pid, NULL, 0);
+    }
+
+    else {
+        close(msgPipe[1]);
+        client.execute_action(actionDigest);
+    }
+    
 }
