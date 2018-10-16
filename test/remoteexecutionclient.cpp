@@ -208,55 +208,73 @@ TEST(RemoteExecutionClientTest, CancelOperation)
 
     // Return a completed Operation when the client sends the Execute request.
     google::longrunning::Operation operation;
-    operation.set_done(true);
+    operation.set_done(false);
     operation.set_name("fake-operation");
     auto operationReader =
         new grpc::testing::MockClientReader<google::longrunning::Operation>();
 
-    int msgPipe[2];
-    pipe(msgPipe);
+    /**
+     * This test is a bit silly, so it warrants an explanation:
+     *
+     * We're testing signals here, so we need to use processes. Since GTest
+     * won't fail loudly in child processes, we have to perform all of the
+     * expectations in the parent, and we'll have the child send the signal.
+     * We also maintain a pipe to ensure we send the signal at the right time.
+     *
+     * execute_action() does, among other things, the following things in order
+     * --
+     *     1. Sets up a SIGINT signal handler
+     *     2. Calls Execute()
+     *     3. Calls Read() to get the result
+     *
+     * This test overrides Execute() (in the parent) to close the timing pipe.
+     * When this pipe is closed, the child knows that the signal handler has
+     * been set up in the parent, so it can safely send SIGINT. This SIGINT
+     * should get picked up by the parent's signal handler, and the busy
+     * wait should eventually pick up on the cancellation flag.
+     */
 
-    // This lambda replaces the behavior of Execute()
-    // It closes the pipe to indicate to the parent that it has called this RPC
-    // This means that the signal handler has already been set up in execute_action, so we can test it
-    EXPECT_CALL(*executionStub,
-                ExecuteRaw(_, MessageEq(expectedExecuteRequest)))
-        .WillOnce(testing::InvokeWithoutArgs(
-                    [&msgPipe, &operationReader](){
-                        // sigset_t set;
-                        // sigemptyset(&set);
-                        // sigaddset(&set, SIGINT);
-                        // pthread_sigmask(SIG_BLOCK, &set, NULL);
-                        cerr << "Closing pipe" << endl;
-                        close(msgPipe[0]);
-                        sleep(2);
-                        return operationReader;
-                    }
-        ));
-    EXPECT_CALL(*operationReader, Read(_))
-        .WillOnce(DoAll(SetArgPointee<0>(operation), Return(true)));
-    // We will be cancelling the request, so expect a call to CancelOperation
-    EXPECT_CALL(*operationsStub, CancelOperation(_, _, _))
-        .WillOnce(Return(grpc::Status::OK));
-    
+    pid_t parent_pid = getpid();
+
+    int timingPipe[2];
+    if (pipe(timingPipe)) {
+        cerr << "Failed to create pipe" << endl;
+    }
+
     pid_t pid = fork();
 
-    if(pid) {
-        close(msgPipe[0]);
+    if (pid == (pid_t)0) {
+        close(timingPipe[1]);
 
         // Wait for the child to close the pipe before sending the signal
-        FILE *stream = fdopen(msgPipe[1], "r");
-        cerr << "Reading from pipe" << endl;
-        while(fgetc(stream) != EOF) break;
-        cerr << "Pipe was closed" << endl;
-        fclose(stream);
-        kill(pid, SIGINT);
-        waitpid(pid, NULL, 0);
+        int c;
+        char readbuffer[80];
+        read(timingPipe[1], readbuffer, sizeof(readbuffer));
+        kill(parent_pid, SIGINT);
     }
 
     else {
-        close(msgPipe[1]);
+        close(timingPipe[0]);
+
+        // This lambda replaces the behavior of Execute()
+        // It closes the pipe to indicate to the child that it has called this
+        // RPC This means that the signal handler has already been set up in
+        // execute_action, so we can test it
+        EXPECT_CALL(*executionStub,
+                    ExecuteRaw(_, MessageEq(expectedExecuteRequest)))
+            .WillOnce(
+                testing::InvokeWithoutArgs([&timingPipe, &operationReader]() {
+                    close(timingPipe[0]);
+                    return operationReader;
+                }));
+        EXPECT_CALL(*operationReader, Read(_))
+            .WillRepeatedly(DoAll(SetArgPointee<0>(operation), Return(true)));
+        // We will be cancelling the request, so expect a call to
+        // CancelOperation
+        EXPECT_CALL(*operationsStub, CancelOperation(_, _, _))
+            .WillOnce(Return(grpc::Status::OK));
+
         client.execute_action(actionDigest);
+        waitpid(pid, NULL, 0);
     }
-    
 }
