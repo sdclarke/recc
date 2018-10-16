@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <remoteexecutionclient.h>
-
+#include <chrono>
 #include <fileutils.h>
+#include <future>
 #include <logging.h>
 #include <merklize.h>
+#include <remote_execution_signals.h>
+#include <remoteexecutionclient.h>
 #include <signal.h>
+#include <thread>
 #include <unistd.h>
 
 using namespace std;
@@ -78,6 +81,68 @@ void add_from_directory(
     }
 }
 
+typedef std::shared_ptr<
+    grpc::ClientReaderInterface<google::longrunning::Operation>>
+    reader_ptr;
+
+google::longrunning::Operation
+read_operation_for_name(reader_ptr reader,
+                        google::longrunning::Operation operation)
+{
+    while (reader->Read(&operation)) {
+        if (operation.name() != "" || operation.done()) {
+            return operation;
+        }
+    }
+    return operation;
+}
+
+google::longrunning::Operation
+read_operation_until_done(reader_ptr reader,
+                          google::longrunning::Operation operation)
+{
+    if (operation.done()) {
+        return operation;
+    }
+    while (reader->Read(&operation)) {
+        if (operation.done()) {
+            break;
+        }
+    }
+    return operation;
+}
+
+/* We need to read the operation in a separate thread */
+google::longrunning::Operation RemoteExecutionClient::read_from_server(
+    google::longrunning::Operation operation, reader_ptr reader,
+    google::longrunning::Operation (*read_function)(
+        reader_ptr reader, google::longrunning::Operation operation))
+{
+
+    /**
+     * Spin off a new thread to perform the requested read function.
+     *
+     * We need to block SIGINT so only this main thread catches it.
+     */
+    block_sigint();
+    auto future =
+        std::async(std::launch::async, read_function, reader, operation);
+    unblock_sigint();
+
+    std::future_status status;
+    do {
+        status = future.wait_for(std::chrono::seconds(1));
+        if (RemoteExecutionClient::cancelled) {
+            RECC_LOG_VERBOSE("Cancelling job");
+            if (operation.name() != "") {
+                cancel_operation(operation.name());
+            }
+            exit(130);
+        }
+    } while (status != std::future_status::ready);
+    return future.get();
+}
+
 ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
                                                    bool skipCache)
 {
@@ -88,30 +153,19 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
 
     grpc::ClientContext context;
 
-    /* Set up signal handling for the Execute() request */
-    struct sigaction sa;
-    sa.sa_handler = RemoteExecutionClient::set_cancelled_flag;
-    sigemptyset(&sa.sa_mask);
-    if (sigaction(SIGINT, &sa, NULL) == -1) {
-        cerr << "Warning: unable to register cancellation handler" << endl;
-    }
-    auto reader = stub->Execute(&context, executeRequest);
+    auto reader_unique = stub->Execute(&context, executeRequest);
+    reader_ptr reader = std::move(reader_unique);
 
+    setup_signal_handler(SIGINT, RemoteExecutionClient::set_cancelled_flag);
+
+    /**
+     * Wait on the operation until it is assigned a name.
+     * We need the operation name to submit a cancellation request.
+     */
     google::longrunning::Operation operation;
-    while (reader->Read(&operation)) {
-        if (RemoteExecutionClient::cancelled) {
-            RECC_LOG_VERBOSE("Cancelling job");
-            cancel_operation(operation.name());
+    operation = read_from_server(operation, reader, read_operation_for_name);
+    operation = read_from_server(operation, reader, read_operation_until_done);
 
-            /* Create and return a dummy ActionResult to denote cancellation */
-            ActionResult result;
-            result.exitCode = 130; // Ctrl+C exit code
-            return result;
-        }
-        if (operation.done()) {
-            break;
-        }
-    }
     ensure_ok(reader->Finish());
 
     if (!operation.done()) {

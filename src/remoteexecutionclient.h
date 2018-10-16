@@ -19,11 +19,15 @@
 #include <merklize.h>
 #include <protos.h>
 
-#include <map>
 #include <csignal>
+#include <map>
 
 namespace BloombergLP {
 namespace recc {
+
+typedef std::shared_ptr<
+    grpc::ClientReaderInterface<google::longrunning::Operation>>
+    reader_ptr;
 
 /**
  * Represents a blob returned by the Remote Execution service.
@@ -61,6 +65,12 @@ class RemoteExecutionClient : public CASClient {
     std::unique_ptr<proto::Operations::StubInterface> operationsStub;
     static volatile sig_atomic_t cancelled;
 
+    google::longrunning::Operation read_from_server(
+        google::longrunning::Operation operation, reader_ptr reader,
+        google::longrunning::Operation (*read_function)(
+            reader_ptr reader, google::longrunning::Operation operation));
+
+    google::longrunning::Operation submit_execute_request(reader_ptr reader);
     /**
      * Sends the CancelOperation RPC
      */
@@ -73,8 +83,7 @@ class RemoteExecutionClient : public CASClient {
         proto::Operations::StubInterface *operationsStub,
         google::bytestream::ByteStream::StubInterface *byteStreamStub,
         std::string instance)
-        : CASClient(casStub, byteStreamStub, instance),
-          stub(stub),
+        : CASClient(casStub, byteStreamStub, instance), stub(stub),
           operationsStub(operationsStub)
     {
     }
@@ -130,7 +139,6 @@ class RemoteExecutionClient : public CASClient {
     {
         RemoteExecutionClient::cancelled = 1;
     }
-
 };
 } // namespace recc
 } // namespace BloombergLP
