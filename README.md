@@ -122,6 +122,22 @@ $ export RECC_DEPS_ENV_LDR_PRELOAD64=/path/to/64bit/libreccdevshim.so
 
 [`libreccdevshim`]: src/lib/reccdevshim
 
+### Running `recc` against Google's RBE (Remote Build Execution) API
+
+*NOTE:* At time of writing, RBE is still in alpha and instructions are subject
+to change
+
+To run `recc` against Google's RBE instead of a self hosted Remote Execution
+Server, the following options need to be set:
+ * `RECC_SERVER_AUTH_GOOGLEAPI=1` to enable using Google's default authentication
+ * `RECC_INSTANCE=projects/<project_ID>/instances/default_instance` Where <project_ID> is the id of your Google Cloud Platform project
+ * `RECC_SERVER=remotebuildexecution.googleapis.com`
+ * `RECC_REMOTE_PLATFORM_CONTAINER_IMAGE=docker://gcr.io/cloud-marketplace/...` The Docker image from google's cloud registry for the worker to run in
+
+You will also need to be authenticated with GCP, which can happen several ways. See https://cloud.google.com/docs/authentication/
+for instructions on how to do that.
+
+
 ### Calling `recc` with a compile command
 
 Once you've started the server and set the environment variables, you're ready
