@@ -22,6 +22,15 @@ build:
       - build/bin/reccworker
       - test/data/hello.cpp
 
+tests_disabled_compile_check:
+  stage: build
+  before_script:
+    - apt-get update && apt-get install -y make cmake build-essential pkg-config libssl-dev
+  script:
+    - mkdir build
+    - cd build
+    - cmake -DBUILD_TESTING=OFF .. && make
+
 check_formatting:
     image: ubuntu:bionic
     stage: test
