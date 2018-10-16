@@ -27,7 +27,7 @@ namespace recc {
 
 typedef std::shared_ptr<
     grpc::ClientReaderInterface<google::longrunning::Operation>>
-    reader_ptr;
+    ReaderPointer;
 
 /**
  * Represents a blob returned by the Remote Execution service.
@@ -65,12 +65,8 @@ class RemoteExecutionClient : public CASClient {
     std::unique_ptr<proto::Operations::StubInterface> operationsStub;
     static volatile sig_atomic_t cancelled;
 
-    google::longrunning::Operation read_from_server(
-        google::longrunning::Operation operation, reader_ptr reader,
-        google::longrunning::Operation (*read_function)(
-            reader_ptr reader, google::longrunning::Operation operation));
+    google::longrunning::Operation read_operation(ReaderPointer reader);
 
-    google::longrunning::Operation submit_execute_request(reader_ptr reader);
     /**
      * Sends the CancelOperation RPC
      */

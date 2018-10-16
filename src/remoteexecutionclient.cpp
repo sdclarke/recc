@@ -24,6 +24,7 @@
 #include <unistd.h>
 
 using namespace std;
+using namespace google::longrunning;
 
 namespace BloombergLP {
 namespace recc {
@@ -35,7 +36,7 @@ volatile sig_atomic_t RemoteExecutionClient::cancelled = 0;
  * if the Operation finished with an error, or if the Operation hasn't
  * finished yet.
  */
-proto::ActionResult get_actionresult(google::longrunning::Operation operation)
+proto::ActionResult get_actionresult(Operation operation)
 {
     if (!operation.done()) {
         throw logic_error(
@@ -81,63 +82,50 @@ void add_from_directory(
     }
 }
 
-typedef std::shared_ptr<
-    grpc::ClientReaderInterface<google::longrunning::Operation>>
-    reader_ptr;
-
-google::longrunning::Operation
-read_operation_for_name(reader_ptr reader,
-                        google::longrunning::Operation operation)
+Operation read_operation_async(ReaderPointer reader,
+                               std::shared_ptr<Operation> operation)
 {
-    while (reader->Read(&operation)) {
-        if (operation.name() != "" || operation.done()) {
-            return operation;
-        }
-    }
-    return operation;
-}
-
-google::longrunning::Operation
-read_operation_until_done(reader_ptr reader,
-                          google::longrunning::Operation operation)
-{
-    if (operation.done()) {
-        return operation;
-    }
-    while (reader->Read(&operation)) {
-        if (operation.done()) {
+    while (reader->Read(operation.get())) {
+        if (operation->done()) {
             break;
         }
     }
-    return operation;
+    return *operation;
 }
 
-/* We need to read the operation in a separate thread */
-google::longrunning::Operation RemoteExecutionClient::read_from_server(
-    google::longrunning::Operation operation, reader_ptr reader,
-    google::longrunning::Operation (*read_function)(
-        reader_ptr reader, google::longrunning::Operation operation))
+/**
+ * Read the operation in a new thread so we can properly handle SIGINT.
+ *
+ * reader->Read(&operation) is a blocking call that isn't interruptible by a
+ * signal like the read() system call. It also doesn't feed its results into
+ * a file descriptor, so we can't use select() without some ugly hacks. Since
+ * signal handlers are very limited in power in C++, this means we need to use
+ * a new thread, busy wait, and check the signal flag on each iteration.
+ */
+Operation RemoteExecutionClient::read_operation(ReaderPointer reader)
 {
+    auto operation_ptr = std::make_shared<Operation>();
 
-    /**
-     * Spin off a new thread to perform the requested read function.
-     *
-     * We need to block SIGINT so only this main thread catches it.
-     */
+    /* We need to block SIGINT so only this main thread catches it. */
     block_sigint();
-    auto future =
-        std::async(std::launch::async, read_function, reader, operation);
+
+    auto future = std::async(std::launch::async, read_operation_async, reader,
+                             operation_ptr);
     unblock_sigint();
 
+    /**
+     * Wait for the operation to complete, handling the
+     * cancellation flag if it was set by SIGINT.
+     */
     std::future_status status;
     do {
         status = future.wait_for(std::chrono::seconds(1));
         if (RemoteExecutionClient::cancelled) {
             RECC_LOG_VERBOSE("Cancelling job");
-            if (operation.name() != "") {
-                cancel_operation(operation.name());
+            if (operation_ptr->name() != "") {
+                cancel_operation(operation_ptr->name());
             }
-            exit(130);
+            exit(130); // Ctrl+C exit code
         }
     } while (status != std::future_status::ready);
     return future.get();
@@ -154,17 +142,11 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
     grpc::ClientContext context;
 
     auto reader_unique = stub->Execute(&context, executeRequest);
-    reader_ptr reader = std::move(reader_unique);
+    ReaderPointer reader = std::move(reader_unique);
 
     setup_signal_handler(SIGINT, RemoteExecutionClient::set_cancelled_flag);
 
-    /**
-     * Wait on the operation until it is assigned a name.
-     * We need the operation name to submit a cancellation request.
-     */
-    google::longrunning::Operation operation;
-    operation = read_from_server(operation, reader, read_operation_for_name);
-    operation = read_from_server(operation, reader, read_operation_until_done);
+    auto operation = read_operation(reader);
 
     ensure_ok(reader->Finish());
 
