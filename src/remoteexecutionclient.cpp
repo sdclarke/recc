@@ -94,18 +94,19 @@ Operation read_operation_async(ReaderPointer reader,
 }
 
 /**
- * Read the operation in a new thread so we can properly handle SIGINT.
+ * Read the operation into the given pointer using a separate thread so we can
+ * properly handle SIGINT.
  *
  * reader->Read(&operation) is a blocking call that isn't interruptible by a
  * signal like the read() system call. It also doesn't feed its results into
  * a file descriptor, so we can't use select() without some ugly hacks. Since
  * signal handlers are very limited in power in C++, this means we need to use
  * a new thread, busy wait, and check the signal flag on each iteration.
+ *
+ * Returns true unless cancelled.
  */
-Operation RemoteExecutionClient::read_operation(ReaderPointer reader)
+bool RemoteExecutionClient::read_operation(ReaderPointer reader, std::shared_ptr<Operation> operation_ptr)
 {
-    auto operation_ptr = std::make_shared<Operation>();
-
     /* We need to block SIGINT so only this main thread catches it. */
     block_sigint();
 
@@ -125,10 +126,11 @@ Operation RemoteExecutionClient::read_operation(ReaderPointer reader)
             if (operation_ptr->name() != "") {
                 cancel_operation(operation_ptr->name());
             }
-            exit(130); // Ctrl+C exit code
+            return false;
         }
     } while (status != std::future_status::ready);
-    return future.get();
+    *operation_ptr = future.get();
+    return true;
 }
 
 ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
@@ -146,7 +148,14 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
 
     setup_signal_handler(SIGINT, RemoteExecutionClient::set_cancelled_flag);
 
-    auto operation = read_operation(reader);
+    auto operation_ptr = std::make_shared<Operation>();
+    bool finished = read_operation(reader, operation_ptr);
+    if(!finished) {
+        ActionResult result;
+        result.exitCode = 130;
+        return result;
+    }
+    auto operation = *operation_ptr;
 
     ensure_ok(reader->Finish());
 

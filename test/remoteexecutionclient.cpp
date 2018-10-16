@@ -208,6 +208,7 @@ TEST(RemoteExecutionClientTest, CancelOperation)
     // Return a completed Operation when the client sends the Execute request.
     google::longrunning::Operation operation;
     operation.set_done(true);
+    operation.set_name("fake-operation");
     auto operationReader =
         new grpc::testing::MockClientReader<google::longrunning::Operation>();
     EXPECT_CALL(*executionStub,
