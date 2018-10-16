@@ -24,11 +24,7 @@ Install [gRPC][], [Protobuf][], [OpenSSL][], [CMake][] through brew:
 $ brew install openssl cmake grpc pkg-config protobuf
 ```
 
-[GoogleTest][] is not available with brew. If you have write access to **/usr/local/** directory, then the easiest way is to use the install script located [here](https://gist.github.com/butuzov/e7df782c31171f9563057871d0ae444a).**
-
-**This script uses version Google Test 1.8.0, adapt it to your needs, use at your own risk! 
-
-Otherwise, you can follow the build instructions on the [Google Test](https://github.com/google/googletest/blob/master/googletest/README.md) site. Which will require you to build GoogleTest and GoogleMock. Then you can specify the include/lib directories for Google Test/Mock in your cmake build command using the -D flag.
+[GoogleTest][] is not available in Homebrew, so instead, you should download a copy of [its source code][googletest source], unzip it somewhere, and use `-DGTEST_SOURCE_ROOT` to tell CMake where to find it. (See below.)
 
 You can now compile `recc`.
 
@@ -41,6 +37,7 @@ You can now compile `recc`.
 [openssl]: https://www.openssl.org/
 [cmake]: https://cmake.org/
 [googletest]: https://github.com/google/googletest
+[googletest source]: https://github.com/google/googletest/archive/release-1.8.1.zip
 
 ## Compiling
 Once you've [installed the dependencies](#dependencies), you can compile `recc` using the following commands:
@@ -48,16 +45,13 @@ Once you've [installed the dependencies](#dependencies), you can compile `recc` 
 ```sh
 $ mkdir build
 $ cd build
+$ cmake .. && make
 ```
 
-#### On macOS, specify constants OPENSSL_ROOT_DIR and OPENSSL_LIBRARIES and run:
+Note that on macOS, you'll need to manually specify the locations of OpenSSL and GoogleTest when running CMake:
+
 ```sh
-$ cmake -DOPENSSL_ROOT_DIR=/usr/local/Cellar/openssl/1.0.2p -DOPENSSL_LIBRARIES=/usr/local/Cellar/openssl/1.0.2p/lib .. && make
-```
-**Note the version number might not be 1.0.2p, update it to the version installed on your device. 
-#### Otherwise run:
-```sh
-$ cmake .. && make
+$ cmake -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl -DGTEST_SOURCE_ROOT=/wherever/you/unzipped/googletest/to .. && make
 ```
 
 ### Debugging options
