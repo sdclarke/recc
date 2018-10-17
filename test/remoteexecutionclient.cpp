@@ -232,6 +232,12 @@ TEST(RemoteExecutionClientTest, CancelOperation)
      * been set up in the parent, so it can safely send SIGINT. This SIGINT
      * should get picked up by the parent's signal handler, and the busy
      * wait should eventually pick up on the cancellation flag.
+     *
+     * Note that since the client calls exit(130) on SIGINT, we need to wrap
+     * the EXPECT_CALLs and execute_action inside an ASSERT_EXIT block, which
+     * itself performs a fork() to check for the exit. If any of the
+     * EXPECT_CALLS inside this assert block fail, the assert block returns 1,
+     * which fails the outer test..
      */
 
     pid_t parent_pid = getpid();
@@ -256,25 +262,35 @@ TEST(RemoteExecutionClientTest, CancelOperation)
     else {
         close(timingPipe[0]);
 
-        // This lambda replaces the behavior of Execute()
-        // It closes the pipe to indicate to the child that it has called this
-        // RPC This means that the signal handler has already been set up in
-        // execute_action, so we can test it
-        EXPECT_CALL(*executionStub,
-                    ExecuteRaw(_, MessageEq(expectedExecuteRequest)))
-            .WillOnce(
-                testing::InvokeWithoutArgs([&timingPipe, &operationReader]() {
-                    close(timingPipe[0]);
-                    return operationReader;
-                }));
-        EXPECT_CALL(*operationReader, Read(_))
-            .WillRepeatedly(DoAll(SetArgPointee<0>(operation), Return(true)));
-        // We will be cancelling the request, so expect a call to
-        // CancelOperation
-        EXPECT_CALL(*operationsStub, CancelOperation(_, _, _))
-            .WillOnce(Return(grpc::Status::OK));
+        ASSERT_EXIT(
+            {
+                // This lambda replaces the behavior of Execute()
+                // It closes the pipe to indicate to the child that it has
+                // called this RPC This means that the signal handler has
+                // already been set up in execute_action, so we can test it
+                EXPECT_CALL(*executionStub,
+                            ExecuteRaw(_, MessageEq(expectedExecuteRequest)))
+                    .WillOnce(testing::InvokeWithoutArgs(
+                        [&timingPipe, &operationReader]() {
+                            close(timingPipe[0]);
+                            return operationReader;
+                        }));
+                EXPECT_CALL(*operationReader, Read(_))
+                    .WillRepeatedly(
+                        DoAll(SetArgPointee<0>(operation), Return(true)));
+                // We will be cancelling the request, so expect a call to
+                // CancelOperation
+                EXPECT_CALL(*operationsStub, CancelOperation(_, _, _))
+                    .WillOnce(Return(grpc::Status::OK));
 
-        client.execute_action(actionDigest);
+                Mock::AllowLeak(executionStub);
+                Mock::AllowLeak(operationReader);
+                Mock::AllowLeak(operationsStub);
+
+                client.execute_action(actionDigest);
+            },
+            ::testing::ExitedWithCode(130), ".*");
+        ;
         waitpid(pid, NULL, 0);
     }
 }

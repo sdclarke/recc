@@ -65,14 +65,10 @@ class RemoteExecutionClient : public CASClient {
     std::unique_ptr<proto::Execution::StubInterface> stub;
     std::unique_ptr<proto::Operations::StubInterface> operationsStub;
     static std::atomic_bool cancelled;
-    static std::atomic_bool cancel_completed;
 
-    bool read_operation(
+    void read_operation(
         ReaderPointer reader,
         std::shared_ptr<google::longrunning::Operation> operation_ptr);
-    static google::longrunning::Operation read_operation_async(
-        ReaderPointer reader,
-        std::shared_ptr<google::longrunning::Operation> operation);
 
     /**
      * Sends the CancelOperation RPC

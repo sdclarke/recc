@@ -30,7 +30,6 @@ namespace BloombergLP {
 namespace recc {
 
 std::atomic_bool RemoteExecutionClient::cancelled(false);
-std::atomic_bool RemoteExecutionClient::cancel_completed(false);
 
 /**
  * Return the ActionResult for the given Operation. Throws an exception
@@ -83,11 +82,10 @@ void add_from_directory(
     }
 }
 
-Operation RemoteExecutionClient::read_operation_async(
-    ReaderPointer reader, std::shared_ptr<Operation> operation)
+Operation read_operation_async(ReaderPointer reader,
+                               std::shared_ptr<Operation> operation)
 {
-    while (reader->Read(operation.get()) &&
-           !RemoteExecutionClient::cancel_completed) {
+    while (reader->Read(operation.get())) {
         if (operation->done()) {
             break;
         }
@@ -107,15 +105,14 @@ Operation RemoteExecutionClient::read_operation_async(
  *
  * Returns true unless cancelled.
  */
-bool RemoteExecutionClient::read_operation(
+void RemoteExecutionClient::read_operation(
     ReaderPointer reader, std::shared_ptr<Operation> operation_ptr)
 {
     /* We need to block SIGINT so only this main thread catches it. */
     block_sigint();
 
-    auto future = std::async(std::launch::async,
-                             RemoteExecutionClient::read_operation_async,
-                             reader, operation_ptr);
+    auto future = std::async(std::launch::async, read_operation_async, reader,
+                             operation_ptr);
     unblock_sigint();
 
     /**
@@ -130,12 +127,10 @@ bool RemoteExecutionClient::read_operation(
             if (operation_ptr->name() != "") {
                 cancel_operation(operation_ptr->name());
             }
-            RemoteExecutionClient::cancel_completed = true;
-            return false;
+            exit(130); // Ctrl+C exit code
         }
     } while (status != std::future_status::ready);
     *operation_ptr = future.get();
-    return true;
 }
 
 ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
@@ -154,12 +149,8 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
     ReaderPointer reader = std::move(reader_unique);
 
     auto operation_ptr = std::make_shared<Operation>();
-    bool finished = read_operation(reader, operation_ptr);
-    if (!finished) {
-        ActionResult result;
-        result.exitCode = 130;
-        return result;
-    }
+    read_operation(reader, operation_ptr);
+
     auto operation = *operation_ptr;
 
     ensure_ok(reader->Finish());
