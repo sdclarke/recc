@@ -12,13 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
+
 #include <env.h>
 
 #include <cstring>
 
+#include <ctype.h>
+
+#include <fstream>
+
 #include <iostream>
 
 #include <reccdefaults.h>
+
+#include <string>
+
+#include <unistd.h>
+
+#include <sstream>
+
+#include <vector>
+
+#include <logging.h>
 
 using namespace std;
 
@@ -54,6 +70,8 @@ map<string, string> RECC_DEPS_ENV = DEFAULT_RECC_DEPS_ENV;
 map<string, string> RECC_REMOTE_ENV = DEFAULT_RECC_REMOTE_ENV;
 map<string, string> RECC_REMOTE_PLATFORM = DEFAULT_RECC_REMOTE_PLATFORM;
 
+vector<string> RECC_CONFIG_LOCATIONS = DEFAULT_RECC_CONFIG_LOCATIONS;
+
 /**
  * Parse a comma-separated list, storing its items in the given set.
  */
@@ -69,6 +87,43 @@ void parse_set(const char *str, set<string> *result)
             result->insert(string(str, comma - str));
             str = comma + 1;
         }
+    }
+}
+
+/**
+ * Check all default recc locations, if found return filename, else return
+ * empty.
+ */
+string get_recc_config_file()
+{
+    for (auto file_location : RECC_CONFIG_LOCATIONS) {
+        ifstream config(file_location);
+        if (config.good()) {
+            RECC_LOG_VERBOSE("Found recc config at: " << file_location);
+            return file_location;
+        }
+    }
+
+    cerr << "Recc config not found; will only use envvars for config" << endl;
+    return "";
+}
+
+/**
+ * Formats line to be used in parse_environment.
+ * Modifies parameter passed to it by reference
+ */
+void format_string(string &line)
+{
+    // remove whitespace
+    line.erase(remove(line.begin(), line.end(), ' '), line.end());
+
+    // converts only the KEY to uppercase
+    transform(line.begin(), line.begin() + line.find('='), line.begin(),
+              [](unsigned char c) -> unsigned char { return toupper(c); });
+
+    // prefix "RECC_" to name, unless name is TMPDIR
+    if (line.substr(0, 6) != "TMPDIR") {
+        line = "RECC_" + line;
     }
 }
 
@@ -134,9 +189,39 @@ void parse_environment(const char *const *environ)
         MAPVAR(RECC_REMOTE_ENV)
         MAPVAR(RECC_REMOTE_PLATFORM)
     }
+}
 
-    // Handle special default cases
+void parse_config_file()
+{
+    string config_file_name = get_recc_config_file();
 
+    if (config_file_name.empty()) {
+        return;
+    }
+
+    ifstream config(config_file_name);
+    string line;
+    vector<string> env_array;
+    vector<char *> env_cstrings;
+
+    while (getline(config, line)) {
+        if (line[0] == '#' || line[0] == ' ' || line.empty()) {
+            continue;
+        }
+        format_string(line);
+        env_array.push_back(line);
+    }
+    // first push strings into vector, then push_back char *
+    // done for easy const char** conversion
+    for (string &i : env_array) {
+        env_cstrings.push_back(const_cast<char *>(i.c_str()));
+    }
+    env_cstrings.push_back(nullptr);
+    parse_environment(env_cstrings.data());
+}
+
+void handle_special_defaults()
+{
     if (RECC_SERVER.empty()) {
         RECC_SERVER = DEFAULT_RECC_SERVER;
         cerr << "Warning: no RECC_SERVER environment variable specified."
@@ -150,5 +235,6 @@ void parse_environment(const char *const *environ)
              << endl;
     }
 }
+
 } // namespace recc
 } // namespace BloombergLP

@@ -38,6 +38,18 @@ add_executable(env_different_cas_test env/env_different_cas.cpp main.cpp)
 target_link_libraries(env_different_cas_test GTest::GTest remoteexecution)
 add_test(NAME env_different_cas_test COMMAND env_different_cas_test)
 
+add_executable(env_from_file_override_test env/env_from_file_override.cpp main.cpp)
+target_link_libraries(env_from_file_override_test GTest::GTest remoteexecution)
+add_test(NAME env_from_file_override_test 
+         COMMAND env_from_file_override_test
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/)
+
+add_executable(env_from_file_test env/env_from_file.cpp main.cpp)
+target_link_libraries(env_from_file_test GTest::GTest remoteexecution)
+add_test(NAME env_from_file_test 
+         COMMAND env_from_file_test
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/)
+
 add_executable(remoteexecutionclient_tests remoteexecutionclient.cpp main.cpp)
 target_link_libraries(remoteexecutionclient_tests GMock::GMock remoteexecution)
 add_test(NAME remoteexecutionclient_tests COMMAND remoteexecutionclient_tests)
