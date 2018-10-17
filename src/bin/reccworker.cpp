@@ -44,8 +44,9 @@ using namespace std;
 const string HELP(
     "USAGE: reccworker [id]\n"
     "\n"
-    "Start a remote worker with the given id. If the id is unspecified,\n"
-    "the computer's hostname is used.\n"
+    "Start a remote worker with the given ID. If the ID is unspecified,\n"
+    "the computer's hostname and reccworker's process ID will be combined\n"
+    "to make the worker's ID.\n"
     "\n"
     "The following environment variables can be used to change reccworker's\n"
     "behavior:\n"
@@ -232,7 +233,7 @@ void worker_thread(proto::BotSession *session, set<string> *activeJobs,
     sessionCondition->notify_all();
 }
 
-string get_hostname()
+string generate_default_bot_id()
 {
     char hostname[256] = {0};
     gethostname(hostname, sizeof(hostname));
@@ -241,7 +242,7 @@ string get_hostname()
 
 int main(int argc, char *argv[])
 {
-    string bot_id = get_hostname();
+    string bot_id = generate_default_bot_id();
 
     // Parse command-line arguments.
     if (argc > 2) {

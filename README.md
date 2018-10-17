@@ -180,7 +180,7 @@ one at a time.) Run `reccworker --help` for the full list of environment
 variables `reccworker` accepts.
 
 Once you've set up the servers and environment, start the worker by
-running `reccworker`. You can optionally specify a bot name (the default is the
+running `reccworker`. You can optionally specify a bot ID (the default is the
 computer's hostname and the pid of the process separated by a '-') by passing
 it as an argument.
 
