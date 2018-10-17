@@ -91,6 +91,12 @@ extern bool RECC_SERVER_AUTH_GOOGLEAPI;
  */
 extern int RECC_MAX_CONCURRENT_JOBS;
 
+/*
+ * The maximum number of jobs to run before terminating the worker. (Used only
+ * by the worker.)
+ */
+extern int RECC_JOBS_COUNT;
+
 /**
  * Defined by cmake when building.
  * On linux defaults to: /usr/local
