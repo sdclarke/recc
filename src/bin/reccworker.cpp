@@ -42,10 +42,10 @@ using namespace BloombergLP::recc;
 using namespace std;
 
 const string HELP(
-    "USAGE: reccworker [parent] [id]\n"
+    "USAGE: reccworker [id]\n"
     "\n"
-    "Start a remote worker with the given parent and id. If the id is\n"
-    "unspecified, the computer's hostname is used.\n"
+    "Start a remote worker with the given id. If the id is unspecified,\n"
+    "the computer's hostname is used.\n"
     "\n"
     "The following environment variables can be used to change reccworker's\n"
     "behavior:\n"
@@ -241,26 +241,20 @@ string get_hostname()
 
 int main(int argc, char *argv[])
 {
-    string bot_parent(DEFAULT_RECC_INSTANCE);
     string bot_id = get_hostname();
 
     // Parse command-line arguments.
-    if (argc > 3) {
-        cerr << "USAGE: " << argv[0] << " [parent] [id]" << endl << endl;
+    if (argc > 2) {
+        cerr << "USAGE: " << argv[0] << " [id]" << endl << endl;
         cerr << "(run \"" << argv[0] << " --help\" for details)" << endl;
         return 1;
     }
-    for (int i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+    else if (argc == 2) {
+        if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
             cerr << HELP;
             return 0;
         }
-        else if (i == 1) {
-            bot_parent = string(argv[i]);
-        }
-        else if (i == 2) {
-            bot_id = string(argv[i]);
-        }
+        bot_id = string(argv[1]);
     }
 
     // Parse configuration from environment variables and defaults
@@ -311,7 +305,7 @@ int main(int argc, char *argv[])
         grpc::ClientContext context;
         proto::CreateBotSessionRequest createRequest;
         RECC_LOG_VERBOSE("Setting parent");
-        createRequest.set_parent(bot_parent);
+        createRequest.set_parent(RECC_INSTANCE);
         *createRequest.mutable_bot_session() = session;
         RECC_LOG_VERBOSE("Setting session");
         ensure_ok(stub->CreateBotSession(&context, createRequest, &session));
