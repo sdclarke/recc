@@ -214,37 +214,42 @@ TEST(RemoteExecutionClientTest, CancelOperation)
         new grpc::testing::MockClientReader<google::longrunning::Operation>();
 
     /**
-     * This test is a bit silly, so it warrants an explanation:
+     * This test is a bit gross, so it warrants an explanation.
      *
-     * We're testing signals here, so we need to use processes. Since GTest
-     * won't fail loudly in child processes, we have to perform all of the
-     * expectations in the parent, and we'll have the child send the signal.
-     * We also maintain a pipe to ensure we send the signal at the right time.
+     * We're testing the SIGINT handler here, and the cleanest way to do that
+     * is to send the signal from another process. Since GTest won't fail
+     * loudly in child processes, we'll have the child send the signal to the
+     * parent rather than the other way around. Moreover, since sending SIGINT
+     * results in a call to exit(), we need to do all of the work inside an
+     * ASSERT_EXIT block, which itself forks.
      *
-     * execute_action() does, among other things, the following things in order
-     * --
+     * execute_action() does, among other things, the following things in
+     * order:
+     *
      *     1. Sets up a SIGINT signal handler
      *     2. Calls Execute()
      *     3. Calls Read() to get the result
      *
-     * This test overrides Execute() (in the parent) to close the timing pipe.
-     * When this pipe is closed, the child knows that the signal handler has
-     * been set up in the parent, so it can safely send SIGINT. This SIGINT
-     * should get picked up by the parent's signal handler, and the busy
-     * wait should eventually pick up on the cancellation flag.
+     * This test takes advantage of this order to override the mock Execute()
+     * (in the parent) to write its PID to the timing pipe. When this happens,
+     * the child knows that the signal handler has been set up in the parent,
+     * so it can safely send SIGINT to the assert block. This SIGINT should get
+     * picked up by the parent's signal handler, and the busy wait should
+     * eventually pick up on the cancellation flag to send the
+     * CancelOperation() RPC.
      *
-     * Note that since the client calls exit(130) on SIGINT, we need to wrap
-     * the EXPECT_CALLs and execute_action inside an ASSERT_EXIT block, which
-     * itself performs a fork() to check for the exit. If any of the
-     * EXPECT_CALLS inside this assert block fail, the assert block returns 1,
-     * which fails the outer test..
+     * If any of the EXPECT_CALLS inside ASSERT_EXIT fail, the process running
+     * ASSERT_EXIT returns 1, which fails the assert block.
+     *
+     * It's unfortunate that this test relies on the implementation detail of
+     * the signal handler being set up before Execute is called, but testing
+     * signal handlers gets rather messy this way.
      */
-
-    pid_t parent_pid = getpid();
 
     int timingPipe[2];
     if (pipe(timingPipe)) {
         cerr << "Failed to create pipe" << endl;
+        FAIL();
     }
 
     pid_t pid = fork();
@@ -253,10 +258,10 @@ TEST(RemoteExecutionClientTest, CancelOperation)
         close(timingPipe[1]);
 
         // Wait for the child to close the pipe before sending the signal
-        int c;
-        char readbuffer[80];
-        read(timingPipe[1], readbuffer, sizeof(readbuffer));
-        kill(parent_pid, SIGINT);
+        pid_t assert_pid = getpid();
+        read(timingPipe[0], &assert_pid, sizeof(assert_pid));
+        close(timingPipe[0]);
+        kill(assert_pid, SIGINT);
     }
 
     else {
@@ -264,25 +269,32 @@ TEST(RemoteExecutionClientTest, CancelOperation)
 
         ASSERT_EXIT(
             {
-                // This lambda replaces the behavior of Execute()
-                // It closes the pipe to indicate to the child that it has
-                // called this RPC This means that the signal handler has
-                // already been set up in execute_action, so we can test it
+                /**
+                 * This lambda replaces the behavior of Execute()
+                 * It closes the pipe to indicate to the child that it has
+                 * called this RPC. This means that the signal handler has
+                 * already been set up in execute_action.
+                 */
+
                 EXPECT_CALL(*executionStub,
                             ExecuteRaw(_, MessageEq(expectedExecuteRequest)))
-                    .WillOnce(testing::InvokeWithoutArgs(
-                        [&timingPipe, &operationReader]() {
-                            close(timingPipe[0]);
-                            return operationReader;
-                        }));
+                    .WillOnce(testing::InvokeWithoutArgs([&timingPipe,
+                                                          &operationReader]() {
+                        pid_t assert_pid = getpid();
+                        write(timingPipe[1], &assert_pid, sizeof(assert_pid));
+                        close(timingPipe[1]);
+                        return operationReader;
+                    }));
+
                 EXPECT_CALL(*operationReader, Read(_))
                     .WillRepeatedly(
                         DoAll(SetArgPointee<0>(operation), Return(true)));
-                // We will be cancelling the request, so expect a call to
-                // CancelOperation
                 EXPECT_CALL(*operationsStub, CancelOperation(_, _, _))
                     .WillOnce(Return(grpc::Status::OK));
 
+                /* Since we call exit(), we leak several mocks and make GTest
+                 * unhappy. We need to tell GTest to ignore these leaks during
+                 * the memory check. */
                 Mock::AllowLeak(executionStub);
                 Mock::AllowLeak(operationReader);
                 Mock::AllowLeak(operationsStub);
@@ -290,7 +302,6 @@ TEST(RemoteExecutionClientTest, CancelOperation)
                 client.execute_action(actionDigest);
             },
             ::testing::ExitedWithCode(130), ".*");
-        ;
-        waitpid(pid, NULL, 0);
     }
+    waitpid(pid, NULL, 0);
 }
