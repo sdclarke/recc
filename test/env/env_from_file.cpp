@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <env.h>
+#include <stdlib.h>
 
 #include <gtest/gtest.h>
 
@@ -21,6 +22,9 @@ using namespace std;
 
 TEST(EnvTest, ENVFROMFILE)
 {
+    unsetenv("RECC_SERVER");
+    unsetenv("RECC_CAS_SERVER");
+
     // should be set from file
     string expectedReccServer = "localhost:99999";
     string expectedRecCasServer = "localhost:66666";
