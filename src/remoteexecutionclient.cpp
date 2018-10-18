@@ -17,7 +17,7 @@
 #include <future>
 #include <logging.h>
 #include <merklize.h>
-#include <remote_execution_signals.h>
+#include <remoteexecutionsignals.h>
 #include <remoteexecutionclient.h>
 #include <signal.h>
 #include <thread>

@@ -14,7 +14,7 @@
 
 #include <iostream>
 #include <pthread.h>
-#include <remote_execution_signals.h>
+#include <remoteexecutionsignals.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -29,8 +29,9 @@ void setup_signal_handler(int signal, void (*handler)(int))
     /* Set up signal handling for the Execute() request */
     struct sigaction sa;
     sa.sa_handler = handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
+    if(sigemptyset(&sa.sa_mask) == -1) {
+        cerr << "Warning: unable to clear signal set" << endl;
+    }
     if (sigaction(signal, &sa, NULL) == -1) {
         cerr << "Warning: unable to register cancellation handler" << endl;
     }

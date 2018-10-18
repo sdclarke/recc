@@ -134,7 +134,7 @@ class RemoteExecutionClient : public CASClient {
     /**
      * Signal handler to mark the remote execution task for cancellation
      */
-    static inline void set_cancelled_flag(int signum)
+    static inline void set_cancelled_flag(int)
     {
         RemoteExecutionClient::cancelled = true;
     }
