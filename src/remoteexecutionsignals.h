@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef INCLUDED_REMOTE_EXECUTION_SIGNALS
-#define INCLUDED_REMOTE_EXECUTION_SIGNALS
+#ifndef INCLUDED_REMOTEEXECUTIONSIGNALS
+#define INCLUDED_REMOTEEXECUTIONSIGNALS
 
 namespace BloombergLP {
 namespace recc {

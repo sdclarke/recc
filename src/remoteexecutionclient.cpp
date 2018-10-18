@@ -22,6 +22,7 @@
 #include <signal.h>
 #include <thread>
 #include <unistd.h>
+#include <reccdefaults.h>
 
 using namespace std;
 using namespace google::longrunning;
@@ -121,7 +122,7 @@ void RemoteExecutionClient::read_operation(
      */
     std::future_status status;
     do {
-        status = future.wait_for(std::chrono::seconds(1));
+        status = future.wait_for(DEFAULT_RECC_POLL_WAIT);
         if (RemoteExecutionClient::cancelled) {
             RECC_LOG_VERBOSE("Cancelling job");
             if (operation_ptr->name() != "") {
