@@ -12,17 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <chrono>
 #include <fileutils.h>
-#include <future>
 #include <logging.h>
 #include <merklize.h>
 #include <remoteexecutionsignals.h>
 #include <remoteexecutionclient.h>
-#include <signal.h>
-#include <thread>
-#include <unistd.h>
 #include <reccdefaults.h>
+
+#include <future>
 
 using namespace std;
 using namespace google::longrunning;

@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <remoteexecutionsignals.h>
+
 #include <iostream>
 #include <pthread.h>
-#include <remoteexecutionsignals.h>
 #include <signal.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 using namespace std;
 

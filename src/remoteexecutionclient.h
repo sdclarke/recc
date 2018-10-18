@@ -20,7 +20,6 @@
 #include <protos.h>
 
 #include <atomic>
-#include <csignal>
 #include <map>
 
 namespace BloombergLP {
