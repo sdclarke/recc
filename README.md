@@ -13,15 +13,16 @@ Currently recc relies on:
 * [OpenSSL][]
 * [CMake][]
 * [GoogleTest][]
+* [pkg-config][]
 
 Some package managers (apt) include all these dependencies while others (brew) require manual installation of some. Please follow the relevant guides for your OS.  
 
 ### Installing on macOS
 
-Install [gRPC][], [Protobuf][], [OpenSSL][], [CMake][] through brew:
+Install [gRPC][], [Protobuf][], [OpenSSL][], [CMake][], [pkg-config][] through brew:
 
 ```sh
-$ brew install openssl cmake grpc pkg-config protobuf
+$ brew install grpc protobuf openssl cmake pkg-config
 ```
 
 [GoogleTest][] is not available in Homebrew, so instead, you should download a copy of [its source code][googletest source], unzip it somewhere, and use `-DGTEST_SOURCE_ROOT` to tell CMake where to find it. (See below.)
