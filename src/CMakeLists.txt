@@ -1,6 +1,6 @@
 include_directories(.)
 
-set(SRCS merklize.cpp casclient.cpp subprocess.cpp remoteexecutionclient.cpp deps.cpp env.cpp parsedcommand.cpp fileutils.cpp remote_execution_signals.cpp)
+set(SRCS merklize.cpp casclient.cpp subprocess.cpp remoteexecutionclient.cpp deps.cpp env.cpp parsedcommand.cpp fileutils.cpp remoteexecutionsignals.cpp)
 
 add_library(remoteexecution ${SRCS})
 target_link_libraries(remoteexecution reccproto ${Protobuf_LIBRARIES} ${GRPC_TARGET} OpenSSL::Crypto ${CMAKE_DL_LIBS})
