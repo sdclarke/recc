@@ -38,7 +38,8 @@ int main(int argc, char *argv[])
         return 0;
     }
     try {
-        auto deps = get_file_info(ParsedCommand(&argv[1])).dependencies;
+        auto deps =
+            get_file_info(ParsedCommand(&argv[1], nullptr)).dependencies;
         for (const auto &dep : deps) {
             cout << dep << endl;
         }

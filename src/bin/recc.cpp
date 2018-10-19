@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 
     parse_config_variables();
 
-    ParsedCommand command(&argv[1]);
+    ParsedCommand command(&argv[1], nullptr);
 
     if (!command.is_compiler_command() && !RECC_FORCE_REMOTE) {
         RECC_LOG_VERBOSE("Not a compiler command, so running locally.");

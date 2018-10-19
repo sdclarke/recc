@@ -50,10 +50,18 @@ static std::vector<std::string> vector_from_argv(const char *const *argv)
  */
 class ParsedCommand {
   public:
-    ParsedCommand(std::vector<std::string> command);
-    ParsedCommand(char **argv) : ParsedCommand(vector_from_argv(argv)) {}
+    /**
+     * Parses the given command. If workingDirectory is non-null, replace
+     * absolute paths with paths relative to the given working directory.
+     */
+    ParsedCommand(std::vector<std::string> command,
+                  const char *workingDirectory);
+    ParsedCommand(char **argv, const char *workingDirectory)
+        : ParsedCommand(vector_from_argv(argv), workingDirectory)
+    {
+    }
     ParsedCommand(std::initializer_list<std::string> command)
-        : ParsedCommand(std::vector<std::string>(command))
+        : ParsedCommand(std::vector<std::string>(command), nullptr)
     {
     }
 
@@ -63,7 +71,8 @@ class ParsedCommand {
     bool is_compiler_command() const { return compilerCommand; }
 
     /**
-     * Returns the original command that was passed to the constructor.
+     * Returns the original command that was passed to the constructor, with
+     * absolute paths replaced with equivalent relative paths.
      */
     std::vector<std::string> get_command() const { return command; }
 

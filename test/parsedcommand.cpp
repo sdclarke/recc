@@ -203,3 +203,75 @@ TEST(XlcTest, OutputArguments)
     EXPECT_EQ(command.get_products(), expectedProducts);
     EXPECT_TRUE(command.produces_sun_make_rules());
 }
+
+TEST(RewriteAbsolutePathsTest, SimpleCompileCommand)
+{
+    vector<string> command = {"gcc", "-c", "/home/nobody/test/hello.c", "-o",
+                              "/home/nobody/test/hello.o"};
+    ParsedCommand parsedCommand(command, "/home/nobody/test");
+
+    vector<string> expectedCommand = {"gcc", "-c", "hello.c", "-o", "hello.o"};
+    vector<string> expectedDepsCommand = {"gcc", "-c", "hello.c", "-MM"};
+    set<string> expectedProducts = {"hello.o"};
+
+    ASSERT_TRUE(parsedCommand.is_compiler_command());
+    EXPECT_EQ(parsedCommand.get_command(), expectedCommand);
+    EXPECT_EQ(parsedCommand.get_dependencies_command(), expectedDepsCommand);
+    EXPECT_EQ(parsedCommand.get_products(), expectedProducts);
+}
+
+TEST(RewriteAbsolutePathsTest, ComplexOptions)
+{
+    vector<string> command = {"gcc",
+                              "-c",
+                              "/home/nobody/test/hello.c",
+                              "-o",
+                              "/home/nobody/test/hello.o",
+                              "-I/home/nobody/headers",
+                              "-I",
+                              "/home/nobody/test/moreheaders/",
+                              "-Wp,-I,/home/nobody/evenmoreheaders",
+                              "-Xpreprocessor",
+                              "-I",
+                              "-Xpreprocessor",
+                              "/usr/include/something"};
+    ParsedCommand parsedCommand(command, "/home/nobody/test");
+
+    vector<string> expectedCommand = {"gcc",
+                                      "-c",
+                                      "hello.c",
+                                      "-o",
+                                      "hello.o",
+                                      "-I../headers",
+                                      "-I",
+                                      "moreheaders/",
+                                      "-Xpreprocessor",
+                                      "-I",
+                                      "-Xpreprocessor",
+                                      "../evenmoreheaders",
+                                      "-Xpreprocessor",
+                                      "-I",
+                                      "-Xpreprocessor",
+                                      "/usr/include/something"};
+    vector<string> expectedDepsCommand = {"gcc",
+                                          "-c",
+                                          "hello.c",
+                                          "-I../headers",
+                                          "-I",
+                                          "moreheaders/",
+                                          "-Xpreprocessor",
+                                          "-I",
+                                          "-Xpreprocessor",
+                                          "../evenmoreheaders",
+                                          "-Xpreprocessor",
+                                          "-I",
+                                          "-Xpreprocessor",
+                                          "/usr/include/something",
+                                          "-MM"};
+    set<string> expectedProducts = {"hello.o"};
+
+    ASSERT_TRUE(parsedCommand.is_compiler_command());
+    EXPECT_EQ(parsedCommand.get_command(), expectedCommand);
+    EXPECT_EQ(parsedCommand.get_dependencies_command(), expectedDepsCommand);
+    EXPECT_EQ(parsedCommand.get_products(), expectedProducts);
+}
