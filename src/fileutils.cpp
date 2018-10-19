@@ -20,6 +20,7 @@
 #include <cerrno>
 #include <cstring>
 #include <fstream>
+#include <stdexcept>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <system_error>
@@ -158,6 +159,75 @@ string normalize_path(const char *path)
             result += segment + "/";
         }
         result.pop_back();
+    }
+    return result;
+}
+
+string make_path_relative(string path, const char *workingDirectory)
+{
+    if (workingDirectory == nullptr || workingDirectory[0] == 0 ||
+        path.length() == 0 || path[0] != '/') {
+        return path;
+    }
+    if (workingDirectory[0] != '/') {
+        throw logic_error(
+            "Working directory must be null or an absolute path");
+    }
+
+    int i = 0;
+    int lastMatchingSegmentEnd = 0;
+    while (i < path.length() && path[i] == workingDirectory[i]) {
+        if (workingDirectory[i + 1] == 0) {
+            // Working directory is prefix of path, so if the last
+            // segment matches, we're done.
+            if (path.length() == i + 1) {
+                return string(path[i] == '/' ? "./" : ".");
+            }
+            else if (path.length() == i + 2 && path[i + 1] == '/') {
+                return string("./");
+            }
+            else if (path[i] == '/') {
+                return path.substr(i + 1);
+            }
+            else if (path[i + 1] == '/') {
+                return path.substr(i + 2);
+            }
+        }
+        else if (path[i] == '/') {
+            lastMatchingSegmentEnd = i;
+        }
+        ++i;
+    }
+
+    if (i == path.length() && workingDirectory[i] == '/') {
+        // Path is prefix of working directory.
+        if (workingDirectory[i + 1] == 0) {
+            return string(".");
+        }
+        else {
+            lastMatchingSegmentEnd = i;
+            ++i;
+        }
+    }
+
+    if (lastMatchingSegmentEnd == 0) {
+        // The path and the working directory have nothing in common,
+        // so we assume the path is a system folder like /usr/include
+        // and not a build input.
+        return path;
+    }
+
+    int dotdotsNeeded = 1;
+    while (workingDirectory[i] != 0) {
+        if (workingDirectory[i] == '/' && workingDirectory[i + 1] != 0) {
+            ++dotdotsNeeded;
+        }
+        ++i;
+    }
+    auto result =
+        path.replace(0, lastMatchingSegmentEnd, dotdotsNeeded * 3 - 1, '.');
+    for (int j = 0; j < dotdotsNeeded - 1; ++j) {
+        result[j * 3 + 2] = '/';
     }
     return result;
 }

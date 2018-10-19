@@ -76,6 +76,14 @@ void write_file(const char *path, std::string contents);
  * segments will occur at the start of the path.
  */
 std::string normalize_path(const char *path);
+
+/**
+ * Make the given path relative to the given working directory.
+ *
+ * If the given working directory is null, or if the given path has nothing to
+ * do with the working directory, the path will be returned unmodified.
+ */
+std::string make_path_relative(std::string path, const char *workingDirectory);
 } // namespace recc
 } // namespace BloombergLP
 #endif
