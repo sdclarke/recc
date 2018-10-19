@@ -65,7 +65,7 @@ class RemoteExecutionClient : public CASClient {
   private:
     std::unique_ptr<proto::Execution::StubInterface> executionStub;
     std::unique_ptr<proto::Operations::StubInterface> operationsStub;
-    static std::atomic_bool cancelled;
+    static std::atomic_bool sigint_received;
 
     void read_operation(ReaderPointer &reader,
                         OperationPointer &operation_ptr);
@@ -135,9 +135,9 @@ class RemoteExecutionClient : public CASClient {
     /**
      * Signal handler to mark the remote execution task for cancellation
      */
-    static inline void set_cancelled_flag(int)
+    static inline void set_sigint_received(int)
     {
-        RemoteExecutionClient::cancelled = true;
+        RemoteExecutionClient::sigint_received = true;
     }
 };
 } // namespace recc

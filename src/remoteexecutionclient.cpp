@@ -27,7 +27,7 @@ using namespace google::longrunning;
 namespace BloombergLP {
 namespace recc {
 
-std::atomic_bool RemoteExecutionClient::cancelled(false);
+std::atomic_bool RemoteExecutionClient::sigint_received(false);
 
 /**
  * Return the ActionResult for the given Operation. Throws an exception
@@ -117,7 +117,7 @@ void RemoteExecutionClient::read_operation(ReaderPointer &reader_ptr,
     std::future_status status;
     do {
         status = future.wait_for(DEFAULT_RECC_POLL_WAIT);
-        if (RemoteExecutionClient::cancelled) {
+        if (RemoteExecutionClient::sigint_received) {
             RECC_LOG_VERBOSE("Cancelling job");
             /* Cancel the operation if the execution service gave it a name */
             if (operation_ptr->name() != "") {
@@ -139,7 +139,7 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
 
     grpc::ClientContext context;
 
-    setup_signal_handler(SIGINT, RemoteExecutionClient::set_cancelled_flag);
+    setup_signal_handler(SIGINT, RemoteExecutionClient::set_sigint_received);
 
     ReaderPointer reader_ptr =
         std::move(executionStub->Execute(&context, executeRequest));
