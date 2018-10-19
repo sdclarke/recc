@@ -231,5 +231,24 @@ string make_path_relative(string path, const char *workingDirectory)
     }
     return result;
 }
+
+string get_current_working_directory()
+{
+    char *cwd = nullptr;
+    int bufferSize = 1024;
+    while (cwd == nullptr) {
+        char *buffer = (char *)(malloc(bufferSize));
+        cwd = getcwd(buffer, bufferSize);
+        if (cwd == nullptr) {
+            free(buffer);
+            if (errno != EINVAL) {
+                throw system_error(errno, system_category());
+            }
+        }
+    }
+    string result(cwd);
+    free(cwd);
+    return result;
+}
 } // namespace recc
 } // namespace BloombergLP

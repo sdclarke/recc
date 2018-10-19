@@ -19,6 +19,7 @@
 
 #include <deps.h>
 #include <env.h>
+#include <fileutils.h>
 #include <logging.h>
 #include <merklize.h>
 #include <reccdefaults.h>
@@ -108,8 +109,9 @@ int main(int argc, char *argv[])
     }
 
     parse_config_variables();
+    string cwd = get_current_working_directory();
 
-    ParsedCommand command(&argv[1], nullptr);
+    ParsedCommand command(&argv[1], cwd.c_str());
 
     if (!command.is_compiler_command() && !RECC_FORCE_REMOTE) {
         RECC_LOG_VERBOSE("Not a compiler command, so running locally.");

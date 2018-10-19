@@ -84,6 +84,11 @@ std::string normalize_path(const char *path);
  * do with the working directory, the path will be returned unmodified.
  */
 std::string make_path_relative(std::string path, const char *workingDirectory);
+
+/**
+ * Returns the current working directory.
+ */
+std::string get_current_working_directory();
 } // namespace recc
 } // namespace BloombergLP
 #endif

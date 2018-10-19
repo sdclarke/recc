@@ -14,6 +14,7 @@
 
 #include <deps.h>
 #include <env.h>
+#include <fileutils.h>
 
 #include <cstring>
 #include <iostream>
@@ -31,6 +32,7 @@ const string HELP(
 int main(int argc, char *argv[])
 {
     parse_config_variables();
+    string cwd = get_current_working_directory();
 
     if (argc <= 1 || strcmp(argv[1], "--help") == 0 ||
         strcmp(argv[1], "-h") == 0) {
@@ -39,7 +41,7 @@ int main(int argc, char *argv[])
     }
     try {
         auto deps =
-            get_file_info(ParsedCommand(&argv[1], nullptr)).dependencies;
+            get_file_info(ParsedCommand(&argv[1], cwd.c_str())).dependencies;
         for (const auto &dep : deps) {
             cout << dep << endl;
         }
