@@ -15,9 +15,9 @@
 #include <fileutils.h>
 #include <logging.h>
 #include <merklize.h>
-#include <remoteexecutionsignals.h>
-#include <remoteexecutionclient.h>
 #include <reccdefaults.h>
+#include <remoteexecutionclient.h>
+#include <remoteexecutionsignals.h>
 
 #include <future>
 
@@ -80,37 +80,34 @@ void add_from_directory(
     }
 }
 
-Operation read_operation_async(ReaderPointer reader,
-                               std::shared_ptr<Operation> operation)
+void read_operation_async(ReaderPointer reader_ptr,
+                          OperationPointer operation_ptr)
 {
-    while (reader->Read(operation.get())) {
-        if (operation->done()) {
+    while (reader_ptr->Read(operation_ptr.get())) {
+        if (operation_ptr->done()) {
             break;
         }
     }
-    return *operation;
 }
 
 /**
  * Read the operation into the given pointer using a separate thread so we can
  * properly handle SIGINT.
  *
- * reader->Read(&operation) is a blocking call that isn't interruptible by a
- * signal like the read() system call. It also doesn't feed its results into
+ * reader_ptr->Read(&operation) is a blocking call that isn't interruptible by
+ * a signal like the read() system call. It also doesn't feed its results into
  * a file descriptor, so we can't use select() without some ugly hacks. Since
  * signal handlers are very limited in power in C++, this means we need to use
  * a new thread, busy wait, and check the signal flag on each iteration.
- *
- * Returns true unless cancelled.
  */
-void RemoteExecutionClient::read_operation(
-    ReaderPointer reader, std::shared_ptr<Operation> operation_ptr)
+void RemoteExecutionClient::read_operation(ReaderPointer &reader_ptr,
+                                           OperationPointer &operation_ptr)
 {
     /* We need to block SIGINT so only this main thread catches it. */
     block_sigint();
 
-    auto future = std::async(std::launch::async, read_operation_async, reader,
-                             operation_ptr);
+    auto future = std::async(std::launch::async, read_operation_async,
+                             reader_ptr, operation_ptr);
     unblock_sigint();
 
     /**
@@ -122,18 +119,19 @@ void RemoteExecutionClient::read_operation(
         status = future.wait_for(DEFAULT_RECC_POLL_WAIT);
         if (RemoteExecutionClient::cancelled) {
             RECC_LOG_VERBOSE("Cancelling job");
+            /* Cancel the operation if the execution service gave it a name */
             if (operation_ptr->name() != "") {
                 cancel_operation(operation_ptr->name());
             }
             exit(130); // Ctrl+C exit code
         }
     } while (status != std::future_status::ready);
-    *operation_ptr = future.get();
 }
 
 ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
                                                    bool skipCache)
 {
+    /* Prepare an asynchonous Execute request */
     proto::ExecuteRequest executeRequest;
     executeRequest.set_instance_name(instance);
     *executeRequest.mutable_action_digest() = actionDigest;
@@ -143,16 +141,16 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
 
     setup_signal_handler(SIGINT, RemoteExecutionClient::set_cancelled_flag);
 
-    auto reader_unique = stub->Execute(&context, executeRequest);
-    ReaderPointer reader = std::move(reader_unique);
+    ReaderPointer reader_ptr =
+        std::move(executionStub->Execute(&context, executeRequest));
 
-    auto operation_ptr = std::make_shared<Operation>();
-    read_operation(reader, operation_ptr);
+    /* Read the result of the Execute request into an OperationPointer */
+    OperationPointer operation_ptr = std::make_shared<Operation>();
+    read_operation(reader_ptr, operation_ptr);
 
-    auto operation = *operation_ptr;
+    ensure_ok(reader_ptr->Finish());
 
-    ensure_ok(reader->Finish());
-
+    Operation operation = *operation_ptr;
     if (!operation.done()) {
         throw runtime_error("Server closed stream before Operation finished");
     }

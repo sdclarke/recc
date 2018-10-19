@@ -27,7 +27,9 @@
 
 #include <fstream>
 #include <iostream>
+#include <signal.h>
 #include <unistd.h>
+
 using namespace BloombergLP::recc;
 using namespace std;
 using namespace testing;
@@ -257,7 +259,7 @@ TEST(RemoteExecutionClientTest, CancelOperation)
     if (pid == (pid_t)0) {
         close(timingPipe[1]);
 
-        // Wait for the child to close the pipe before sending the signal
+        /* Wait for the parent to write its PID before sending the signal */
         pid_t assert_pid = getpid();
         read(timingPipe[0], &assert_pid, sizeof(assert_pid));
         close(timingPipe[0]);
@@ -271,9 +273,9 @@ TEST(RemoteExecutionClientTest, CancelOperation)
             {
                 /**
                  * This lambda replaces the behavior of Execute()
-                 * It closes the pipe to indicate to the child that it has
-                 * called this RPC. This means that the signal handler has
-                 * already been set up in execute_action.
+                 * It writes its PID to the pipe to indicate to the child that
+                 * it has called this RPC. This means that the signal handler
+                 * has already been set up in execute_action.
                  */
 
                 EXPECT_CALL(*executionStub,

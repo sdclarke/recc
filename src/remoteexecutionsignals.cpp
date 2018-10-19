@@ -14,7 +14,8 @@
 
 #include <remoteexecutionsignals.h>
 
-#include <iostream>
+#include <cerrno>
+#include <cstdio>
 #include <pthread.h>
 #include <signal.h>
 
@@ -28,26 +29,39 @@ void setup_signal_handler(int signal, void (*handler)(int))
     /* Set up signal handling for the Execute() request */
     struct sigaction sa;
     sa.sa_handler = handler;
-    if(sigemptyset(&sa.sa_mask) == -1) {
-        cerr << "Warning: unable to clear signal set" << endl;
+    if (sigemptyset(&sa.sa_mask) != 0) {
+        perror("Unable to clear signal set");
+        return;
     }
-    if (sigaction(signal, &sa, NULL) == -1) {
-        cerr << "Warning: unable to register cancellation handler" << endl;
+    if (sigaction(signal, &sa, NULL) != 0) {
+        perror("Unable to register cancellation handler");
     }
 }
 
 void block_sigint()
 {
     sigset_t signal_set;
-    sigaddset(&signal_set, SIGINT);
-    pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
+    if (sigaddset(&signal_set, SIGINT) != 0) {
+        perror("Unable to block SIGINT");
+        return;
+    }
+    errno = pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
+    if (errno != 0) {
+        perror("Unable to block SIGINT");
+    }
 }
 
 void unblock_sigint()
 {
     sigset_t signal_set;
-    sigaddset(&signal_set, SIGINT);
-    pthread_sigmask(SIG_UNBLOCK, &signal_set, NULL);
+    if (sigaddset(&signal_set, SIGINT) != 0) {
+        perror("Unable to unblock SIGINT");
+        return;
+    }
+    errno = pthread_sigmask(SIG_UNBLOCK, &signal_set, NULL);
+    if (errno != 0) {
+        perror("Unable to block SIGINT");
+    }
 }
 
 } // namespace recc

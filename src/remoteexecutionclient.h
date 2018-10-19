@@ -29,6 +29,8 @@ typedef std::shared_ptr<
     grpc::ClientReaderInterface<google::longrunning::Operation>>
     ReaderPointer;
 
+typedef std::shared_ptr<google::longrunning::Operation> OperationPointer;
+
 /**
  * Represents a blob returned by the Remote Execution service.
  *
@@ -61,13 +63,12 @@ struct ActionResult {
 
 class RemoteExecutionClient : public CASClient {
   private:
-    std::unique_ptr<proto::Execution::StubInterface> stub;
+    std::unique_ptr<proto::Execution::StubInterface> executionStub;
     std::unique_ptr<proto::Operations::StubInterface> operationsStub;
     static std::atomic_bool cancelled;
 
-    void read_operation(
-        ReaderPointer reader,
-        std::shared_ptr<google::longrunning::Operation> operation_ptr);
+    void read_operation(ReaderPointer &reader,
+                        OperationPointer &operation_ptr);
 
     /**
      * Sends the CancelOperation RPC
@@ -76,13 +77,13 @@ class RemoteExecutionClient : public CASClient {
 
   public:
     RemoteExecutionClient(
-        proto::Execution::StubInterface *stub,
+        proto::Execution::StubInterface *executionStub,
         proto::ContentAddressableStorage::StubInterface *casStub,
         proto::Operations::StubInterface *operationsStub,
         google::bytestream::ByteStream::StubInterface *byteStreamStub,
         std::string instance)
-        : CASClient(casStub, byteStreamStub, instance), stub(stub),
-          operationsStub(operationsStub)
+        : CASClient(casStub, byteStreamStub, instance),
+          executionStub(executionStub), operationsStub(operationsStub)
     {
     }
 
@@ -90,7 +91,7 @@ class RemoteExecutionClient : public CASClient {
                           std::shared_ptr<grpc::Channel> casChannel,
                           std::string instance)
         : CASClient(casChannel, instance),
-          stub(proto::Execution::NewStub(channel)),
+          executionStub(proto::Execution::NewStub(channel)),
           operationsStub(proto::Operations::NewStub(channel))
     {
     }
@@ -98,13 +99,14 @@ class RemoteExecutionClient : public CASClient {
     RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel,
                           std::string instance)
         : CASClient(channel, instance),
-          stub(proto::Execution::NewStub(channel)),
+          executionStub(proto::Execution::NewStub(channel)),
           operationsStub(proto::Operations::NewStub(channel))
     {
     }
 
     RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel)
-        : CASClient(channel), stub(proto::Execution::NewStub(channel)),
+        : CASClient(channel),
+          executionStub(proto::Execution::NewStub(channel)),
           operationsStub(proto::Operations::NewStub(channel))
     {
     }
