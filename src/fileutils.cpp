@@ -18,6 +18,7 @@
 #include <subprocess.h>
 
 #include <cerrno>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <stdexcept>
@@ -234,21 +235,21 @@ string make_path_relative(string path, const char *workingDirectory)
 
 string get_current_working_directory()
 {
-    char *cwd = nullptr;
     int bufferSize = 1024;
-    while (cwd == nullptr) {
-        char *buffer = (char *)(malloc(bufferSize));
-        cwd = getcwd(buffer, bufferSize);
-        if (cwd == nullptr) {
-            free(buffer);
-            if (errno != EINVAL) {
-                throw system_error(errno, system_category());
-            }
+    while (true) {
+        char buffer[bufferSize];
+        char *cwd = getcwd(buffer, bufferSize);
+        if (cwd != nullptr) {
+            return string(cwd);
+        }
+        else if (errno == ERANGE) {
+            bufferSize *= 2;
+        }
+        else {
+            perror("Warning: could not get current working directory");
+            return string();
         }
     }
-    string result(cwd);
-    free(cwd);
-    return result;
 }
 } // namespace recc
 } // namespace BloombergLP

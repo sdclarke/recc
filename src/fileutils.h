@@ -86,7 +86,11 @@ std::string normalize_path(const char *path);
 std::string make_path_relative(std::string path, const char *workingDirectory);
 
 /**
- * Returns the current working directory.
+ * Return the current working directory.
+ *
+ * If the current working directory cannot be determined (if the user does not
+ * have permission to read the current directory, for example), return the
+ * empty string and log a warning.
  */
 std::string get_current_working_directory();
 } // namespace recc
