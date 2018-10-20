@@ -14,6 +14,8 @@
 
 #include <fileutils.h>
 
+#include <subprocess.h>
+
 #include <gtest/gtest.h>
 
 #include <exception>
@@ -222,4 +224,14 @@ TEST(MakePathRelativeTest, PathUnrelatedToWorkingDirectory)
               make_path_relative(string("/e/b/c/d/"), "/a/b/c/d"));
     EXPECT_EQ("/e/b/c/d/",
               make_path_relative(string("/e/b/c/d/"), "/a/b/c/d/"));
+}
+
+TEST(FileUtilsTest, GetCurrentWorkingDirectory)
+{
+    vector<string> command = {"pwd"};
+    auto commandResult = execute(command, true);
+    if (commandResult.exitCode == 0) {
+        EXPECT_EQ(commandResult.stdOut,
+                  get_current_working_directory() + "\n");
+    }
 }
