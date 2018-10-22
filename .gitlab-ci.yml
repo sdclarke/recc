@@ -5,24 +5,7 @@ stages:
     - build
     - test
 
-build:
-  stage: build
-  before_script: 
-    - apt-get update && apt-get install -y make cmake build-essential pkg-config libssl-dev googletest
-    - cd /usr/src/googletest
-    - cmake . && make install
-    - cd $CI_PROJECT_DIR
-  script: 
-    - mkdir build
-    - cd build
-    - cmake .. && make && make test
-  artifacts:
-    paths:
-      - build/bin/recc
-      - build/bin/reccworker
-      - test/data/hello.cpp
-
-tests_disabled_compile_check:
+build_only:
   stage: build
   before_script:
     - apt-get update && apt-get install -y make cmake build-essential pkg-config libssl-dev
@@ -30,10 +13,51 @@ tests_disabled_compile_check:
     - mkdir build
     - cd build
     - cmake -DBUILD_TESTING=OFF .. && make
+  artifacts:
+    paths:
+      - build/bin/recc
+      - build/bin/reccworker
+      - test/data/hello.cpp
+
+test_cover:
+  stage: build
+  coverage: '/^TOTAL.*\ (\d+\.*\d+\%)$/'
+  dependencies: []
+  before_script:
+    - apt-get update && apt-get install -y make cmake build-essential pkg-config libssl-dev googletest
+    - apt-get install -y python3 python3-pip wget
+    - pip3 install gcovr pycobertura
+  script:
+    - mkdir build
+    - cd build
+    - export COV_FLGS="-g -O0 -fprofile-arcs -ftest-coverage"
+    - cmake -DGTEST_SOURCE_ROOT=/usr/src/googletest -DCMAKE_CXX_FLAGS="${COV_FLGS}" -DCMAKE_EXE_LINKER_FLAGS="${COV_FLGS}" -DCMAKE_SHARED_LINKER_FLAGS="${COV_FLGS}" -DCMAKE_CXX_OUTPUT_EXTENSION_REPLACE="ON" ..
+    - make && make test
+    - cd $CI_PROJECT_DIR
+    - echo Generating gcov files
+    - mkdir gcov && cd gcov
+    - find "$CI_PROJECT_DIR/" -type f -name "*.gcno" -exec gcov --branch-counts --branch-probabilities --preserve-paths {} \;
+    # remove gcov files that come from dependencies so that they don't show up on reports
+    - find "$CI_PROJECT_DIR/gcov/" -type f -name "#*#build#gen*" -exec rm "{}" \;
+    - find "$CI_PROJECT_DIR/gcov/" -type f -name "#*#third_party#*" -exec rm "{}" \;
+    - find "$CI_PROJECT_DIR/gcov/" -type f ! -name "#*#src#*" -exec rm "{}" \;
+    - cd "$CI_PROJECT_DIR"
+    - mkdir -p  public/coverage
+    - export LC_ALL=C.UTF-8 && export LANG=C.UTF-8
+    - gcovr --xml-pretty -g -k > public/coverage/gcovr.xml
+    - pycobertura show --format text --output public/coverage/report.txt -s "$CI_PROJECT_DIR" public/coverage/gcovr.xml
+    - echo >> public/coverage/report.txt
+    - pycobertura show --format html --output public/coverage/report.html -s "$CI_PROJECT_DIR" public/coverage/gcovr.xml
+    - cat public/coverage/report.txt # show the textual report here, also used by GitLab to pick-up coverage %
+  artifacts:
+    paths:
+      - public # name GitLab uses for Pages feature
 
 check_formatting:
     image: ubuntu:bionic
     stage: test
+    dependencies:
+        - build_only
     before_script:
         - apt-get update && apt-get install -y clang-format-6.0 git-core
     script:
@@ -46,14 +70,14 @@ check_formatting:
 
 e2e:
     stage: test
-    dependencies: 
-        - build
+    dependencies:
+        - build_only
     before_script:
         - apt-get update && apt-get install -y python3 python3-pip git-core net-tools procps
     script:
         - git clone https://gitlab.com/BuildGrid/buildgrid.git && cd buildgrid
         - pip3 install -e . # install buildgrid system wide
-        - export LC_ALL=C.UTF-8 
+        - export LC_ALL=C.UTF-8
         - export LANG=C.UTF-8
         - bgd -v server start "$CI_PROJECT_DIR/test/data/bgdconfig.yml" &
         - sleep 5 # Give server some time to boot
@@ -61,7 +85,7 @@ e2e:
         - export RECC_SERVER="localhost:50051" # port recc connects to buildgrid.
         - export RECC_CAS_SERVER="localhost:50051" # port cas server is hosted. By default BuildGrid creates a cas server.
         - export RECC_VERBOSE=1
-        - export RECC_FORCE_REMOTE=1 
+        - export RECC_FORCE_REMOTE=1
         - export RECC_OUTPUT_FILES_OVERRIDE="hello.o"
         - export RECC_DEPS_OVERRIDE="hello.cpp"
         - chmod +x "$CI_PROJECT_DIR/build/bin/reccworker"
