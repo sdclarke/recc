@@ -20,6 +20,7 @@
 #include <remoteexecutionsignals.h>
 
 #include <future>
+#include <signal.h>
 
 using namespace std;
 using namespace google::longrunning;
