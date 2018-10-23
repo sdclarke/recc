@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    parse_environment();
+    parse_config_variables();
 
     ParsedCommand command(&argv[1]);
 

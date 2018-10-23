@@ -14,6 +14,7 @@
 
 #ifndef INCLUDED_RECCDEFAULTS
 #define INCLUDED_RECCDEFAULTS
+
 #include <chrono>
 
 // clang-format off
@@ -44,6 +45,6 @@
 #define DEFAULT_RECC_REMOTE_ENV {}
 #define DEFAULT_RECC_REMOTE_PLATFORM {}
 
-#define DEFAULT_RECC_CONFIG_LOCATIONS {DEFAULT_RECC_CONFIG}
+#define DEFAULT_RECC_CONFIG_LOCATIONS {}
 
 #endif

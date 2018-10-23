@@ -26,22 +26,18 @@
 
 #include <reccdefaults.h>
 
-#include <string>
-
 #include <unistd.h>
 
-#include <sstream>
+#include <logging.h>
 
 #include <vector>
-
-#include <logging.h>
 
 using namespace std;
 
 namespace BloombergLP {
 namespace recc {
 
-// Leave those empty so that parse_environment can print warnings if not
+// Leave these empty so that parse_config_variables can print warnings if not
 // specified
 string RECC_SERVER = "";
 string RECC_CAS_SERVER = "";
@@ -61,6 +57,12 @@ bool RECC_SERVER_AUTH_GOOGLEAPI = DEFAULT_RECC_SERVER_AUTH_GOOGLEAPI;
 
 int RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
 
+#ifdef CMAKE_INSTALL_DIR
+string RECC_INSTALL_DIR = string(CMAKE_INSTALL_DIR);
+#else
+string RECC_INSTALL_DIR = string("");
+#endif
+
 set<string> RECC_DEPS_OVERRIDE = DEFAULT_RECC_DEPS_OVERRIDE;
 set<string> RECC_OUTPUT_FILES_OVERRIDE = DEFAULT_RECC_OUTPUT_FILES_OVERRIDE;
 set<string> RECC_OUTPUT_DIRECTORIES_OVERRIDE =
@@ -70,7 +72,7 @@ map<string, string> RECC_DEPS_ENV = DEFAULT_RECC_DEPS_ENV;
 map<string, string> RECC_REMOTE_ENV = DEFAULT_RECC_REMOTE_ENV;
 map<string, string> RECC_REMOTE_PLATFORM = DEFAULT_RECC_REMOTE_PLATFORM;
 
-vector<string> RECC_CONFIG_LOCATIONS = DEFAULT_RECC_CONFIG_LOCATIONS;
+deque<string> RECC_CONFIG_LOCATIONS = DEFAULT_RECC_CONFIG_LOCATIONS;
 
 /**
  * Parse a comma-separated list, storing its items in the given set.
@@ -91,28 +93,10 @@ void parse_set(const char *str, set<string> *result)
 }
 
 /**
- * Check all default recc locations, if found return filename, else return
- * empty.
- */
-string get_recc_config_file()
-{
-    for (auto file_location : RECC_CONFIG_LOCATIONS) {
-        ifstream config(file_location);
-        if (config.good()) {
-            RECC_LOG_VERBOSE("Found recc config at: " << file_location);
-            return file_location;
-        }
-    }
-
-    cerr << "Recc config not found; will only use envvars for config" << endl;
-    return "";
-}
-
-/**
- * Formats line to be used in parse_environment.
+ * Formats line to be used in parse_config_variables.
  * Modifies parameter passed to it by reference
  */
-void format_string(string &line)
+void format_config_string(string &line)
 {
     // remove whitespace
     line.erase(remove(line.begin(), line.end(), ' '), line.end());
@@ -127,7 +111,33 @@ void format_string(string &line)
     }
 }
 
-void parse_environment(const char *const *environ)
+/*
+ * Parse the config variables, and pass to parse_config_variables
+ */
+void parse_config_files(const string &config_file_name)
+{
+    ifstream config(config_file_name);
+    string line;
+    vector<string> env_array;
+    vector<char *> env_cstrings;
+
+    while (getline(config, line)) {
+        if (line.empty() || isspace(line[0]) || line[0] == '#') {
+            continue;
+        }
+        format_config_string(line);
+        env_array.push_back(line);
+    }
+    // first push strings into vector, then push_back char *
+    // done for easy const char** conversion
+    for (string &i : env_array) {
+        env_cstrings.push_back(const_cast<char *>(i.c_str()));
+    }
+    env_cstrings.push_back(nullptr);
+    parse_config_variables(env_cstrings.data());
+}
+
+void parse_config_variables(const char *const *environ)
 {
 #define VARS_START()                                                          \
     if (strncmp(environ[i], "RECC_", 4) != 0 &&                               \
@@ -191,33 +201,17 @@ void parse_environment(const char *const *environ)
     }
 }
 
-void parse_config_file()
+void find_and_parse_config_files()
 {
-    string config_file_name = get_recc_config_file();
-
-    if (config_file_name.empty()) {
-        return;
-    }
-
-    ifstream config(config_file_name);
-    string line;
-    vector<string> env_array;
-    vector<char *> env_cstrings;
-
-    while (getline(config, line)) {
-        if (line[0] == '#' || line[0] == ' ' || line.empty()) {
-            continue;
+    for (auto file_location : RECC_CONFIG_LOCATIONS) {
+        ifstream config(file_location);
+        if (config.good()) {
+            // append name of config file, defined by DEFAULT_RECC_CONFIG
+            file_location = file_location + "/" + DEFAULT_RECC_CONFIG;
+            RECC_LOG_VERBOSE("Found recc config at: " << file_location);
+            parse_config_files(file_location);
         }
-        format_string(line);
-        env_array.push_back(line);
     }
-    // first push strings into vector, then push_back char *
-    // done for easy const char** conversion
-    for (string &i : env_array) {
-        env_cstrings.push_back(const_cast<char *>(i.c_str()));
-    }
-    env_cstrings.push_back(nullptr);
-    parse_environment(env_cstrings.data());
 }
 
 void handle_special_defaults()
@@ -230,9 +224,31 @@ void handle_special_defaults()
 
     if (RECC_CAS_SERVER.empty()) {
         RECC_CAS_SERVER = RECC_SERVER;
-        cerr << "Warning: no RECC_CAS_SERVER environment variable specified."
+        cerr << "Warning: no RECC_CAS_SERVER environment variable "
+                "specified."
              << "Using the same as RECC_SERVER (" << RECC_CAS_SERVER << ")"
              << endl;
+    }
+}
+
+void add_default_locations()
+{
+    string home = getenv("HOME");
+    const string cwd_recc = "./recc";
+
+    // Note that the order in which the config locations are pushed
+    // is significant.
+
+    RECC_CONFIG_LOCATIONS.push_front(cwd_recc);
+
+    if (!home.empty()) {
+        home += "/.recc";
+        RECC_CONFIG_LOCATIONS.push_front(home);
+    }
+
+    if (!RECC_INSTALL_DIR.empty()) {
+        RECC_INSTALL_DIR += "/../etc/recc";
+        RECC_CONFIG_LOCATIONS.push_front(RECC_INSTALL_DIR);
     }
 }
 

@@ -259,7 +259,7 @@ int main(int argc, char *argv[])
     }
 
     // Parse configuration from environment variables and defaults
-    parse_environment();
+    parse_config_variables();
 
     if (RECC_MAX_CONCURRENT_JOBS <= 0) {
         cerr << "Warning: no RECC_MAX_CONCURRENT_JOBS specified." << endl;

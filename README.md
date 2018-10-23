@@ -96,14 +96,39 @@ but at time of writing it uses version 1 of the API and so cannot be used with
 [buildgrid]: https://gitlab.com/BuildGrid/buildgrid
 [bazel buildfarm]: https://github.com/bazelbuild/bazel-buildfarm
 
-### Setting environment variables
+### Configuration
 
-`recc` uses environment variables to configure its behavior. To see a full list
-of the environment variables `recc` accepts and what they do, run
+`recc`’s default behavior can be overridden by configuration file settings, which in turn can be overridden by environment variables with names starting with RECC_. `recc` normally reads configuration from files in 3 locations. The priority of configuration settings is as follows (where 1 is highest):
+
+  1) Environment variables
+   
+  2) User defined locations specified in DEFAULT_RECC_CONFIG_LOCATIONS, in file recc_defaults.h.
+
+  3) ${cwd}/recc/recc.conf
+
+  4) ~/.recc/recc.conf
+   
+  5) ${INSTALL_DIR}/../etc/recc/recc.conf
+   
+In addition, you can specify a config file location by adding it to: DEFAULT_RECC_CONFIG_LOCATIONS, in recc_defaults.h
+
+#### Configuration File Syntax
+Configuration files are in a simple “key = value” format, one setting per line. Lines starting with a hash sign are comments. Blank lines are ignored, as is whitespace surrounding keys and values.
+
+At minimum, you'll need to set `RECC_SERVER` to the URI of your Remote:
+```
+  # set execution server to localhost:12345
+  server = localhost:12345
+```
+
+For a full list of the environment/configuration variables `recc` accepts and what they do, run
 `recc --help`.
 
-At minimum, you'll need to set `RECC_SERVER` to the URI of your Remote
-Execution server:
+If variables are specified in the configuration file, the prefix **RECC_** should not be included. 
+
+#### Environment Variables
+
+If you'd like to set environment variables, an example is specified below:
 
 ```sh
 $ export RECC_SERVER=localhost:12345

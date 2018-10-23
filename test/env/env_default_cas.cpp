@@ -24,8 +24,9 @@ TEST(EnvTest, CasDefaultsToServerTest)
     const char *testEnviron[] = {"RECC_SERVER=somehost:1234", nullptr};
     string expectedReccServer = "somehost:1234";
 
-    parse_environment(testEnviron);
-    // need this for testing, since we are calling parse_environment directly.
+    parse_config_variables(testEnviron);
+    // need this for testing, since we are calling parse_config_variables
+    // directly.
     handle_special_defaults();
 
     EXPECT_EQ(expectedReccServer, RECC_SERVER);

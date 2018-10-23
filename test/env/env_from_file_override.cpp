@@ -27,10 +27,13 @@ TEST(EnvTest, ENVFROMFILEOVERRIDE)
     // should be set from file
     string expectedRecCasServer = "localhost:66666";
 
-    // need this for testing, since we are calling parse_environment directly.
-    parse_config_file();
-    parse_environment(testEnviron);
-    // need this for testing, since we are calling parse_environment directly.
+    // need this for testing, since we are calling parse_config_variables
+    // directly.
+    add_default_locations();
+    find_and_parse_config_files();
+    parse_config_variables(testEnviron);
+    // need this for testing, since we are calling parse_config_variables
+    // directly.
     handle_special_defaults();
 
     EXPECT_EQ(expectedReccServer, RECC_SERVER);

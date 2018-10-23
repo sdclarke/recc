@@ -13,28 +13,38 @@
 // limitations under the License.
 
 #include <env.h>
-#include <stdlib.h>
-
 #include <gtest/gtest.h>
+#include <iostream>
+#include <reccdefaults.h>
+#include <string>
 
 using namespace BloombergLP::recc;
 using namespace std;
 
-TEST(EnvTest, ENVFROMFILE)
+/*
+ * Test modifies RECC_CONFIG_LOCATIONS directly.
+ *
+ * WARNING: Test will fail if not invoked by "make test".
+ */
+TEST(EnvTest, ENVMULTIPLECONFIGS)
 {
-    // Make sure outside env doesn't get prioritized
     unsetenv("RECC_SERVER");
-    unsetenv("RECC_CAS_SERVER");
-    unsetenv("TMPDIR");
 
-    // should be set from file
-    string expectedReccServer = "localhost:99999";
-    string expectedRecCasServer = "localhost:66666";
-    string expectedTMPDIR = "/tmp/dir";
+    // this should be in {SOMEWHERE}/test/ if running 'make test'
+    string cwd_recc = "./recc";
+    string home = "./.recc";
+
+    RECC_CONFIG_LOCATIONS.push_back(cwd_recc);
 
     parse_config_variables();
 
-    EXPECT_EQ(expectedReccServer, RECC_SERVER);
-    EXPECT_EQ(expectedRecCasServer, RECC_CAS_SERVER);
-    EXPECT_EQ(expectedTMPDIR, TMPDIR);
+    // should take value of file in /test/recc/recc.conf.
+    EXPECT_EQ(RECC_SERVER, "localhost:99999");
+
+    RECC_CONFIG_LOCATIONS.push_back(home);
+
+    parse_config_variables();
+
+    // should take value of file in /test/.recc/recc.conf.
+    EXPECT_EQ(RECC_SERVER, "localhost:10001");
 }

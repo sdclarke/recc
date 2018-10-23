@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.6)
+
 project(recc CXX)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -35,6 +36,9 @@ else()
     set(GRPC_TARGET gRPC::grpc++)
     set(GRPC_CPP_PLUGIN $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
 endif()
+
+# define CMAKE_INSTALL_DIR
+add_definitions(-DCMAKE_INSTALL_DIR="${CMAKE_INSTALL_PREFIX}")
 
 include(cmake/protos.cmake)
 add_subdirectory(src)
