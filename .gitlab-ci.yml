@@ -12,7 +12,8 @@ build_only:
   script:
     - mkdir build
     - cd build
-    - cmake -DBUILD_TESTING=OFF .. && make
+    - cmake -DBUILD_TESTING=OFF .. || exit 1
+    - make || exit 1
   artifacts:
     paths:
       - build/bin/recc
@@ -31,8 +32,9 @@ test_cover:
     - mkdir build
     - cd build
     - export COV_FLGS="-g -O0 -fprofile-arcs -ftest-coverage"
-    - cmake -DGTEST_SOURCE_ROOT=/usr/src/googletest -DCMAKE_CXX_FLAGS="${COV_FLGS}" -DCMAKE_EXE_LINKER_FLAGS="${COV_FLGS}" -DCMAKE_SHARED_LINKER_FLAGS="${COV_FLGS}" -DCMAKE_CXX_OUTPUT_EXTENSION_REPLACE="ON" ..
-    - make && make test
+    - cmake -DGTEST_SOURCE_ROOT=/usr/src/googletest -DCMAKE_CXX_FLAGS="${COV_FLGS}" -DCMAKE_EXE_LINKER_FLAGS="${COV_FLGS}" -DCMAKE_SHARED_LINKER_FLAGS="${COV_FLGS}" -DCMAKE_CXX_OUTPUT_EXTENSION_REPLACE="ON" .. || exit 1
+    - make || exit 1
+    - make test || exit 1
     - cd $CI_PROJECT_DIR
     - echo Generating gcov files
     - mkdir gcov && cd gcov
