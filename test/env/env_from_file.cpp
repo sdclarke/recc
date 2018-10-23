@@ -22,8 +22,10 @@ using namespace std;
 
 TEST(EnvTest, ENVFROMFILE)
 {
+    // Make sure outside env doesn't get prioritized
     unsetenv("RECC_SERVER");
     unsetenv("RECC_CAS_SERVER");
+    unsetenv("TMPDIR");
 
     // should be set from file
     string expectedReccServer = "localhost:99999";

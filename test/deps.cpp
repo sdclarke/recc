@@ -22,8 +22,11 @@ using namespace std;
 
 #ifdef RECC_PLATFORM_COMPILER
 
+// Some compilers, like xlc, need certain environment variables to
+// get the dependencies properly. So parse the env for these tests
 TEST(DepsTest, Empty)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.", "empty.c"};
     set<string> expectedDeps = {"empty.c"};
     EXPECT_EQ(expectedDeps, get_file_info(command).dependencies);
@@ -31,6 +34,7 @@ TEST(DepsTest, Empty)
 
 TEST(DepsTest, SimpleInclude)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c"};
     set<string> expected = {"includes_empty.c", "empty.h"};
@@ -39,6 +43,7 @@ TEST(DepsTest, SimpleInclude)
 
 TEST(DepsTest, RecursiveDependency)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_includes_empty.c"};
     set<string> expected = {"includes_includes_empty.c", "includes_empty.h",
@@ -48,6 +53,7 @@ TEST(DepsTest, RecursiveDependency)
 
 TEST(DepsTest, MultiFile)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_includes_empty.c", "includes_empty.c"};
     set<string> expected = {"includes_includes_empty.c", "includes_empty.c",
@@ -57,6 +63,7 @@ TEST(DepsTest, MultiFile)
 
 TEST(DepsTest, EdgeCases)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "edge_cases.c"};
     set<string> expected = {"edge_cases.c", "empty.h", "header with spaces.h"};
@@ -65,6 +72,7 @@ TEST(DepsTest, EdgeCases)
 
 TEST(DepsTest, OutputArgument)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c",     "-o", "/dev/null"};
     set<string> expected = {"includes_empty.c", "empty.h"};
@@ -73,6 +81,7 @@ TEST(DepsTest, OutputArgument)
 
 TEST(DepsTest, OutputArgumentNoSpace)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c", "-o/dev/null"};
     set<string> expected = {"includes_empty.c", "empty.h"};
@@ -91,6 +100,7 @@ TEST(DepsTest, PreprocessorOutputArgument)
 
 TEST(DepsTest, Subdirectory)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "-Isubdirectory", "includes_from_subdirectory.c"};
     set<string> expected = {"includes_from_subdirectory.c",
@@ -100,6 +110,7 @@ TEST(DepsTest, Subdirectory)
 
 TEST(DepsTest, InputInSubdirectory)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c",
                              "subdirectory/empty.c"};
     set<string> expected = {"subdirectory/empty.c"};
@@ -108,6 +119,7 @@ TEST(DepsTest, InputInSubdirectory)
 
 TEST(DepsTest, SubprocessFailure)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "empty.c",
                              "--clearly-invalid-option", "invalid_file.c"};
     EXPECT_THROW(get_file_info(command), subprocess_failed_error);
@@ -115,6 +127,7 @@ TEST(DepsTest, SubprocessFailure)
 
 TEST(ProductsTest, OutputArgument)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-o",
                              "some_output.exe", "empty.c"};
 
@@ -125,6 +138,7 @@ TEST(ProductsTest, OutputArgument)
 
 TEST(ProductsTest, NormalizesPath)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-o",
                              "out/subdir/../../../empty", "empty.c"};
 
@@ -135,6 +149,7 @@ TEST(ProductsTest, NormalizesPath)
 
 TEST(ProductsTest, OutputArgumentNoSpace)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-osome_output.exe",
                              "empty.c"};
 
@@ -145,6 +160,7 @@ TEST(ProductsTest, OutputArgumentNoSpace)
 
 TEST(ProductsTest, DefaultOutput)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "empty.c"};
 
     auto products = get_file_info(command).possibleProducts;
@@ -155,6 +171,7 @@ TEST(ProductsTest, DefaultOutput)
 
 TEST(ProductsTest, Subdirectory)
 {
+    parse_environment();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c",
                              "subdirectory/empty.c"};
 
