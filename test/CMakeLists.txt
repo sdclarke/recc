@@ -56,6 +56,10 @@ add_test(NAME env_multiple_configs_test
          COMMAND env_multiple_configs_test
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/)
 
+add_executable(env_check_order_test env/env_check_order.cpp main.cpp)
+target_link_libraries(env_check_order_test GTest::GTest remoteexecution)
+add_test(NAME env_check_order_test COMMAND env_check_order_test)
+
 add_executable(remoteexecutionclient_tests remoteexecutionclient.cpp main.cpp)
 target_link_libraries(remoteexecutionclient_tests GMock::GMock GTest::GTest remoteexecution)
 add_test(NAME remoteexecutionclient_tests COMMAND remoteexecutionclient_tests)
