@@ -39,6 +39,7 @@ You can now compile `recc`.
 [cmake]: https://cmake.org/
 [googletest]: https://github.com/google/googletest
 [googletest source]: https://github.com/google/googletest/archive/release-1.8.1.zip
+[pkg-config]: https://www.freedesktop.org/wiki/Software/pkg-config/
 
 ## Compiling
 Once you've [installed the dependencies](#dependencies), you can compile `recc` using the following commands:
