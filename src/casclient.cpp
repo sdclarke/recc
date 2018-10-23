@@ -159,7 +159,7 @@ void CASClient::upload_resources(
                          << missingBlobsRequest.ShortDebugString());
         grpc::ClientContext missingBlobsContext;
         proto::FindMissingBlobsResponse missingBlobsResponse;
-        ensure_ok(stub->FindMissingBlobs(
+        ensure_ok(executionStub->FindMissingBlobs(
             &missingBlobsContext, missingBlobsRequest, &missingBlobsResponse));
         RECC_LOG_VERBOSE("Got missing blobs response: "
                          << missingBlobsResponse.ShortDebugString());
@@ -193,8 +193,8 @@ void CASClient::upload_resources(
             grpc::ClientContext context;
             proto::BatchUpdateBlobsResponse response;
             RECC_LOG_VERBOSE("Sending batch update request");
-            ensure_ok(stub->BatchUpdateBlobs(&context, batchUpdateRequest,
-                                             &response));
+            ensure_ok(executionStub->BatchUpdateBlobs(
+                &context, batchUpdateRequest, &response));
             for (int j = 0; j < response.responses_size(); ++j) {
                 ensure_ok(response.responses(j).status());
             }
@@ -214,8 +214,8 @@ void CASClient::upload_resources(
         grpc::ClientContext context;
         proto::BatchUpdateBlobsResponse response;
         RECC_LOG_VERBOSE("Sending final batch update request");
-        ensure_ok(
-            stub->BatchUpdateBlobs(&context, batchUpdateRequest, &response));
+        ensure_ok(executionStub->BatchUpdateBlobs(&context, batchUpdateRequest,
+                                                  &response));
         for (int i = 0; i < response.responses_size(); ++i) {
             ensure_ok(response.responses(i).status());
         }

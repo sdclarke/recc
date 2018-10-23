@@ -19,10 +19,17 @@
 #include <merklize.h>
 #include <protos.h>
 
+#include <atomic>
 #include <map>
 
 namespace BloombergLP {
 namespace recc {
+
+typedef std::shared_ptr<
+    grpc::ClientReaderInterface<google::longrunning::Operation>>
+    ReaderPointer;
+
+typedef std::shared_ptr<google::longrunning::Operation> OperationPointer;
 
 /**
  * Represents a blob returned by the Remote Execution service.
@@ -56,15 +63,27 @@ struct ActionResult {
 
 class RemoteExecutionClient : public CASClient {
   private:
-    std::unique_ptr<proto::Execution::StubInterface> stub;
+    std::unique_ptr<proto::Execution::StubInterface> executionStub;
+    std::unique_ptr<proto::Operations::StubInterface> operationsStub;
+    static std::atomic_bool sigint_received;
+
+    void read_operation(ReaderPointer &reader,
+                        OperationPointer &operation_ptr);
+
+    /**
+     * Sends the CancelOperation RPC
+     */
+    void cancel_operation(const std::string &operationName);
 
   public:
     RemoteExecutionClient(
-        proto::Execution::StubInterface *stub,
+        proto::Execution::StubInterface *executionStub,
         proto::ContentAddressableStorage::StubInterface *casStub,
+        proto::Operations::StubInterface *operationsStub,
         google::bytestream::ByteStream::StubInterface *byteStreamStub,
         std::string instance)
-        : CASClient(casStub, byteStreamStub, instance), stub(stub)
+        : CASClient(casStub, byteStreamStub, instance),
+          executionStub(executionStub), operationsStub(operationsStub)
     {
     }
 
@@ -72,19 +91,23 @@ class RemoteExecutionClient : public CASClient {
                           std::shared_ptr<grpc::Channel> casChannel,
                           std::string instance)
         : CASClient(casChannel, instance),
-          stub(proto::Execution::NewStub(channel))
+          executionStub(proto::Execution::NewStub(channel)),
+          operationsStub(proto::Operations::NewStub(channel))
     {
     }
 
     RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel,
                           std::string instance)
         : CASClient(channel, instance),
-          stub(proto::Execution::NewStub(channel))
+          executionStub(proto::Execution::NewStub(channel)),
+          operationsStub(proto::Operations::NewStub(channel))
     {
     }
 
     RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel)
-        : CASClient(channel), stub(proto::Execution::NewStub(channel))
+        : CASClient(channel),
+          executionStub(proto::Execution::NewStub(channel)),
+          operationsStub(proto::Operations::NewStub(channel))
     {
     }
 
@@ -108,6 +131,14 @@ class RemoteExecutionClient : public CASClient {
      * Write the given ActionResult's output files to disk.
      */
     void write_files_to_disk(ActionResult result, const char *root = ".");
+
+    /**
+     * Signal handler to mark the remote execution task for cancellation
+     */
+    static inline void set_sigint_received(int)
+    {
+        RemoteExecutionClient::sigint_received = true;
+    }
 };
 } // namespace recc
 } // namespace BloombergLP

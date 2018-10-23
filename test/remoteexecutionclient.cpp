@@ -19,6 +19,7 @@
 #include <build/bazel/remote/execution/v2/remote_execution_mock.grpc.pb.h>
 #include <gmock/gmock.h>
 #include <google/bytestream/bytestream_mock.grpc.pb.h>
+#include <google/longrunning/operations_mock.grpc.pb.h>
 #include <google/protobuf/util/message_differencer.h>
 #include <grpcpp/test/mock_stream.h>
 #include <gtest/gtest.h>
@@ -26,6 +27,9 @@
 
 #include <fstream>
 #include <iostream>
+#include <signal.h>
+#include <unistd.h>
+
 using namespace BloombergLP::recc;
 using namespace std;
 using namespace testing;
@@ -35,9 +39,10 @@ const string emptyString;
 #define WITH_CLIENT()                                                         \
     auto executionStub = new proto::MockExecutionStub();                      \
     auto casStub = new proto::MockContentAddressableStorageStub();            \
+    auto operationsStub = new google::longrunning::MockOperationsStub();      \
     auto byteStreamStub = new google::bytestream::MockByteStreamStub;         \
-    RemoteExecutionClient client(executionStub, casStub, byteStreamStub,      \
-                                 string())
+    RemoteExecutionClient client(executionStub, casStub, operationsStub,      \
+                                 byteStreamStub, string())
 
 MATCHER_P(MessageEq, expected, "")
 {
@@ -190,4 +195,115 @@ TEST(RemoteExecutionClientTest, WriteFilesToDisk)
     string expectedPath = string(tempDir.name()) + "/test.txt";
     EXPECT_TRUE(is_executable(expectedPath.c_str()));
     EXPECT_EQ(get_file_contents(expectedPath.c_str()), "Test file content!");
+}
+
+TEST(RemoteExecutionClientTest, CancelOperation)
+{
+    WITH_CLIENT();
+
+    // Construct the Digest we're passing in, and the ExecuteRequest we expect
+    // the RemoteExecutionClient to send as a result.
+    proto::Digest actionDigest;
+    actionDigest.set_hash("Action digest hash here");
+    proto::ExecuteRequest expectedExecuteRequest;
+    *expectedExecuteRequest.mutable_action_digest() = actionDigest;
+
+    // Return a completed Operation when the client sends the Execute request.
+    google::longrunning::Operation operation;
+    operation.set_done(false);
+    operation.set_name("fake-operation");
+    auto operationReader =
+        new grpc::testing::MockClientReader<google::longrunning::Operation>();
+
+    /**
+     * This test is a bit gross, so it warrants an explanation.
+     *
+     * We're testing the SIGINT handler here, and the cleanest way to do that
+     * is to send the signal from another process. Since GTest won't fail
+     * loudly in child processes, we'll have the child send the signal to the
+     * parent rather than the other way around. Moreover, since sending SIGINT
+     * results in a call to exit(), we need to do all of the work inside an
+     * ASSERT_EXIT block, which itself forks.
+     *
+     * execute_action() does, among other things, the following things in
+     * order:
+     *
+     *     1. Sets up a SIGINT signal handler
+     *     2. Calls Execute()
+     *     3. Calls Read() to get the result
+     *
+     * This test takes advantage of this order to override the mock Execute()
+     * (in the parent) to write its PID to the timing pipe. When this happens,
+     * the child knows that the signal handler has been set up in the parent,
+     * so it can safely send SIGINT to the assert block. This SIGINT should get
+     * picked up by the parent's signal handler, and the busy wait should
+     * eventually pick up on the cancellation flag to send the
+     * CancelOperation() RPC.
+     *
+     * If any of the EXPECT_CALLS inside ASSERT_EXIT fail, the process running
+     * ASSERT_EXIT returns 1, which fails the assert block.
+     *
+     * It's unfortunate that this test relies on the implementation detail of
+     * the signal handler being set up before Execute is called, but testing
+     * signal handlers gets rather messy this way.
+     */
+
+    int timingPipe[2];
+    if (pipe(timingPipe)) {
+        cerr << "Failed to create pipe" << endl;
+        FAIL();
+    }
+
+    pid_t pid = fork();
+
+    if (pid == (pid_t)0) {
+        close(timingPipe[1]);
+
+        /* Wait for the parent to write its PID before sending the signal */
+        pid_t assert_pid = getpid();
+        read(timingPipe[0], &assert_pid, sizeof(assert_pid));
+        close(timingPipe[0]);
+        kill(assert_pid, SIGINT);
+    }
+
+    else {
+        close(timingPipe[0]);
+
+        ASSERT_EXIT(
+            {
+                /**
+                 * This lambda replaces the behavior of Execute()
+                 * It writes its PID to the pipe to indicate to the child that
+                 * it has called this RPC. This means that the signal handler
+                 * has already been set up in execute_action.
+                 */
+
+                EXPECT_CALL(*executionStub,
+                            ExecuteRaw(_, MessageEq(expectedExecuteRequest)))
+                    .WillOnce(testing::InvokeWithoutArgs([&timingPipe,
+                                                          &operationReader]() {
+                        pid_t assert_pid = getpid();
+                        write(timingPipe[1], &assert_pid, sizeof(assert_pid));
+                        close(timingPipe[1]);
+                        return operationReader;
+                    }));
+
+                EXPECT_CALL(*operationReader, Read(_))
+                    .WillRepeatedly(
+                        DoAll(SetArgPointee<0>(operation), Return(true)));
+                EXPECT_CALL(*operationsStub, CancelOperation(_, _, _))
+                    .WillOnce(Return(grpc::Status::OK));
+
+                /* Since we call exit(), we leak several mocks and make GTest
+                 * unhappy. We need to tell GTest to ignore these leaks during
+                 * the memory check. */
+                Mock::AllowLeak(executionStub);
+                Mock::AllowLeak(operationReader);
+                Mock::AllowLeak(operationsStub);
+
+                client.execute_action(actionDigest);
+            },
+            ::testing::ExitedWithCode(130), ".*");
+    }
+    waitpid(pid, NULL, 0);
 }

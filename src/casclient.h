@@ -31,29 +31,31 @@ typedef std::shared_ptr<grpc::Channel> channel_ref;
 
 class CASClient {
   private:
-    std::unique_ptr<proto::ContentAddressableStorage::StubInterface> stub;
+    std::unique_ptr<proto::ContentAddressableStorage::StubInterface>
+        executionStub;
     std::unique_ptr<google::bytestream::ByteStream::StubInterface>
         byteStreamStub;
 
   public:
     std::string instance;
 
-    CASClient(proto::ContentAddressableStorage::StubInterface *stub,
+    CASClient(proto::ContentAddressableStorage::StubInterface *executionStub,
               google::bytestream::ByteStream::StubInterface *byteStreamStub,
               std::string instance)
-        : stub(stub), byteStreamStub(byteStreamStub), instance(instance)
+        : executionStub(executionStub), byteStreamStub(byteStreamStub),
+          instance(instance)
     {
     }
 
     CASClient(std::shared_ptr<grpc::Channel> channel, std::string instance)
-        : stub(proto::ContentAddressableStorage::NewStub(channel)),
+        : executionStub(proto::ContentAddressableStorage::NewStub(channel)),
           byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
           instance(instance)
     {
     }
 
     CASClient(std::shared_ptr<grpc::Channel> channel)
-        : stub(proto::ContentAddressableStorage::NewStub(channel)),
+        : executionStub(proto::ContentAddressableStorage::NewStub(channel)),
           byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
           instance()
     {

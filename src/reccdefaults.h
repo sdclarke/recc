@@ -19,6 +19,7 @@
 // clang-format off
 
 #define DEFAULT_RECC_WORKER_POLL_WAIT std::chrono::milliseconds(250)
+#define DEFAULT_RECC_POLL_WAIT std::chrono::seconds(1)
 #define DEFAULT_RECC_SERVER "localhost:8085"
 #define DEFAULT_RECC_INSTANCE "main"
 #define DEFAULT_RECC_TMPDIR "/tmp"
