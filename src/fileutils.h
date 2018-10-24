@@ -93,6 +93,23 @@ std::string make_path_relative(std::string path, const char *workingDirectory);
  * empty string and log a warning.
  */
 std::string get_current_working_directory();
+
+/**
+ * Return the number of levels of parent directory needed to follow the given
+ * path.
+ *
+ * For example, "a/b/c.txt" has zero parent directory levels, "a/../../b.txt"
+ * has one, and "../.." has two.
+ */
+int parent_directory_levels(const char *path);
+
+/**
+ * Return a string containing the last N segments of the given path, without a
+ * trailing slash.
+ *
+ * If the given path doesn't have that many segments, throws an exception.
+ */
+std::string last_n_segments(const char *path, int n);
 } // namespace recc
 } // namespace BloombergLP
 #endif
