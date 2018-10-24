@@ -122,6 +122,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    string commandWorkingDirectory;
     NestedDirectory nestedDirectory;
     unordered_map<proto::Digest, string> blobs;
     unordered_map<proto::Digest, string> filenames;
@@ -151,27 +152,29 @@ int main(int argc, char *argv[])
             }
         }
 
-        for (const auto &dep : deps) {
-            if (dep.compare(0, 3, "../") == 0) {
-                RECC_LOG_VERBOSE("Command requires dependency outside current "
-                                 "directory, so running locally.");
-                RECC_LOG_VERBOSE("(use RECC_DEPS_OVERRIDE to override)");
-                execvp(argv[1], &argv[1]);
-                perror(argv[1]);
-                exit(1);
-            }
-        }
         RECC_LOG_VERBOSE("Building Merkle tree");
+        int parentsNeeded = 0;
         for (const auto &dep : deps) {
+            parentsNeeded =
+                max(parentsNeeded, parent_directory_levels(dep.c_str()));
+        }
+        for (const auto &product : products) {
+            parentsNeeded =
+                max(parentsNeeded, parent_directory_levels(product.c_str()));
+        }
+        commandWorkingDirectory = last_n_segments(cwd.c_str(), parentsNeeded);
+        for (const auto &dep : deps) {
+            string merklePath = commandWorkingDirectory + "/" + dep;
+            merklePath = normalize_path(merklePath.c_str());
             File file(dep.c_str());
-            nestedDirectory.add(file, dep.c_str());
+            nestedDirectory.add(file, merklePath.c_str());
             filenames[file.digest] = dep;
         }
     }
     for (const auto &product : products) {
-        if (product.compare(0, 3, "../") == 0 || product[0] == '/') {
-            RECC_LOG_VERBOSE("Command produces file outside current "
-                             "directory, so running locally.");
+        if (product[0] == '/') {
+            RECC_LOG_VERBOSE("Command produces file in a location unrelated "
+                             "to the current directory, so running locally.");
             RECC_LOG_VERBOSE(
                 "(use RECC_OUTPUT_[FILES|DIRECTORIES]_OVERRIDE to override)");
             execvp(argv[1], &argv[1]);
@@ -203,6 +206,7 @@ int main(int argc, char *argv[])
         property->set_name(platformIter.first);
         property->set_value(platformIter.second);
     }
+    *commandProto.mutable_working_directory() = commandWorkingDirectory;
     RECC_LOG_VERBOSE("Command: " << commandProto.ShortDebugString());
     auto commandDigest = make_digest(commandProto);
     blobs[commandDigest] = commandProto.SerializeAsString();
