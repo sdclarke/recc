@@ -60,6 +60,10 @@ add_executable(remoteexecutionclient_tests remoteexecutionclient.cpp main.cpp)
 target_link_libraries(remoteexecutionclient_tests GMock::GMock GTest::GTest remoteexecution)
 add_test(NAME remoteexecutionclient_tests COMMAND remoteexecutionclient_tests)
 
+add_executable(recccounterguard_tests recccounterguard.cpp main.cpp)
+target_link_libraries(recccounterguard_tests GMock::GMock GTest::GTest remoteexecution)
+add_test(NAME recccounterguard_tests COMMAND recccounterguard_tests)
+
 add_executable(fileutils_tests fileutils.cpp main.cpp)
 target_link_libraries(fileutils_tests GTest::GTest remoteexecution)
 add_test(NAME fileutils_tests COMMAND fileutils_tests)

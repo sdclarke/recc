@@ -22,6 +22,7 @@
 #include <logging.h>
 #include <merklize.h>
 #include <protos.h>
+#include <recccounterguard.h>
 #include <reccdefaults.h>
 #include <subprocess.h>
 
@@ -61,6 +62,9 @@ const string HELP(
     "                             using an insecure connection\n"
     "\n"
     "RECC_MAX_CONCURRENT_JOBS - number of jobs to run simultaneously\n"
+    "\n"
+    "RECC_JOBS_COUNT - number of jobs to run before terminating the worker\n"
+    "                  (by default, unlimited)"
     "\n"
     "RECC_INSTANCE - the instance name to pass to the server\n"
     "\n"
@@ -261,11 +265,25 @@ int main(int argc, char *argv[])
     // Parse configuration from environment variables and defaults
     parse_config_variables();
 
+    // TODO move the following checks in src/env.cpp special cases
     if (RECC_MAX_CONCURRENT_JOBS <= 0) {
         cerr << "Warning: no RECC_MAX_CONCURRENT_JOBS specified." << endl;
         cerr << "Running " << DEFAULT_RECC_MAX_CONCURRENT_JOBS
              << " job(s) at a time (default option)." << endl;
         RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
+    }
+
+    ReccCounterGuard counterGuard(
+        ReccCounterGuard::get_limit_from_args(RECC_JOBS_COUNT));
+
+    // If RECC_JOBS_LIMIT was set, make sure we cap RECC_MAX_CONCURRENT_JOBS
+    if (!counterGuard.is_unlimited()) {
+        if (RECC_MAX_CONCURRENT_JOBS > counterGuard.get_limit()) {
+            cerr << "Warning: RECC_MAX_CONCURRENT_JOBS (" << RECC_JOBS_COUNT
+                 << ") > RECC_JOBS_COUNT (" << counterGuard.get_limit() << ") "
+                 << ", capping it to: " << counterGuard.get_limit() << endl;
+            RECC_MAX_CONCURRENT_JOBS = counterGuard.get_limit();
+        }
     }
 
     RECC_LOG_VERBOSE("Starting build worker with bot_id=[" + bot_id + "]");
@@ -317,8 +335,22 @@ int main(int argc, char *argv[])
     mutex sessionMutex;
     condition_variable sessionCondition;
     bool skipPollDelay = true;
+
+    // Keep track of Lease IDs that have been accepted but not assigned to a
+    // worker yet. Fully managed by the while-loop; used to know if it is
+    // permitted to exit upon reaching the JOBS_LIMIT
+    set<string> activeJobsPendingWorker;
+
+    // Keep track of Lease IDs that have been assigned to a worker
+    // Lease IDs are added when the while-loop spawns worker threads and they
+    //           are removed when by the worker threads when they're done
     set<string> activeJobs;
-    while (true) {
+
+    // Run this loop until the job limit (if any) was reached, or there
+    // are jobs running, or jobs have been accepted and pending a
+    // worker assignment
+    while (counterGuard.is_allowed_more() || activeJobs.size() ||
+           activeJobsPendingWorker.size()) {
         unique_lock<mutex> lock(sessionMutex);
         if (skipPollDelay) {
             skipPollDelay = false;
@@ -332,11 +364,15 @@ int main(int argc, char *argv[])
                 RECC_LOG_VERBOSE("Got lease: " << lease.DebugString());
                 if (lease.payload().Is<proto::Action>() ||
                     lease.payload().Is<proto::Digest>()) {
-                    if (activeJobs.size() < RECC_MAX_CONCURRENT_JOBS) {
+                    if (activeJobs.size() + activeJobsPendingWorker.size() <
+                            RECC_MAX_CONCURRENT_JOBS &&
+                        counterGuard.is_allowed_more()) {
                         // Accept the lease, but wait for the server's ack
                         // before actually starting work on it.
                         lease.set_state(proto::LeaseState::ACTIVE);
                         skipPollDelay = true;
+                        activeJobsPendingWorker.insert(lease.id());
+                        counterGuard.decrease_limit();
                     }
                 }
                 else {
@@ -352,9 +388,13 @@ int main(int argc, char *argv[])
                         worker_thread, &session, &activeJobs, &sessionMutex,
                         &sessionCondition, casChannel, lease.id());
                     thread.detach();
-                    activeJobs.insert(lease.id());
                     // (the thread will remove its job from activeJobs when
                     // it's done)
+                    activeJobs.insert(lease.id());
+
+                    // since a worker thread has been spawned, remove it from
+                    // the pending set
+                    activeJobsPendingWorker.erase(lease.id());
                 }
             }
         }
@@ -369,4 +409,8 @@ int main(int argc, char *argv[])
                 stub->UpdateBotSession(&context, updateRequest, &session));
         }
     }
+    if (!counterGuard.is_allowed_more()) {
+        RECC_LOG_VERBOSE("Terminating, reached job limit.");
+    }
+    return 0;
 }

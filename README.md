@@ -206,6 +206,12 @@ simultaneous build jobs you want the worker to run. (By default, it runs jobs
 one at a time.) Run `reccworker --help` for the full list of environment
 variables `reccworker` accepts.
 
+You can also optionally set `RECC_JOBS_COUNT` to the maximum number of jobs
+each worker can execute before terminating execution. This can be useful when
+running reccworker on Kubernetes (and similar platforms) since it can provide a 
+"free sandbox" with `RECC_JOBS_COUNT=1`  with Kubernetes' (or equivalent) 
+`restartPolicy: Always`.
+
 Once you've set up the servers and environment, start the worker by
 running `reccworker`. You can optionally specify a bot ID (the default is the
 computer's hostname and the pid of the process separated by a '-') by passing
