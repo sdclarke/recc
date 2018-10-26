@@ -58,7 +58,7 @@ set<string> dependencies_from_make_rules(string rules, bool is_sun_format,
             saw_colon_on_line = false;
             ignoring_file = false;
             if (!current_filename.empty()) {
-                result.insert(normalize_path(current_filename.c_str()));
+                result.insert(current_filename);
             }
             current_filename.clear();
         }
@@ -72,7 +72,7 @@ set<string> dependencies_from_make_rules(string rules, bool is_sun_format,
             else {
                 ignoring_file = false;
                 if (!current_filename.empty()) {
-                    result.insert(normalize_path(current_filename.c_str()));
+                    result.insert(current_filename);
                 }
                 current_filename.clear();
             }
@@ -86,7 +86,7 @@ set<string> dependencies_from_make_rules(string rules, bool is_sun_format,
         }
     }
     if (!current_filename.empty()) {
-        result.insert(normalize_path(current_filename.c_str()));
+        result.insert(current_filename);
     }
     return result;
 }
@@ -99,7 +99,7 @@ CommandFileInfo get_file_info(ParsedCommand parsedCommand)
     if (subprocessResult.exitCode != 0) {
         throw subprocess_failed_error(subprocessResult.exitCode);
     }
-    auto dependencies = dependencies_from_make_rules(
+    result.dependencies = dependencies_from_make_rules(
         subprocessResult.stdOut, parsedCommand.produces_sun_make_rules(),
         false);
     set<string> products;
@@ -107,12 +107,9 @@ CommandFileInfo get_file_info(ParsedCommand parsedCommand)
         products = parsedCommand.get_products();
     }
     else {
-        products = guess_products(dependencies);
+        products = guess_products(result.dependencies);
     }
 
-    for (const auto &dependency : dependencies) {
-        result.dependencies.insert(normalize_path(dependency.c_str()));
-    }
     for (const auto &product : products) {
         result.possibleProducts.insert(normalize_path(product.c_str()));
     }
