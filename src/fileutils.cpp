@@ -261,7 +261,7 @@ int parent_directory_levels(const char *path)
         const char *slash = strchr(path, '/');
         if (!slash)
             break;
-        int segmentLength = slash - path;
+        const int segmentLength = slash - path;
         if (segmentLength == 0 || (segmentLength == 1 && path[0] == '.')) {
             // Empty or dot segments don't change the level.
         }
@@ -285,7 +285,7 @@ string last_n_segments(const char *path, int n)
 {
     if (n == 0)
         return string();
-    int pathLength = strlen(path);
+    const int pathLength = strlen(path);
     const char *substringStart = path + pathLength - 1;
     int substringLength = 1;
     int slashesSeen = 0;
