@@ -228,8 +228,8 @@ TEST(MakePathRelativeTest, PathUnrelatedToWorkingDirectory)
 
 TEST(FileUtilsTest, GetCurrentWorkingDirectory)
 {
-    vector<string> command = {"pwd"};
-    auto commandResult = execute(command, true);
+    const vector<string> command = {"pwd"};
+    const auto commandResult = execute(command, true);
     if (commandResult.exitCode == 0) {
         EXPECT_EQ(commandResult.stdOut,
                   get_current_working_directory() + "\n");
