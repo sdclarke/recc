@@ -33,35 +33,6 @@ using namespace std;
 namespace BloombergLP {
 namespace recc {
 
-string cleanup_path(string path)
-{
-    vector<string> segments;
-    string currentSegment;
-    for (const char &character : path + '/') {
-        if (character == '/') {
-            if (currentSegment == ".." && !segments.empty()) {
-                segments.pop_back();
-            }
-            else if ((segments.empty() || !currentSegment.empty()) &&
-                     currentSegment != ".") {
-                segments.push_back(currentSegment);
-            }
-            currentSegment.clear();
-        }
-        else {
-            currentSegment += character;
-        }
-    }
-    string result;
-    for (int i = 0; i < segments.size(); ++i) {
-        result += segments[i];
-        if (i + 1 < segments.size()) {
-            result += '/';
-        }
-    }
-    return result;
-}
-
 set<string> dependencies_from_make_rules(string rules, bool is_sun_format,
                                          bool include_global_paths)
 {
@@ -87,7 +58,7 @@ set<string> dependencies_from_make_rules(string rules, bool is_sun_format,
             saw_colon_on_line = false;
             ignoring_file = false;
             if (!current_filename.empty()) {
-                result.insert(cleanup_path(current_filename));
+                result.insert(normalize_path(current_filename.c_str()));
             }
             current_filename.clear();
         }
@@ -101,7 +72,7 @@ set<string> dependencies_from_make_rules(string rules, bool is_sun_format,
             else {
                 ignoring_file = false;
                 if (!current_filename.empty()) {
-                    result.insert(cleanup_path(current_filename));
+                    result.insert(normalize_path(current_filename.c_str()));
                 }
                 current_filename.clear();
             }
@@ -115,7 +86,7 @@ set<string> dependencies_from_make_rules(string rules, bool is_sun_format,
         }
     }
     if (!current_filename.empty()) {
-        result.insert(cleanup_path(current_filename));
+        result.insert(normalize_path(current_filename.c_str()));
     }
     return result;
 }

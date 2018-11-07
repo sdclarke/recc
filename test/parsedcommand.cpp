@@ -203,3 +203,76 @@ TEST(XlcTest, OutputArguments)
     EXPECT_EQ(command.get_products(), expectedProducts);
     EXPECT_TRUE(command.produces_sun_make_rules());
 }
+
+TEST(RewriteAbsolutePathsTest, SimpleCompileCommand)
+{
+    const vector<string> command = {"gcc", "-c", "/home/nobody/test/hello.c",
+                                    "-o", "/home/nobody/test/hello.o"};
+    const ParsedCommand parsedCommand(command, "/home/nobody/test");
+
+    const vector<string> expectedCommand = {"gcc", "-c", "hello.c", "-o",
+                                            "hello.o"};
+    const vector<string> expectedDepsCommand = {"gcc", "-c", "hello.c", "-MM"};
+    const set<string> expectedProducts = {"hello.o"};
+
+    ASSERT_TRUE(parsedCommand.is_compiler_command());
+    EXPECT_EQ(parsedCommand.get_command(), expectedCommand);
+    EXPECT_EQ(parsedCommand.get_dependencies_command(), expectedDepsCommand);
+    EXPECT_EQ(parsedCommand.get_products(), expectedProducts);
+}
+
+TEST(RewriteAbsolutePathsTest, ComplexOptions)
+{
+    const vector<string> command = {"gcc",
+                                    "-c",
+                                    "/home/nobody/test/hello.c",
+                                    "-o",
+                                    "/home/nobody/test/hello.o",
+                                    "-I/home/nobody/headers",
+                                    "-I",
+                                    "/home/nobody/test/moreheaders/",
+                                    "-Wp,-I,/home/nobody/evenmoreheaders",
+                                    "-Xpreprocessor",
+                                    "-I",
+                                    "-Xpreprocessor",
+                                    "/usr/include/something"};
+    const ParsedCommand parsedCommand(command, "/home/nobody/test");
+
+    const vector<string> expectedCommand = {"gcc",
+                                            "-c",
+                                            "hello.c",
+                                            "-o",
+                                            "hello.o",
+                                            "-I../headers",
+                                            "-I",
+                                            "moreheaders/",
+                                            "-Xpreprocessor",
+                                            "-I",
+                                            "-Xpreprocessor",
+                                            "../evenmoreheaders",
+                                            "-Xpreprocessor",
+                                            "-I",
+                                            "-Xpreprocessor",
+                                            "/usr/include/something"};
+    const vector<string> expectedDepsCommand = {"gcc",
+                                                "-c",
+                                                "hello.c",
+                                                "-I../headers",
+                                                "-I",
+                                                "moreheaders/",
+                                                "-Xpreprocessor",
+                                                "-I",
+                                                "-Xpreprocessor",
+                                                "../evenmoreheaders",
+                                                "-Xpreprocessor",
+                                                "-I",
+                                                "-Xpreprocessor",
+                                                "/usr/include/something",
+                                                "-MM"};
+    const set<string> expectedProducts = {"hello.o"};
+
+    ASSERT_TRUE(parsedCommand.is_compiler_command());
+    EXPECT_EQ(parsedCommand.get_command(), expectedCommand);
+    EXPECT_EQ(parsedCommand.get_dependencies_command(), expectedDepsCommand);
+    EXPECT_EQ(parsedCommand.get_products(), expectedProducts);
+}

@@ -14,6 +14,8 @@
 
 #include <fileutils.h>
 
+#include <subprocess.h>
+
 #include <gtest/gtest.h>
 
 #include <exception>
@@ -116,4 +118,120 @@ TEST(NormalizePathTest, KeepNeededDotDot)
     EXPECT_EQ("../dir/hello", normalize_path("../dir/hello"));
     EXPECT_EQ("../dir/hello", normalize_path("subdir/../../dir/hello"));
     EXPECT_EQ("../../dir/hello", normalize_path("subdir/../../../dir/hello"));
+}
+
+TEST(MakePathRelativeTest, ReturnNonAbsolutePathsUnmodified)
+{
+    EXPECT_EQ("", make_path_relative(string(""), "/some/working/directory"));
+    EXPECT_EQ("", make_path_relative(string(""), "/some/working/directory"));
+    EXPECT_EQ("test",
+              make_path_relative(string("test"), "/some/working/directory"));
+    EXPECT_EQ("test/long/path", make_path_relative(string("test/long/path"),
+                                                   "/some/working/directory"));
+    EXPECT_EQ("some/path", make_path_relative(string("some/path"),
+                                              "/some/working/directory"));
+}
+
+TEST(MakePathRelativeTest, DoNothingIfWorkingDirectoryNull)
+{
+    EXPECT_EQ("/test/directory/",
+              make_path_relative(string("/test/directory/"), nullptr));
+    EXPECT_EQ("/test/directory/",
+              make_path_relative(string("/test/directory/"), ""));
+    EXPECT_EQ("/test", make_path_relative(string("/test"), ""));
+}
+
+TEST(MakePathRelativeTest, WorkingDirectoryIsPathPrefix)
+{
+    EXPECT_EQ("path",
+              make_path_relative(string("/some/test/path"), "/some/test"));
+    EXPECT_EQ("path",
+              make_path_relative(string("/some/test/path"), "/some/test/"));
+    EXPECT_EQ("path/",
+              make_path_relative(string("/some/test/path/"), "/some/test"));
+    EXPECT_EQ("path/",
+              make_path_relative(string("/some/test/path/"), "/some/test/"));
+}
+
+TEST(MakePathRelativeTest, PathEqualsWorkingDirectory)
+{
+    EXPECT_EQ(
+        ".", make_path_relative(string("/some/test/path"), "/some/test/path"));
+    EXPECT_EQ(".", make_path_relative(string("/some/test/path"),
+                                      "/some/test/path/"));
+    EXPECT_EQ("./", make_path_relative(string("/some/test/path/"),
+                                       "/some/test/path"));
+    EXPECT_EQ("./", make_path_relative(string("/some/test/path/"),
+                                       "/some/test/path/"));
+}
+
+TEST(MakePathRelativeTest, PathAlmostEqualsWorkingDirectory)
+{
+    EXPECT_EQ("../tests",
+              make_path_relative(string("/some/tests"), "/some/test"));
+    EXPECT_EQ("../tests",
+              make_path_relative(string("/some/tests"), "/some/test/"));
+    EXPECT_EQ("../tests/",
+              make_path_relative(string("/some/tests/"), "/some/test"));
+    EXPECT_EQ("../tests/",
+              make_path_relative(string("/some/tests/"), "/some/test/"));
+}
+
+TEST(MakePathRelativeTest, PathIsParentOfWorkingDirectory)
+{
+    EXPECT_EQ("..", make_path_relative(string("/a/b/c"), "/a/b/c/d"));
+    EXPECT_EQ("..", make_path_relative(string("/a/b/c"), "/a/b/c/d/"));
+    EXPECT_EQ("../", make_path_relative(string("/a/b/c/"), "/a/b/c/d"));
+    EXPECT_EQ("../", make_path_relative(string("/a/b/c/"), "/a/b/c/d/"));
+
+    EXPECT_EQ("../../..", make_path_relative(string("/a"), "/a/b/c/d"));
+    EXPECT_EQ("../../..", make_path_relative(string("/a"), "/a/b/c/d/"));
+    EXPECT_EQ("../../../", make_path_relative(string("/a/"), "/a/b/c/d"));
+    EXPECT_EQ("../../../", make_path_relative(string("/a/"), "/a/b/c/d/"));
+}
+
+TEST(MakePathRelativeTest, PathAdjacentToWorkingDirectory)
+{
+    EXPECT_EQ("../e", make_path_relative(string("/a/b/c/e"), "/a/b/c/d"));
+    EXPECT_EQ("../e", make_path_relative(string("/a/b/c/e"), "/a/b/c/d/"));
+    EXPECT_EQ("../e/", make_path_relative(string("/a/b/c/e/"), "/a/b/c/d"));
+    EXPECT_EQ("../e/", make_path_relative(string("/a/b/c/e/"), "/a/b/c/d/"));
+
+    EXPECT_EQ("../e/f/g",
+              make_path_relative(string("/a/b/c/e/f/g"), "/a/b/c/d"));
+    EXPECT_EQ("../e/f/g",
+              make_path_relative(string("/a/b/c/e/f/g"), "/a/b/c/d/"));
+    EXPECT_EQ("../e/f/g/",
+              make_path_relative(string("/a/b/c/e/f/g/"), "/a/b/c/d"));
+    EXPECT_EQ("../e/f/g/",
+              make_path_relative(string("/a/b/c/e/f/g/"), "/a/b/c/d/"));
+
+    EXPECT_EQ("../../e/f/g",
+              make_path_relative(string("/a/b/e/f/g"), "/a/b/c/d"));
+    EXPECT_EQ("../../e/f/g",
+              make_path_relative(string("/a/b/e/f/g"), "/a/b/c/d/"));
+    EXPECT_EQ("../../e/f/g/",
+              make_path_relative(string("/a/b/e/f/g/"), "/a/b/c/d"));
+    EXPECT_EQ("../../e/f/g/",
+              make_path_relative(string("/a/b/e/f/g/"), "/a/b/c/d/"));
+}
+
+TEST(MakePathRelativeTest, PathUnrelatedToWorkingDirectory)
+{
+    EXPECT_EQ("/e/b/c/d", make_path_relative(string("/e/b/c/d"), "/a/b/c/d"));
+    EXPECT_EQ("/e/b/c/d", make_path_relative(string("/e/b/c/d"), "/a/b/c/d/"));
+    EXPECT_EQ("/e/b/c/d/",
+              make_path_relative(string("/e/b/c/d/"), "/a/b/c/d"));
+    EXPECT_EQ("/e/b/c/d/",
+              make_path_relative(string("/e/b/c/d/"), "/a/b/c/d/"));
+}
+
+TEST(FileUtilsTest, GetCurrentWorkingDirectory)
+{
+    const vector<string> command = {"pwd"};
+    const auto commandResult = execute(command, true);
+    if (commandResult.exitCode == 0) {
+        EXPECT_EQ(commandResult.stdOut,
+                  get_current_working_directory() + "\n");
+    }
 }
