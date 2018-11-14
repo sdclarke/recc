@@ -224,7 +224,7 @@ void find_and_parse_config_files()
 void handle_special_defaults(Source f)
 {
     switch (f) {
-        case Source::Standard:
+        case Source::Baseline:
             if (RECC_SERVER.empty()) {
                 RECC_SERVER = DEFAULT_RECC_SERVER;
                 cerr << "Warning: no RECC_SERVER environment variable "
@@ -239,6 +239,7 @@ void handle_special_defaults(Source f)
                      << "Using the same as RECC_SERVER (" << RECC_CAS_SERVER
                      << ")" << endl;
             }
+            break;
 
         case Source::Reccworker:
             if (RECC_MAX_CONCURRENT_JOBS <= 0) {
@@ -248,6 +249,7 @@ void handle_special_defaults(Source f)
                      << " job(s) at a time (default option)." << endl;
                 RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
             }
+            break;
     }
 }
 
