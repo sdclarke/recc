@@ -17,6 +17,7 @@
 #include <logging.h>
 #include <subprocess.h>
 
+#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -251,5 +252,58 @@ string get_current_working_directory()
         }
     }
 }
+
+int parent_directory_levels(const char *path)
+{
+    int currentLevel = 0;
+    int lowestLevel = 0;
+    while (*path != 0) {
+        const char *slash = strchr(path, '/');
+        if (!slash)
+            break;
+        const int segmentLength = slash - path;
+        if (segmentLength == 0 || (segmentLength == 1 && path[0] == '.')) {
+            // Empty or dot segments don't change the level.
+        }
+        else if (segmentLength == 2 && path[0] == '.' && path[1] == '.') {
+            currentLevel--;
+            lowestLevel = min(lowestLevel, currentLevel);
+        }
+        else {
+            currentLevel++;
+        }
+        path = slash + 1;
+    }
+    if (strcmp(path, "..") == 0) {
+        currentLevel--;
+        lowestLevel = min(lowestLevel, currentLevel);
+    }
+    return -lowestLevel;
+}
+
+string last_n_segments(const char *path, int n)
+{
+    if (n == 0)
+        return string();
+    const int pathLength = strlen(path);
+    const char *substringStart = path + pathLength - 1;
+    int substringLength = 1;
+    int slashesSeen = 0;
+    if (path[pathLength - 1] == '/') {
+        substringLength = 0;
+    }
+    while (substringStart != path) {
+        if (*(substringStart - 1) == '/') {
+            slashesSeen++;
+            if (slashesSeen == n) {
+                return string(substringStart, substringLength);
+            }
+        }
+        substringStart--;
+        substringLength++;
+    }
+    throw logic_error("Not enough segments in path");
+}
+
 } // namespace recc
 } // namespace BloombergLP

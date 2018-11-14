@@ -235,3 +235,40 @@ TEST(FileUtilsTest, GetCurrentWorkingDirectory)
                   get_current_working_directory() + "\n");
     }
 }
+
+TEST(FileUtilsTest, ParentDirectoryLevels)
+{
+    EXPECT_EQ(parent_directory_levels(""), 0);
+    EXPECT_EQ(parent_directory_levels("/"), 0);
+    EXPECT_EQ(parent_directory_levels("."), 0);
+    EXPECT_EQ(parent_directory_levels("./"), 0);
+
+    EXPECT_EQ(parent_directory_levels(".."), 1);
+    EXPECT_EQ(parent_directory_levels("../"), 1);
+    EXPECT_EQ(parent_directory_levels("../.."), 2);
+    EXPECT_EQ(parent_directory_levels("../../"), 2);
+
+    EXPECT_EQ(parent_directory_levels("a/b/c.txt"), 0);
+    EXPECT_EQ(parent_directory_levels("a/../../b.txt"), 1);
+    EXPECT_EQ(parent_directory_levels("a/../../b/c/d/../../../../test.txt"),
+              2);
+}
+
+TEST(FileUtilsTest, LastNSegments)
+{
+    EXPECT_EQ(last_n_segments("/a/bb/c/dd/e", 0), "");
+    EXPECT_EQ(last_n_segments("/a/bb/c/dd/e", 1), "e");
+    EXPECT_EQ(last_n_segments("/a/bb/c/dd/e", 2), "dd/e");
+    EXPECT_EQ(last_n_segments("/a/bb/c/dd/e", 3), "c/dd/e");
+    EXPECT_EQ(last_n_segments("/a/bb/c/dd/e", 4), "bb/c/dd/e");
+    EXPECT_EQ(last_n_segments("/a/bb/c/dd/e", 5), "a/bb/c/dd/e");
+    EXPECT_ANY_THROW(last_n_segments("/a/bb/c/dd/e", 6));
+
+    EXPECT_EQ(last_n_segments("/a/bb/c/dd/e/", 0), "");
+    EXPECT_EQ(last_n_segments("/a/bb/c/dd/e/", 1), "e");
+    EXPECT_EQ(last_n_segments("/a/bb/c/dd/e/", 2), "dd/e");
+    EXPECT_EQ(last_n_segments("/a/bb/c/dd/e/", 3), "c/dd/e");
+    EXPECT_EQ(last_n_segments("/a/bb/c/dd/e/", 4), "bb/c/dd/e");
+    EXPECT_EQ(last_n_segments("/a/bb/c/dd/e/", 5), "a/bb/c/dd/e");
+    EXPECT_ANY_THROW(last_n_segments("/a/bb/c/dd/e/", 6));
+}

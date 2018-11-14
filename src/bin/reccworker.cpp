@@ -87,10 +87,10 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
 
     casClient.download_directory(action.input_root_digest(), tmpdir.name());
 
-    string pathPrefix = string(tmpdir.name()) + "/";
+    const string pathPrefix = string(tmpdir.name()) + "/";
 
     // Fetch command from CAS and read it
-    auto commandProto =
+    const auto commandProto =
         casClient.fetch_message<proto::Command>(action.command_digest());
     vector<string> command;
     for (auto &arg : commandProto.arguments()) {
@@ -100,12 +100,15 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
     for (auto &envVar : commandProto.environment_variables()) {
         env[envVar.name()] = envVar.value();
     }
+    const string workingDirectory =
+        pathPrefix + commandProto.working_directory();
+    const string outputPathPrefix = workingDirectory + "/";
 
     // Create parent directories for the Command's output files
     for (auto &file : commandProto.output_files()) {
         if (file.find("/") != string::npos) {
             create_directory_recursive(
-                (pathPrefix + file.substr(0, file.rfind("/"))).c_str());
+                (outputPathPrefix + file.substr(0, file.rfind("/"))).c_str());
         }
     }
     for (auto &directory : commandProto.output_directories()) {
@@ -113,7 +116,8 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
     }
 
     RECC_LOG_VERBOSE("Running command " << commandProto.DebugString());
-    auto subprocessResult = execute(command, true, true, env, tmpdir.name());
+    const auto subprocessResult =
+        execute(command, true, true, env, workingDirectory.c_str());
     RECC_LOG_VERBOSE("Command completed. Creating action result...");
 
     proto::ActionResult result;
@@ -126,10 +130,10 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
 
     // Add any output files that exist to ActionResult and filesToUpload
     for (auto &outputFilename : commandProto.output_files()) {
-        auto outputPath = pathPrefix + outputFilename;
+        const auto outputPath = outputPathPrefix + outputFilename;
         if (access(outputPath.c_str(), R_OK) == 0) {
             RECC_LOG_VERBOSE("Making digest for " << outputPath);
-            auto file = File(outputPath.c_str());
+            const auto file = File(outputPath.c_str());
             filesToUpload[file.digest] = outputPath;
             auto fileProto = result.add_output_files();
             fileProto->set_path(outputFilename);
@@ -141,12 +145,12 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
     // Construct output directory trees, add them to ActionResult and
     // blobsToUpload
     for (auto &directory : commandProto.output_directories()) {
-        auto directoryPath = pathPrefix + directory;
+        const auto directoryPath = outputPathPrefix + directory;
         if (access(directoryPath.c_str(), R_OK) == 0) {
-            auto tree =
+            const auto tree =
                 make_nesteddirectory(directoryPath.c_str(), &filesToUpload)
                     .to_tree();
-            auto treeDigest = make_digest(tree);
+            const auto treeDigest = make_digest(tree);
             blobsToUpload[treeDigest] = tree.SerializeAsString();
 
             auto outputDirectory = result.add_output_directories();

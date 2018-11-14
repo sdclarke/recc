@@ -20,6 +20,15 @@
 using namespace BloombergLP::recc;
 using namespace std;
 
+set<string> normalize_all(set<string> paths)
+{
+    set<string> result;
+    for (const auto &path : paths) {
+        result.insert(normalize_path(path.c_str()));
+    }
+    return result;
+}
+
 #ifdef RECC_PLATFORM_COMPILER
 
 // Some compilers, like xlc, need certain environment variables to
@@ -29,7 +38,8 @@ TEST(DepsTest, Empty)
     parse_config_variables();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.", "empty.c"};
     set<string> expectedDeps = {"empty.c"};
-    EXPECT_EQ(expectedDeps, get_file_info(command).dependencies);
+    EXPECT_EQ(expectedDeps,
+              normalize_all(get_file_info(command).dependencies));
 }
 
 TEST(DepsTest, SimpleInclude)
@@ -38,7 +48,7 @@ TEST(DepsTest, SimpleInclude)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c"};
     set<string> expected = {"includes_empty.c", "empty.h"};
-    EXPECT_EQ(expected, get_file_info(command).dependencies);
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
 }
 
 TEST(DepsTest, RecursiveDependency)
@@ -48,7 +58,7 @@ TEST(DepsTest, RecursiveDependency)
                              "includes_includes_empty.c"};
     set<string> expected = {"includes_includes_empty.c", "includes_empty.h",
                             "empty.h"};
-    EXPECT_EQ(expected, get_file_info(command).dependencies);
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
 }
 
 TEST(DepsTest, MultiFile)
@@ -58,7 +68,7 @@ TEST(DepsTest, MultiFile)
                              "includes_includes_empty.c", "includes_empty.c"};
     set<string> expected = {"includes_includes_empty.c", "includes_empty.c",
                             "includes_empty.h", "empty.h"};
-    EXPECT_EQ(expected, get_file_info(command).dependencies);
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
 }
 
 TEST(DepsTest, EdgeCases)
@@ -67,7 +77,7 @@ TEST(DepsTest, EdgeCases)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "edge_cases.c"};
     set<string> expected = {"edge_cases.c", "empty.h", "header with spaces.h"};
-    EXPECT_EQ(expected, get_file_info(command).dependencies);
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
 }
 
 TEST(DepsTest, OutputArgument)
@@ -76,7 +86,7 @@ TEST(DepsTest, OutputArgument)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c",     "-o", "/dev/null"};
     set<string> expected = {"includes_empty.c", "empty.h"};
-    EXPECT_EQ(expected, get_file_info(command).dependencies);
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
 }
 
 TEST(DepsTest, OutputArgumentNoSpace)
@@ -85,7 +95,7 @@ TEST(DepsTest, OutputArgumentNoSpace)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c", "-o/dev/null"};
     set<string> expected = {"includes_empty.c", "empty.h"};
-    EXPECT_EQ(expected, get_file_info(command).dependencies);
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
 }
 
 TEST(DepsTest, PreprocessorOutputArgument)
@@ -94,7 +104,8 @@ TEST(DepsTest, PreprocessorOutputArgument)
         ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                                  "includes_empty.c", "-Wp,-MMD,'/dev/null'"};
         set<string> expected = {"includes_empty.c", "empty.h"};
-        EXPECT_EQ(expected, get_file_info(command).dependencies);
+        EXPECT_EQ(expected,
+                  normalize_all(get_file_info(command).dependencies));
     }
 }
 
@@ -105,7 +116,7 @@ TEST(DepsTest, Subdirectory)
                              "-Isubdirectory", "includes_from_subdirectory.c"};
     set<string> expected = {"includes_from_subdirectory.c",
                             "subdirectory/header.h"};
-    EXPECT_EQ(expected, get_file_info(command).dependencies);
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
 }
 
 TEST(DepsTest, InputInSubdirectory)
@@ -114,7 +125,7 @@ TEST(DepsTest, InputInSubdirectory)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c",
                              "subdirectory/empty.c"};
     set<string> expected = {"subdirectory/empty.c"};
-    EXPECT_EQ(expected, get_file_info(command).dependencies);
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
 }
 
 TEST(DepsTest, SubprocessFailure)
@@ -203,7 +214,7 @@ TEST(DepsFromMakeRulesTest, GccStyleMakefile)
                        "rule2.o: sample.h";
     set<string> expected = {"sample.c", "sample.h", "subdir/sample.h"};
 
-    auto dependencies = dependencies_from_make_rules(makeRules);
+    auto dependencies = normalize_all(dependencies_from_make_rules(makeRules));
 
     EXPECT_EQ(expected, dependencies);
 }
@@ -219,7 +230,8 @@ TEST(DepsFromMakeRulesTest, SunStyleMakefile)
     set<string> expected = {"sample.c", "sample.h", "subdir/sample.h",
                             "sample with spaces.c"};
 
-    auto dependencies = dependencies_from_make_rules(makeRules, true);
+    auto dependencies =
+        normalize_all(dependencies_from_make_rules(makeRules, true));
 
     EXPECT_EQ(expected, dependencies);
 }
@@ -229,7 +241,7 @@ TEST(DepsFromMakeRulesTest, LargeMakeOutput)
     auto makeRules = get_file_contents("giant_make_output.mk");
     set<string> expected = {"hello.c", "hello.h", "final_dependency.h"};
 
-    auto dependencies = dependencies_from_make_rules(makeRules);
+    auto dependencies = normalize_all(dependencies_from_make_rules(makeRules));
 
     EXPECT_EQ(expected, dependencies);
 }
