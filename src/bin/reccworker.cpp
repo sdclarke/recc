@@ -283,8 +283,9 @@ int main(int argc, char *argv[])
     // If RECC_JOBS_LIMIT was set, make sure we cap RECC_MAX_CONCURRENT_JOBS
     if (!counterGuard.is_unlimited()) {
         if (RECC_MAX_CONCURRENT_JOBS > counterGuard.get_limit()) {
-            cerr << "Warning: RECC_MAX_CONCURRENT_JOBS (" << RECC_JOBS_COUNT
-                 << ") > RECC_JOBS_COUNT (" << counterGuard.get_limit() << ") "
+            cerr << "Warning: RECC_MAX_CONCURRENT_JOBS ("
+                 << RECC_MAX_CONCURRENT_JOBS << ") > RECC_JOBS_COUNT ("
+                 << counterGuard.get_limit() << ") "
                  << ", capping it to: " << counterGuard.get_limit() << endl;
             RECC_MAX_CONCURRENT_JOBS = counterGuard.get_limit();
         }
