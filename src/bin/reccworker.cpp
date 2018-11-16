@@ -268,7 +268,8 @@ int main(int argc, char *argv[])
     }
 
     // Parse configuration from environment variables and defaults
-    parse_config_variables();
+    // Specify Reccworker in argument to set reccworker specific variables
+    parse_config_variables(Source::Reccworker);
 
     ReccCounterGuard counterGuard(
         ReccCounterGuard::get_limit_from_args(RECC_JOBS_COUNT));
@@ -285,9 +286,6 @@ int main(int argc, char *argv[])
             RECC_MAX_CONCURRENT_JOBS = counterGuard.get_limit();
         }
     }
-
-    // Specify Reccworker in argument to set reccworker specific variables
-    handle_special_defaults(Source::Reccworker);
 
     RECC_LOG_VERBOSE("Starting build worker with bot_id=[" + bot_id + "]");
 
