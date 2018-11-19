@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <logging.h>
 #include <subprocess.h>
 
 #include <cerrno>
@@ -69,7 +70,7 @@ SubprocessResult execute(vector<string> command, bool pipeStdOut,
         }
         if (cwd != nullptr) {
             if (chdir(cwd) == -1) {
-                perror(nullptr);
+                RECC_LOG_PERROR(nullptr);
                 _Exit(1);
             }
         }
@@ -77,7 +78,7 @@ SubprocessResult execute(vector<string> command, bool pipeStdOut,
             setenv(envPair.first.c_str(), envPair.second.c_str(), 1);
         }
         execvp(argv[0], const_cast<char *const *>(argv));
-        perror(nullptr);
+        RECC_LOG_PERROR(nullptr);
         _Exit(1);
     }
     // (runs only in the parent)

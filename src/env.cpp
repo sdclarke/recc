@@ -32,6 +32,10 @@
 
 #include <vector>
 
+#include <sstream>
+
+#include <string>
+
 using namespace std;
 
 namespace BloombergLP {
@@ -220,16 +224,17 @@ void handle_special_defaults()
 {
     if (RECC_SERVER.empty()) {
         RECC_SERVER = DEFAULT_RECC_SERVER;
-        cerr << "Warning: no RECC_SERVER environment variable specified."
-             << "Using default server (" << RECC_SERVER << ")" << endl;
+        RECC_LOG_WARNING(
+            "Warning: no RECC_SERVER environment variable specified."
+            << "Using default server (" << RECC_SERVER << ")");
     }
 
     if (RECC_CAS_SERVER.empty()) {
         RECC_CAS_SERVER = RECC_SERVER;
-        cerr << "Warning: no RECC_CAS_SERVER environment variable "
-                "specified."
-             << "Using the same as RECC_SERVER (" << RECC_CAS_SERVER << ")"
-             << endl;
+        RECC_LOG_WARNING("Warning: no RECC_CAS_SERVER environment variable "
+                         "specified."
+                         << "Using the same as RECC_SERVER ("
+                         << RECC_CAS_SERVER << ")");
     }
 }
 

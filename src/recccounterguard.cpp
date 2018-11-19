@@ -16,6 +16,7 @@
 #include <iostream>
 #include <logging.h>
 #include <recccounterguard.h>
+#include <sstream>
 
 using namespace std;
 
@@ -52,8 +53,9 @@ int ReccCounterGuard::get_limit_from_args(int arg)
             job_limit = arg;
         }
         else {
-            cerr << "Warning: RECC_JOBS_COUNT set to an invalid value (" << arg
-                 << "), defaulting to NO_LIMIT";
+            RECC_LOG_WARNING(
+                "Warning: RECC_JOBS_COUNT set to an invalid value ("
+                << arg << "), defaulting to NO_LIMIT");
         }
     }
     return job_limit;

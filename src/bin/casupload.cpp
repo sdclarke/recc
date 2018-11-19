@@ -14,6 +14,7 @@
 
 #include <casclient.h>
 #include <env.h>
+#include <logging.h>
 #include <merklize.h>
 
 #include <cstdlib>
@@ -37,18 +38,18 @@ const string HELP(
     "containing file2.txt.\n"
     "\n"
     "The server and instance to write to are controlled by the RECC_SERVER\n"
-    "and RECC_INSTANCE environment variables.\n");
+    "and RECC_INSTANCE environment variables.");
 
 int main(int argc, char *argv[])
 {
     if (argc <= 1) {
-        cerr << "USAGE: casupload <paths>" << endl << endl;
-        cerr << "(run \"casupload --help\" for details)" << endl;
+        RECC_LOG_ERROR("USAGE: casupload <paths>");
+        RECC_LOG_ERROR("(run \"casupload --help\" for details)");
         return 1;
     }
     else if (argc == 2 &&
              (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)) {
-        cerr << HELP;
+        RECC_LOG_WARNING(HELP);
         return 1;
     }
 
@@ -76,8 +77,8 @@ int main(int argc, char *argv[])
     auto channel = grpc::CreateChannel(RECC_CAS_SERVER, creds);
     CASClient(channel, RECC_INSTANCE).upload_resources(blobs, filenames);
 
-    cout << directoryDigest.hash() << endl;
-    cout << directoryDigest.size_bytes() << endl;
+    RECC_LOG(directoryDigest.hash());
+    RECC_LOG(directoryDigest.size_bytes());
 
     return 0;
 }

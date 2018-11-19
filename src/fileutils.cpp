@@ -247,7 +247,8 @@ string get_current_working_directory()
             bufferSize *= 2;
         }
         else {
-            perror("Warning: could not get current working directory");
+            RECC_LOG_PERROR(
+                "Warning: could not get current working directory");
             return string();
         }
     }

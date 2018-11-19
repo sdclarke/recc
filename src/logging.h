@@ -15,6 +15,8 @@
 #ifndef INCLUDED_LOGGING
 #define INCLUDED_LOGGING
 
+#include <cerrno>
+#include <cstdio>
 #include <env.h>
 
 #include <iostream>
@@ -31,8 +33,16 @@
     if (RECC_VERBOSE) {                                                       \
         std::clog << x << std::endl;                                          \
     }
+
 #endif
 
-using BloombergLP::recc::RECC_VERBOSE;
+#define RECC_LOG_PERROR(x) perror(x);
 
+#define RECC_LOG(x) std::cout << x << std::endl;
+
+#define RECC_LOG_ERROR(x) std::cerr << x << std::endl;
+
+#define RECC_LOG_WARNING(x) std::cerr << x << std::endl;
+
+using BloombergLP::recc::RECC_VERBOSE;
 #endif

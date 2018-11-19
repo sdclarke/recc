@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <fileutils.h>
+#include <logging.h>
 #include <merklize.h>
 #include <remoteexecutionclient.h>
 
@@ -250,7 +251,7 @@ TEST(RemoteExecutionClientTest, CancelOperation)
 
     int timingPipe[2];
     if (pipe(timingPipe)) {
-        cerr << "Failed to create pipe" << endl;
+        RECC_LOG_ERROR("Failed to create pipe");
         FAIL();
     }
 
