@@ -93,18 +93,18 @@ const string HELP(
     "\n"
     "RECC_REMOTE_PLATFORM_[key] - specifies required Platform property,\n"
     "                             which the build server uses to select\n"
-    "                             the build worker\n");
+    "                             the build worker");
 
 int main(int argc, char *argv[])
 {
     if (argc <= 1) {
-        cerr << "USAGE: recc <command>" << endl << endl;
-        cerr << "(run \"recc --help\" for details)" << endl;
+        RECC_LOG_ERROR("USAGE: recc <command>");
+        RECC_LOG_ERROR("(run \"recc --help\" for details)");
         return 1;
     }
     else if (argc == 2 &&
              (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)) {
-        cerr << HELP;
+        RECC_LOG_WARNING(HELP);
         return 0;
     }
 
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
         RECC_LOG_VERBOSE(
             "(use RECC_FORCE_REMOTE=1 to force remote execution)");
         execvp(argv[1], &argv[1]);
-        perror(argv[1]);
+        RECC_LOG_PERROR(argv[1]);
         exit(1);
     }
 
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
             RECC_LOG_VERBOSE(
                 "(use RECC_OUTPUT_[FILES|DIRECTORIES]_OVERRIDE to override)");
             execvp(argv[1], &argv[1]);
-            perror(argv[1]);
+            RECC_LOG_PERROR(argv[1]);
             exit(1);
         }
     }
@@ -233,8 +233,8 @@ int main(int argc, char *argv[])
     RECC_LOG_VERBOSE("Executing action...");
     auto result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
 
-    cout << client.get_outputblob(result.stdOut);
-    cerr << client.get_outputblob(result.stdErr);
+    RECC_LOG(client.get_outputblob(result.stdOut));
+    RECC_LOG_ERROR(client.get_outputblob(result.stdErr));
 
     if (!RECC_DONT_SAVE_OUTPUT) {
         client.write_files_to_disk(result);

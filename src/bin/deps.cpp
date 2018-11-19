@@ -27,7 +27,7 @@ const string HELP(
     "USAGE: deps<command>\n"
     "\n"
     "Attempts to determine the files needed to execute the given compiler\n"
-    "command, then prints a newline-separated list of them.\n");
+    "command, then prints a newline-separated list of them.");
 
 int main(int argc, char *argv[])
 {
@@ -36,14 +36,14 @@ int main(int argc, char *argv[])
 
     if (argc <= 1 || strcmp(argv[1], "--help") == 0 ||
         strcmp(argv[1], "-h") == 0) {
-        cerr << HELP;
+        RECC_LOG_WARNING(HELP);
         return 0;
     }
     try {
         const auto deps =
             get_file_info(ParsedCommand(&argv[1], cwd.c_str())).dependencies;
         for (const auto &dep : deps) {
-            cout << dep << endl;
+            RECC_LOG(dep);
         }
     }
     catch (const subprocess_failed_error &e) {

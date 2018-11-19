@@ -34,6 +34,7 @@
 #include <grpcpp/security/credentials.h>
 #include <mutex>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <stdlib.h>
 #include <thread>
@@ -73,7 +74,7 @@ const string HELP(
     "TMPDIR - directory used to store temporary files\n"
     "\n"
     "RECC_REMOTE_PLATFORM_[key] - specifies this worker's platform\n"
-    "                             properties\n");
+    "                             properties");
 
 /**
  * Execute the given Action synchronously, using the given CASClient to fetch
@@ -254,13 +255,13 @@ int main(int argc, char *argv[])
 
     // Parse command-line arguments.
     if (argc > 2) {
-        cerr << "USAGE: " << argv[0] << " [id]" << endl << endl;
-        cerr << "(run \"" << argv[0] << " --help\" for details)" << endl;
+        RECC_LOG_ERROR("USAGE: " << argv[0] << " [id]");
+        RECC_LOG_ERROR("(run \"" << argv[0] << " --help\" for details)");
         return 1;
     }
     else if (argc == 2) {
         if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
-            cerr << HELP;
+            RECC_LOG_WARNING(HELP);
             return 0;
         }
         bot_id = string(argv[1]);
@@ -271,9 +272,12 @@ int main(int argc, char *argv[])
 
     // TODO move the following checks in src/env.cpp special cases
     if (RECC_MAX_CONCURRENT_JOBS <= 0) {
-        cerr << "Warning: no RECC_MAX_CONCURRENT_JOBS specified." << endl;
-        cerr << "Running " << DEFAULT_RECC_MAX_CONCURRENT_JOBS
-             << " job(s) at a time (default option)." << endl;
+
+        RECC_LOG_WARNING("Warning: no RECC_MAX_CONCURRENT_JOBS specified.");
+
+        RECC_LOG_WARNING("Running " << DEFAULT_RECC_MAX_CONCURRENT_JOBS
+                                    << " job(s) at a time (default option).");
+
         RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
     }
 
@@ -283,10 +287,11 @@ int main(int argc, char *argv[])
     // If RECC_JOBS_LIMIT was set, make sure we cap RECC_MAX_CONCURRENT_JOBS
     if (!counterGuard.is_unlimited()) {
         if (RECC_MAX_CONCURRENT_JOBS > counterGuard.get_limit()) {
-            cerr << "Warning: RECC_MAX_CONCURRENT_JOBS ("
-                 << RECC_MAX_CONCURRENT_JOBS << ") > RECC_JOBS_COUNT ("
-                 << counterGuard.get_limit() << ") "
-                 << ", capping it to: " << counterGuard.get_limit() << endl;
+            RECC_LOG_WARNING(
+                "Warning: RECC_MAX_CONCURRENT_JOBS ("
+                << RECC_MAX_CONCURRENT_JOBS << ") > RECC_JOBS_COUNT ("
+                << counterGuard.get_limit() << ") "
+                << ", capping it to: " << counterGuard.get_limit());
             RECC_MAX_CONCURRENT_JOBS = counterGuard.get_limit();
         }
     }

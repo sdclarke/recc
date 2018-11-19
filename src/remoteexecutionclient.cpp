@@ -22,6 +22,8 @@
 #include <future>
 #include <signal.h>
 
+#include <sstream>
+
 using namespace std;
 using namespace google::longrunning;
 
@@ -197,11 +199,11 @@ void RemoteExecutionClient::cancel_operation(const std::string &operationName)
     grpc::Status s = operationsStub->CancelOperation(&cancelContext,
                                                      cancelRequest, nullptr);
     if (!s.ok()) {
-        cerr << "Failed to cancel job " << operationName << ": "
-             << s.error_message() << endl;
+        RECC_LOG_ERROR("Failed to cancel job " << operationName << ": "
+                                               << s.error_message());
     }
     else {
-        cout << "Cancelled job " << operationName << endl;
+        RECC_LOG("Cancelled job " << operationName);
     }
 }
 
