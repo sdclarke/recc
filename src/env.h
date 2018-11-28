@@ -179,7 +179,7 @@ void find_and_parse_config_files();
 /**
  * Handles the case that RECC_SERVER and RECC_CAS_SERVER have not been set.
  */
-void handle_special_defaults(Source f = Source::Baseline);
+void handle_special_defaults(Source file = Source::Baseline);
 
 /*
  * Append default location to look for recc.conf files by default looks in
@@ -199,15 +199,15 @@ extern "C" char **environ;
 /**
  * Add default recc locations, parse the config files, then the
  * environment, and then checks whether important fields are empty.
- * Takes optional parameter specyfying source, to pass to
+ * Takes optional parameter specyfying source file which calls it, to pass to
  * handle_special_defaults
  */
-inline void parse_config_variables(Source f = Source::Baseline)
+inline void parse_config_variables(Source file = Source::Baseline)
 {
     add_default_locations();
     find_and_parse_config_files();
     parse_config_variables(environ);
-    handle_special_defaults(f);
+    handle_special_defaults(file);
 }
 } // namespace recc
 } // namespace BloombergLP

@@ -220,30 +220,32 @@ void find_and_parse_config_files()
     }
 }
 
-// defaults to Standard
-void handle_special_defaults(Source f)
+// defaults to Baseline
+void handle_special_defaults(Source file)
 {
 
     if (RECC_SERVER.empty()) {
         RECC_SERVER = DEFAULT_RECC_SERVER;
-        cerr << "Warning: no RECC_SERVER environment variable "
-                "specified."
-             << "Using default server (" << RECC_SERVER << ")" << endl;
+        RECC_LOG_WARNING("Warning: no RECC_SERVER environment variable "
+                         "specified."
+                         << "Using default server (" << RECC_SERVER << ")");
     }
 
     if (RECC_CAS_SERVER.empty()) {
         RECC_CAS_SERVER = RECC_SERVER;
-        cerr << "Warning: no RECC_CAS_SERVER environment variable "
-                "specified."
-             << "Using the same as RECC_SERVER (" << RECC_CAS_SERVER << ")"
-             << endl;
+        RECC_LOG_WARNING("Warning: no RECC_CAS_SERVER environment variable "
+                         "specified."
+                         << "Using the same as RECC_SERVER ("
+                         << RECC_CAS_SERVER << ")");
     }
 
-    if (f == Source::Reccworker) {
+    if (file == Source::Reccworker) {
         if (RECC_MAX_CONCURRENT_JOBS <= 0) {
-            cerr << "Warning: no RECC_MAX_CONCURRENT_JOBS specified." << endl;
-            cerr << "Running " << DEFAULT_RECC_MAX_CONCURRENT_JOBS
-                 << " job(s) at a time (default option)." << endl;
+            RECC_LOG_WARNING(
+                "Warning: no RECC_MAX_CONCURRENT_JOBS specified.");
+            RECC_LOG_WARNING("Running "
+                             << DEFAULT_RECC_MAX_CONCURRENT_JOBS
+                             << " job(s) at a time (default option).");
             RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
         }
     }
