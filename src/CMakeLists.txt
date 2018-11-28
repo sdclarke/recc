@@ -1,16 +1,17 @@
 include_directories(.)
 
-set(SRCS 
-    casclient.cpp 
+set(SRCS
+    actionbuilder.cpp
+    casclient.cpp
     deps.cpp
-    env.cpp 
+    env.cpp
     fileutils.cpp
-    merklize.cpp 
-    parsedcommand.cpp 
+    merklize.cpp
+    parsedcommand.cpp
     recccounterguard.cpp
-    remoteexecutionclient.cpp 
+    remoteexecutionclient.cpp
     remoteexecutionsignals.cpp
-    subprocess.cpp 
+    subprocess.cpp
 )
 
 add_library(remoteexecution ${SRCS})
