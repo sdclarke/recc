@@ -24,6 +24,12 @@ namespace BloombergLP {
 namespace recc {
 
 /**
+ * enum class for specifying source binary which calls
+ * handle_special_defaults
+ */
+enum class Source { Standard, Reccworker };
+
+/**
  * The URI of the server to use, e.g. localhost:8085
  */
 extern std::string RECC_SERVER;
@@ -173,7 +179,7 @@ void find_and_parse_config_files();
 /**
  * Handles the case that RECC_SERVER and RECC_CAS_SERVER have not been set.
  */
-void handle_special_defaults();
+void handle_special_defaults(Source f = Source::Standard);
 
 /*
  * Append default location to look for recc.conf files by default looks in

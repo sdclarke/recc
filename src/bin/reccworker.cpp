@@ -270,21 +270,11 @@ int main(int argc, char *argv[])
     // Parse configuration from environment variables and defaults
     parse_config_variables();
 
-    // TODO move the following checks in src/env.cpp special cases
-    if (RECC_MAX_CONCURRENT_JOBS <= 0) {
-
-        RECC_LOG_WARNING("Warning: no RECC_MAX_CONCURRENT_JOBS specified.");
-
-        RECC_LOG_WARNING("Running " << DEFAULT_RECC_MAX_CONCURRENT_JOBS
-                                    << " job(s) at a time (default option).");
-
-        RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
-    }
-
     ReccCounterGuard counterGuard(
         ReccCounterGuard::get_limit_from_args(RECC_JOBS_COUNT));
 
-    // If RECC_JOBS_LIMIT was set, make sure we cap RECC_MAX_CONCURRENT_JOBS
+    // If RECC_JOBS_LIMIT was set, make sure we cap
+    // RECC_MAX_CONCURRENT_JOBS
     if (!counterGuard.is_unlimited()) {
         if (RECC_MAX_CONCURRENT_JOBS > counterGuard.get_limit()) {
             RECC_LOG_WARNING(
@@ -295,6 +285,9 @@ int main(int argc, char *argv[])
             RECC_MAX_CONCURRENT_JOBS = counterGuard.get_limit();
         }
     }
+
+    // Specify Reccworker in argument to set reccworker specific variables
+    handle_special_defaults(Source::Reccworker);
 
     RECC_LOG_VERBOSE("Starting build worker with bot_id=[" + bot_id + "]");
 

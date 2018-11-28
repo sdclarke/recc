@@ -94,8 +94,8 @@ void parse_set(const char *str, set<string> *result)
             result->insert(string(str, comma - str));
             str = comma + 1;
         }
-    }
-}
+    } // namespace recc
+} // namespace BloombergLP
 
 /**
  * Formats line to be used in parse_config_variables.
@@ -220,21 +220,34 @@ void find_and_parse_config_files()
     }
 }
 
-void handle_special_defaults()
+// defaults to Standard
+void handle_special_defaults(Source f)
 {
-    if (RECC_SERVER.empty()) {
-        RECC_SERVER = DEFAULT_RECC_SERVER;
-        RECC_LOG_WARNING(
-            "Warning: no RECC_SERVER environment variable specified."
-            << "Using default server (" << RECC_SERVER << ")");
-    }
+    switch (f) {
+        case Source::Standard:
+            if (RECC_SERVER.empty()) {
+                RECC_SERVER = DEFAULT_RECC_SERVER;
+                cerr << "Warning: no RECC_SERVER environment variable "
+                        "specified."
+                     << "Using default server (" << RECC_SERVER << ")" << endl;
+            }
 
-    if (RECC_CAS_SERVER.empty()) {
-        RECC_CAS_SERVER = RECC_SERVER;
-        RECC_LOG_WARNING("Warning: no RECC_CAS_SERVER environment variable "
-                         "specified."
-                         << "Using the same as RECC_SERVER ("
-                         << RECC_CAS_SERVER << ")");
+            if (RECC_CAS_SERVER.empty()) {
+                RECC_CAS_SERVER = RECC_SERVER;
+                cerr << "Warning: no RECC_CAS_SERVER environment variable "
+                        "specified."
+                     << "Using the same as RECC_SERVER (" << RECC_CAS_SERVER
+                     << ")" << endl;
+            }
+
+        case Source::Reccworker:
+            if (RECC_MAX_CONCURRENT_JOBS <= 0) {
+                cerr << "Warning: no RECC_MAX_CONCURRENT_JOBS specified."
+                     << endl;
+                cerr << "Running " << DEFAULT_RECC_MAX_CONCURRENT_JOBS
+                     << " job(s) at a time (default option)." << endl;
+                RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
+            }
     }
 }
 
