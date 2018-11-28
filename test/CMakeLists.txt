@@ -40,19 +40,19 @@ add_test(NAME env_different_cas_test COMMAND env_different_cas_test)
 
 add_executable(env_from_file_override_test env/env_from_file_override.cpp main.cpp)
 target_link_libraries(env_from_file_override_test GTest::GTest remoteexecution)
-add_test(NAME env_from_file_override_test 
+add_test(NAME env_from_file_override_test
          COMMAND env_from_file_override_test
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/)
 
 add_executable(env_from_file_test env/env_from_file.cpp main.cpp)
 target_link_libraries(env_from_file_test GTest::GTest remoteexecution)
-add_test(NAME env_from_file_test 
+add_test(NAME env_from_file_test
          COMMAND env_from_file_test
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/)
 
 add_executable(env_multiple_configs_test env/env_multiple_configs.cpp main.cpp)
 target_link_libraries(env_multiple_configs_test GTest::GTest remoteexecution)
-add_test(NAME env_multiple_configs_test 
+add_test(NAME env_multiple_configs_test
          COMMAND env_multiple_configs_test
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/)
 
@@ -71,3 +71,9 @@ add_test(NAME recccounterguard_tests COMMAND recccounterguard_tests)
 add_executable(fileutils_tests fileutils.cpp main.cpp)
 target_link_libraries(fileutils_tests GTest::GTest remoteexecution)
 add_test(NAME fileutils_tests COMMAND fileutils_tests)
+
+add_executable(actionbuilder_tests actionbuilder.cpp main.cpp)
+target_link_libraries(actionbuilder_tests GTest::GTest remoteexecution)
+add_test(NAME actionbuilder_tests
+         COMMAND actionbuilder_tests
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/actionbuilder)

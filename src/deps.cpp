@@ -16,6 +16,7 @@
 
 #include <env.h>
 #include <fileutils.h>
+#include <logging.h>
 #include <subprocess.h>
 
 #include <cerrno>
@@ -23,6 +24,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <system_error>
@@ -97,6 +99,11 @@ CommandFileInfo get_file_info(ParsedCommand parsedCommand)
     auto subprocessResult = execute(parsedCommand.get_dependencies_command(),
                                     true, false, RECC_DEPS_ENV);
     if (subprocessResult.exitCode != 0) {
+        string errorMsg = "Failed to execute get dependencies command: ";
+        for (const auto &token : parsedCommand.get_dependencies_command()) {
+            errorMsg += (token + " ");
+        }
+        RECC_LOG_ERROR(errorMsg);
         throw subprocess_failed_error(subprocessResult.exitCode);
     }
     result.dependencies = dependencies_from_make_rules(

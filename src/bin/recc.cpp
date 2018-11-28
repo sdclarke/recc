@@ -17,6 +17,7 @@
 // Runs a build command remotely. If the given command is not a build command,
 // it's actually run locally.
 
+#include <actionbuilder.h>
 #include <deps.h>
 #include <env.h>
 #include <fileutils.h>
@@ -110,113 +111,30 @@ int main(int argc, char *argv[])
 
     parse_config_variables();
     const string cwd = get_current_working_directory();
-
     ParsedCommand command(&argv[1], cwd.c_str());
 
-    if (!command.is_compiler_command() && !RECC_FORCE_REMOTE) {
-        RECC_LOG_VERBOSE("Not a compiler command, so running locally.");
-        RECC_LOG_VERBOSE(
-            "(use RECC_FORCE_REMOTE=1 to force remote execution)");
+    unordered_map<proto::Digest, string> blobs;
+    unordered_map<proto::Digest, string> filenames;
+
+    std::shared_ptr<proto::Action> actionPtr;
+
+    try {
+        actionPtr =
+            ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
+    }
+    catch (const subprocess_failed_error &e) {
+        exit(e.error_code);
+    }
+
+    if (!actionPtr) {
         execvp(argv[1], &argv[1]);
         RECC_LOG_PERROR(argv[1]);
         exit(1);
     }
-
-    string commandWorkingDirectory;
-    NestedDirectory nestedDirectory;
-    unordered_map<proto::Digest, string> blobs;
-    unordered_map<proto::Digest, string> filenames;
-
-    std::set<std::string> products = RECC_OUTPUT_FILES_OVERRIDE;
-    if (!RECC_DEPS_DIRECTORY_OVERRIDE.empty()) {
-        RECC_LOG_VERBOSE("Building Merkle tree using directory override");
-        nestedDirectory = make_nesteddirectory(
-            RECC_DEPS_DIRECTORY_OVERRIDE.c_str(), &filenames);
-    }
-    else {
-        set<string> deps = RECC_DEPS_OVERRIDE;
-
-        if (RECC_DEPS_OVERRIDE.empty() && !RECC_FORCE_REMOTE) {
-            RECC_LOG_VERBOSE("Getting dependencies");
-            try {
-                auto fileInfo = get_file_info(command);
-                deps = fileInfo.dependencies;
-
-                if (RECC_OUTPUT_DIRECTORIES_OVERRIDE.empty() &&
-                    RECC_OUTPUT_FILES_OVERRIDE.empty()) {
-                    products = fileInfo.possibleProducts;
-                }
-            }
-            catch (const subprocess_failed_error &e) {
-                exit(e.error_code);
-            }
-        }
-
-        RECC_LOG_VERBOSE("Building Merkle tree");
-        int parentsNeeded = 0;
-        for (const auto &dep : deps) {
-            parentsNeeded =
-                max(parentsNeeded, parent_directory_levels(dep.c_str()));
-        }
-        for (const auto &product : products) {
-            parentsNeeded =
-                max(parentsNeeded, parent_directory_levels(product.c_str()));
-        }
-        commandWorkingDirectory = last_n_segments(cwd.c_str(), parentsNeeded);
-        for (const auto &dep : deps) {
-            string merklePath = commandWorkingDirectory + "/" + dep;
-            merklePath = normalize_path(merklePath.c_str());
-            File file(dep.c_str());
-            nestedDirectory.add(file, merklePath.c_str());
-            filenames[file.digest] = dep;
-        }
-    }
-    for (const auto &product : products) {
-        if (product[0] == '/') {
-            RECC_LOG_VERBOSE("Command produces file in a location unrelated "
-                             "to the current directory, so running locally.");
-            RECC_LOG_VERBOSE(
-                "(use RECC_OUTPUT_[FILES|DIRECTORIES]_OVERRIDE to override)");
-            execvp(argv[1], &argv[1]);
-            RECC_LOG_PERROR(argv[1]);
-            exit(1);
-        }
-    }
-
-    auto directoryDigest = nestedDirectory.to_digest(&blobs);
-
-    proto::Command commandProto;
-
-    for (const auto &arg : command.get_command()) {
-        commandProto.add_arguments(arg);
-    }
-    for (const auto &envIter : RECC_REMOTE_ENV) {
-        auto envVar = commandProto.add_environment_variables();
-        envVar->set_name(envIter.first);
-        envVar->set_value(envIter.second);
-    }
-    for (const auto &product : products) {
-        commandProto.add_output_files(product);
-    }
-    for (const auto &directory : RECC_OUTPUT_DIRECTORIES_OVERRIDE) {
-        commandProto.add_output_directories(directory);
-    }
-    for (const auto &platformIter : RECC_REMOTE_PLATFORM) {
-        auto property = commandProto.mutable_platform()->add_properties();
-        property->set_name(platformIter.first);
-        property->set_value(platformIter.second);
-    }
-    *commandProto.mutable_working_directory() = commandWorkingDirectory;
-    RECC_LOG_VERBOSE("Command: " << commandProto.ShortDebugString());
-    auto commandDigest = make_digest(commandProto);
-    blobs[commandDigest] = commandProto.SerializeAsString();
-
-    proto::Action action;
-    *action.mutable_command_digest() = commandDigest;
-    *action.mutable_input_root_digest() = directoryDigest;
-    action.set_do_not_cache(RECC_ACTION_UNCACHEABLE);
+    auto action = *actionPtr;
     RECC_LOG_VERBOSE("Action: " << action.ShortDebugString());
     auto actionDigest = make_digest(action);
+
     blobs[actionDigest] = action.SerializeAsString();
     std::shared_ptr<grpc::ChannelCredentials> creds;
     if (RECC_SERVER_AUTH_GOOGLEAPI) {
@@ -233,8 +151,9 @@ int main(int argc, char *argv[])
     RECC_LOG_VERBOSE("Executing action...");
     auto result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
 
-    RECC_LOG(client.get_outputblob(result.stdOut));
-    RECC_LOG_ERROR(client.get_outputblob(result.stdErr));
+    /* These don't use logging macros because they are compiler output */
+    cout << client.get_outputblob(result.stdOut);
+    cerr << client.get_outputblob(result.stdErr);
 
     if (!RECC_DONT_SAVE_OUTPUT) {
         client.write_files_to_disk(result);
