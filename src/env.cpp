@@ -94,8 +94,8 @@ void parse_set(const char *str, set<string> *result)
             result->insert(string(str, comma - str));
             str = comma + 1;
         }
-    }
-}
+    } // namespace recc
+} // namespace BloombergLP
 
 /**
  * Formats line to be used in parse_config_variables.
@@ -220,13 +220,15 @@ void find_and_parse_config_files()
     }
 }
 
-void handle_special_defaults()
+// defaults to Baseline
+void handle_special_defaults(Source file)
 {
+
     if (RECC_SERVER.empty()) {
         RECC_SERVER = DEFAULT_RECC_SERVER;
-        RECC_LOG_WARNING(
-            "Warning: no RECC_SERVER environment variable specified."
-            << "Using default server (" << RECC_SERVER << ")");
+        RECC_LOG_WARNING("Warning: no RECC_SERVER environment variable "
+                         "specified."
+                         << "Using default server (" << RECC_SERVER << ")");
     }
 
     if (RECC_CAS_SERVER.empty()) {
@@ -235,6 +237,17 @@ void handle_special_defaults()
                          "specified."
                          << "Using the same as RECC_SERVER ("
                          << RECC_CAS_SERVER << ")");
+    }
+
+    if (file == Source::Reccworker) {
+        if (RECC_MAX_CONCURRENT_JOBS <= 0) {
+            RECC_LOG_WARNING(
+                "Warning: no RECC_MAX_CONCURRENT_JOBS specified.");
+            RECC_LOG_WARNING("Running "
+                             << DEFAULT_RECC_MAX_CONCURRENT_JOBS
+                             << " job(s) at a time (default option).");
+            RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
+        }
     }
 }
 
