@@ -81,7 +81,7 @@ e2e:
         - pip3 install -e . # install buildgrid system wide
         - export LC_ALL=C.UTF-8
         - export LANG=C.UTF-8
-        - bgd -v server start "$CI_PROJECT_DIR/test/data/bgdconfig.yml" &
+        - bgd server start -v "$CI_PROJECT_DIR/test/data/bgdconfig.yml" &
         - sleep 5 # Give server some time to boot
         - netstat -pln | grep 50051 || exit 1
         - export RECC_SERVER="localhost:50051" # port recc connects to buildgrid.
