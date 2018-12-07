@@ -32,6 +32,8 @@ TEST(EnvTest, EnvFromFile)
     string expectedRecCasServer = "localhost:66666";
     string expectedTMPDIR = "/tmp/dir";
 
+    // In this test use the usual config location list
+    set_config_locations();
     parse_config_variables();
 
     EXPECT_EQ(expectedReccServer, RECC_SERVER);

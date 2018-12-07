@@ -29,7 +29,7 @@ TEST(EnvTest, EnvFromFileOverride)
 
     // need this for testing, since we are calling parse_config_variables
     // directly.
-    add_default_locations();
+    set_config_locations(evaluate_config_locations());
     find_and_parse_config_files();
     parse_config_variables(testEnviron);
     // need this for testing, since we are calling parse_config_variables

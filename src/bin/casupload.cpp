@@ -53,6 +53,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    set_config_locations();
     parse_config_variables();
 
     NestedDirectory nestedDirectory;

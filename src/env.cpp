@@ -68,6 +68,12 @@ string RECC_INSTALL_DIR = string(CMAKE_INSTALL_DIR);
 string RECC_INSTALL_DIR = string("");
 #endif
 
+#ifdef RECC_CONFIG_PREFIX_DIR
+string RECC_CUSTOM_PREFIX = string(RECC_CONFIG_PREFIX_DIR);
+#else
+string RECC_CUSTOM_PREFIX = string("");
+#endif
+
 set<string> RECC_DEPS_OVERRIDE = DEFAULT_RECC_DEPS_OVERRIDE;
 set<string> RECC_OUTPUT_FILES_OVERRIDE = DEFAULT_RECC_OUTPUT_FILES_OVERRIDE;
 set<string> RECC_OUTPUT_DIRECTORIES_OVERRIDE =
@@ -77,7 +83,8 @@ map<string, string> RECC_DEPS_ENV = DEFAULT_RECC_DEPS_ENV;
 map<string, string> RECC_REMOTE_ENV = DEFAULT_RECC_REMOTE_ENV;
 map<string, string> RECC_REMOTE_PLATFORM = DEFAULT_RECC_REMOTE_PLATFORM;
 
-deque<string> RECC_CONFIG_LOCATIONS = DEFAULT_RECC_CONFIG_LOCATIONS;
+// Keep this empty initially and have set_default_locations() populate it
+deque<string> RECC_CONFIG_LOCATIONS = {};
 
 /**
  * Parse a comma-separated list, storing its items in the given set.
@@ -251,25 +258,42 @@ void handle_special_defaults(Source file)
     }
 }
 
-void add_default_locations()
+std::deque<std::string> evaluate_config_locations()
 {
+    // Note that the order in which the config locations are pushed
+    // is significant.
+    deque<std::string> config_order;
+
     string home = getenv("HOME");
     const string cwd_recc = "./recc";
 
-    // Note that the order in which the config locations are pushed
-    // is significant.
-
-    RECC_CONFIG_LOCATIONS.push_front(cwd_recc);
+    config_order.push_front(cwd_recc);
 
     if (!home.empty()) {
         home += "/.recc";
-        RECC_CONFIG_LOCATIONS.push_front(home);
+        config_order.push_front(home);
+    }
+
+    if (!RECC_CUSTOM_PREFIX.empty()) {
+        config_order.push_front(RECC_CUSTOM_PREFIX);
     }
 
     if (!RECC_INSTALL_DIR.empty()) {
         RECC_INSTALL_DIR += "/../etc/recc";
-        RECC_CONFIG_LOCATIONS.push_front(RECC_INSTALL_DIR);
+        config_order.push_front(RECC_INSTALL_DIR);
     }
+
+    return config_order;
+}
+
+void set_config_locations()
+{
+    set_config_locations(evaluate_config_locations());
+}
+
+void set_config_locations(std::deque<std::string> config_order)
+{
+    RECC_CONFIG_LOCATIONS = config_order;
 }
 
 } // namespace recc
