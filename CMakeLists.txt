@@ -40,6 +40,9 @@ endif()
 # define CMAKE_INSTALL_DIR
 add_definitions(-DCMAKE_INSTALL_DIR="${CMAKE_INSTALL_PREFIX}")
 
+# define RECC_CONFIG_PREFIX_DIR
+add_definitions(-DRECC_CONFIG_PREFIX_DIR="${RECC_CONFIG_PREFIX_DIR}")
+
 include(cmake/protos.cmake)
 add_subdirectory(src)
 

@@ -98,19 +98,17 @@ but at time of writing it uses version 1 of the API and so cannot be used with
 
 ### Configuration
 
-`recc`’s default behavior can be overridden by configuration file settings, which in turn can be overridden by environment variables with names starting with RECC_. `recc` normally reads configuration from files in 3 locations. The priority of configuration settings is as follows (where 1 is highest):
+`recc`’s default behavior can be overridden by configuration file settings, which in turn can be overridden by environment variables with names starting with `RECC_`. `recc` by default reads configuration options from the following places, applying settings bottom-up, with 1 being the last applied configuration (i.e. if an option is set in multiple files, the one higher on this list will be the effective one):
 
   1) Environment variables
-   
-  2) User defined locations specified in DEFAULT_RECC_CONFIG_LOCATIONS, in file recc_defaults.h.
 
-  3) ${cwd}/recc/recc.conf
+  2) `${cwd}/recc/recc.conf`
 
-  4) ~/.recc/recc.conf
-   
-  5) ${INSTALL_DIR}/../etc/recc/recc.conf
-   
-In addition, you can specify a config file location by adding it to: DEFAULT_RECC_CONFIG_LOCATIONS, in recc_defaults.h
+  3) `~/.recc/recc.conf`
+
+  4) `${RECC_CONFIG_PREFIX_DIR}/recc.conf` when specified at compile time with `-DRECC_CONFIG_PREFIX_DIR=/path/to/custom/prefix`
+
+  5) `${INSTALL_DIR}/../etc/recc/recc.conf`
 
 #### Configuration File Syntax
 Configuration files are in a simple “key = value” format, one setting per line. Lines starting with a hash sign are comments. Blank lines are ignored, as is whitespace surrounding keys and values.

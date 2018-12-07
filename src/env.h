@@ -110,6 +110,13 @@ extern int RECC_JOBS_COUNT;
 extern std::string RECC_INSTALL_DIR;
 
 /**
+ * Optionally defined when compiling using
+ * -DRECC_CONFIG_PREFIX_DIR=/path/to/prefix/dir
+ *
+ */
+extern std::string RECC_CUSTOM_PREFIX;
+
+/**
  * A comma-separated list of input file paths to send to the build server. If
  * this isn't set, deps is called to determine the input files.
  */
@@ -182,14 +189,26 @@ void find_and_parse_config_files();
 void handle_special_defaults(Source file = Source::Baseline);
 
 /*
- * Append default location to look for recc.conf files by default looks in
- * these locations:
- *
- * 1. ${cwd}/recc/recc.conf
- * 2. ${HOME}/.recc/recc.conf
- * 3. ${INSTALL_DIR}/../etc/recc/recc.conf
+ * Evaluates ENV and Returns a prioritized deque with the config locations
+ * as follows:
+ *  1. ${cwd}/recc
+ *  2. ~/.recc
+ *  3. ${RECC_CONFIG_PREFIX_DIR}
+ *  4. ${INSTALL_DIR}/../etc/recc
  */
-void add_default_locations();
+std::deque<std::string> evaluate_config_locations();
+
+/**
+ * Sets the prioritized configuration file locations from
+ * evaluate_config_locations() -- default ordering
+ */
+void set_config_locations();
+
+/**
+ * Sets the prioritized configuration file locations as specified
+ * in config_order
+ */
+void set_config_locations(std::deque<std::string> config_order);
 
 /**
  * The process environment.
@@ -197,14 +216,14 @@ void add_default_locations();
 extern "C" char **environ;
 
 /**
- * Add default recc locations, parse the config files, then the
- * environment, and then checks whether important fields are empty.
- * Takes optional parameter specyfying source file which calls it, to pass to
+ * Calculate and set the config locations, parse the config files from those,
+ * then parse the environment variables for overrides and run some sanity
+ * checks (handle_special_defaults) on the resulting config. Takes optional
+ * parameter specyfying source file which calls it, to pass to
  * handle_special_defaults
  */
 inline void parse_config_variables(Source file = Source::Baseline)
 {
-    add_default_locations();
     find_and_parse_config_files();
     parse_config_variables(environ);
     handle_special_defaults(file);

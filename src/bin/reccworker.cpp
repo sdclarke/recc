@@ -269,6 +269,7 @@ int main(int argc, char *argv[])
 
     // Parse configuration from environment variables and defaults
     // Specify Reccworker in argument to set reccworker specific variables
+    set_config_locations();
     parse_config_variables(Source::Reccworker);
 
     ReccCounterGuard counterGuard(

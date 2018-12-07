@@ -109,6 +109,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    set_config_locations();
     parse_config_variables();
     const string cwd = get_current_working_directory();
     ParsedCommand command(&argv[1], cwd.c_str());
