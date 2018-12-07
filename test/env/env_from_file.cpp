@@ -20,7 +20,7 @@
 using namespace BloombergLP::recc;
 using namespace std;
 
-TEST(EnvTest, ENVFROMFILE)
+TEST(EnvTest, EnvFromFile)
 {
     // Make sure outside env doesn't get prioritized
     unsetenv("RECC_SERVER");

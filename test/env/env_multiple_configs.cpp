@@ -26,7 +26,7 @@ using namespace std;
  *
  * WARNING: Test will fail if not invoked by "make test".
  */
-TEST(EnvTest, ENVMULTIPLECONFIGS)
+TEST(EnvTest, EnvMultipleConfigs)
 {
     unsetenv("RECC_SERVER");
 

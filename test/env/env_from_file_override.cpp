@@ -19,7 +19,7 @@
 using namespace BloombergLP::recc;
 using namespace std;
 
-TEST(EnvTest, ENVFROMFILEOVERRIDE)
+TEST(EnvTest, EnvFromFileOverride)
 {
 
     const char *testEnviron[] = {"RECC_SERVER=somehost:1234", nullptr};
