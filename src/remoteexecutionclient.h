@@ -38,34 +38,34 @@ typedef std::shared_ptr<google::longrunning::Operation> OperationPointer;
  * RemoteExecutionClient::get_outputblob.
  */
 struct OutputBlob {
-    bool inlined;
-    std::string blob; // Only valid if inlined.
-    proto::Digest digest;
+    bool d_inlined;
+    std::string d_blob; // Only valid if inlined.
+    proto::Digest d_digest;
 
     OutputBlob() {}
     OutputBlob(proto::Digest digest)
-        : inlined(digest.size_bytes() == 0), digest(digest)
+        : d_inlined(digest.size_bytes() == 0), d_digest(digest)
     {
     }
     OutputBlob(std::string blob, proto::Digest digest)
-        : blob(blob), digest(digest),
-          inlined(!blob.empty() || digest.size_bytes() == 0)
+        : d_blob(blob), d_digest(digest),
+          d_inlined(!blob.empty() || digest.size_bytes() == 0)
     {
     }
 };
 
 struct ActionResult {
-    OutputBlob stdOut;
-    OutputBlob stdErr;
-    int exitCode;
-    std::map<std::string, File> outputFiles;
+    OutputBlob d_stdOut;
+    OutputBlob d_stdErr;
+    int d_exitCode;
+    std::map<std::string, File> d_outputFiles;
 };
 
 class RemoteExecutionClient : public CASClient {
   private:
-    std::unique_ptr<proto::Execution::StubInterface> executionStub;
-    std::unique_ptr<proto::Operations::StubInterface> operationsStub;
-    static std::atomic_bool sigint_received;
+    std::unique_ptr<proto::Execution::StubInterface> d_executionStub;
+    std::unique_ptr<proto::Operations::StubInterface> d_operationsStub;
+    static std::atomic_bool s_sigint_received;
 
     void read_operation(ReaderPointer &reader,
                         OperationPointer &operation_ptr);
@@ -83,7 +83,7 @@ class RemoteExecutionClient : public CASClient {
         google::bytestream::ByteStream::StubInterface *byteStreamStub,
         std::string instance)
         : CASClient(casStub, byteStreamStub, instance),
-          executionStub(executionStub), operationsStub(operationsStub)
+          d_executionStub(executionStub), d_operationsStub(operationsStub)
     {
     }
 
@@ -91,23 +91,23 @@ class RemoteExecutionClient : public CASClient {
                           std::shared_ptr<grpc::Channel> casChannel,
                           std::string instance)
         : CASClient(casChannel, instance),
-          executionStub(proto::Execution::NewStub(channel)),
-          operationsStub(proto::Operations::NewStub(channel))
+          d_executionStub(proto::Execution::NewStub(channel)),
+          d_operationsStub(proto::Operations::NewStub(channel))
     {
     }
 
     RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel,
                           std::string instance)
         : CASClient(channel, instance),
-          executionStub(proto::Execution::NewStub(channel)),
-          operationsStub(proto::Operations::NewStub(channel))
+          d_executionStub(proto::Execution::NewStub(channel)),
+          d_operationsStub(proto::Operations::NewStub(channel))
     {
     }
 
     RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel)
         : CASClient(channel),
-          executionStub(proto::Execution::NewStub(channel)),
-          operationsStub(proto::Operations::NewStub(channel))
+          d_executionStub(proto::Execution::NewStub(channel)),
+          d_operationsStub(proto::Operations::NewStub(channel))
     {
     }
 
@@ -124,7 +124,7 @@ class RemoteExecutionClient : public CASClient {
      */
     inline std::string get_outputblob(OutputBlob b)
     {
-        return b.inlined ? b.blob : fetch_blob(b.digest);
+        return b.d_inlined ? b.d_blob : fetch_blob(b.d_digest);
     }
 
     /**
@@ -137,7 +137,7 @@ class RemoteExecutionClient : public CASClient {
      */
     static inline void set_sigint_received(int)
     {
-        RemoteExecutionClient::sigint_received = true;
+        RemoteExecutionClient::s_sigint_received = true;
     }
 };
 } // namespace recc

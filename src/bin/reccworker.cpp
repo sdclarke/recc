@@ -122,9 +122,9 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
     RECC_LOG_VERBOSE("Command completed. Creating action result...");
 
     proto::ActionResult result;
-    result.set_exit_code(subprocessResult.exitCode);
-    result.set_stdout_raw(subprocessResult.stdOut);
-    result.set_stderr_raw(subprocessResult.stdErr);
+    result.set_exit_code(subprocessResult.d_exitCode);
+    result.set_stdout_raw(subprocessResult.d_stdOut);
+    result.set_stderr_raw(subprocessResult.d_stdErr);
 
     unordered_map<proto::Digest, string> blobsToUpload;
     unordered_map<proto::Digest, string> filesToUpload;
@@ -135,11 +135,11 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
         if (access(outputPath.c_str(), R_OK) == 0) {
             RECC_LOG_VERBOSE("Making digest for " << outputPath);
             const auto file = File(outputPath.c_str());
-            filesToUpload[file.digest] = outputPath;
+            filesToUpload[file.d_digest] = outputPath;
             auto fileProto = result.add_output_files();
             fileProto->set_path(outputFilename);
-            fileProto->set_is_executable(file.executable);
-            *fileProto->mutable_digest() = file.digest;
+            fileProto->set_is_executable(file.d_executable);
+            *fileProto->mutable_digest() = file.d_digest;
         }
     }
 
@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
     // Parse configuration from environment variables and defaults
     // Specify Reccworker in argument to set reccworker specific variables
     set_config_locations();
-    parse_config_variables(Source::Reccworker);
+    parse_config_variables(Source::e_Reccworker);
 
     ReccCounterGuard counterGuard(
         ReccCounterGuard::get_limit_from_args(RECC_JOBS_COUNT));

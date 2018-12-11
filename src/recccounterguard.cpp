@@ -25,37 +25,37 @@ namespace recc {
 
 ReccCounterGuard::ReccCounterGuard(int limit)
 {
-    if (limit <= 0 && limit != ReccCounterGuard::NO_LIMIT) {
+    if (limit <= 0 && limit != ReccCounterGuard::s_NO_LIMIT) {
         throw std::invalid_argument("Invalid limit initialization.");
     }
     else {
-        this->limit_left = limit;
+        this->d_limit_left = limit;
     }
 }
 
 bool ReccCounterGuard::is_unlimited()
 {
-    return this->limit_left == ReccCounterGuard::NO_LIMIT;
+    return this->d_limit_left == ReccCounterGuard::s_NO_LIMIT;
 }
 
 bool ReccCounterGuard::is_allowed_more()
 {
-    return (this->is_unlimited() || this->limit_left > 0);
+    return (this->is_unlimited() || this->d_limit_left > 0);
 }
 
-int ReccCounterGuard::get_limit() { return (this->limit_left); }
+int ReccCounterGuard::get_limit() { return (this->d_limit_left); }
 
 int ReccCounterGuard::get_limit_from_args(int arg)
 {
-    int job_limit = ReccCounterGuard::NO_LIMIT;
-    if (arg != ReccCounterGuard::NO_LIMIT) {
+    int job_limit = ReccCounterGuard::s_NO_LIMIT;
+    if (arg != ReccCounterGuard::s_NO_LIMIT) {
         if (arg > 0) {
             job_limit = arg;
         }
         else {
             RECC_LOG_WARNING(
                 "Warning: RECC_JOBS_COUNT set to an invalid value ("
-                << arg << "), defaulting to NO_LIMIT");
+                << arg << "), defaulting to s_NO_LIMIT");
         }
     }
     return job_limit;
@@ -64,9 +64,9 @@ int ReccCounterGuard::get_limit_from_args(int arg)
 void ReccCounterGuard::decrease_limit()
 {
     if (!this->is_unlimited()) {
-        if (this->limit_left > 0) {
-            this->limit_left -= 1;
-            RECC_LOG_VERBOSE(this->limit_left
+        if (this->d_limit_left > 0) {
+            this->d_limit_left -= 1;
+            RECC_LOG_VERBOSE(this->d_limit_left
                              << " left before terminating worker");
         }
         else {

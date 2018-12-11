@@ -42,29 +42,29 @@ TEST(DigestTest, TrivialDigest)
 TEST(FileTest, TrivialFile)
 {
     File file("abc.txt");
-    EXPECT_EQ(3, file.digest.size_bytes());
+    EXPECT_EQ(3, file.d_digest.size_bytes());
     EXPECT_EQ(
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-        file.digest.hash());
-    EXPECT_FALSE(file.executable);
+        file.d_digest.hash());
+    EXPECT_FALSE(file.d_executable);
 }
 
 TEST(FileTest, ExecutableFile)
 {
     File file("script.sh");
-    EXPECT_EQ(41, file.digest.size_bytes());
+    EXPECT_EQ(41, file.d_digest.size_bytes());
     EXPECT_EQ(
         "a56e86eefe699eb6a759ff6ddf94ca54efc2f6463946b9585858511e07c88b8c",
-        file.digest.hash());
-    EXPECT_TRUE(file.executable);
+        file.d_digest.hash());
+    EXPECT_TRUE(file.d_executable);
 }
 
 TEST(FileTest, ToFilenode)
 {
     File file;
-    file.digest.set_hash("HASH HERE");
-    file.digest.set_size_bytes(123);
-    file.executable = true;
+    file.d_digest.set_hash("HASH HERE");
+    file.d_digest.set_size_bytes(123);
+    file.d_executable = true;
 
     auto fileNode = file.to_filenode(string("file.name"));
 
@@ -90,7 +90,7 @@ TEST(NestedDirectoryTest, EmptyNestedDirectory)
 TEST(NestedDirectoryTest, TrivialNestedDirectory)
 {
     File file;
-    file.digest.set_hash("DIGESTHERE");
+    file.d_digest.set_hash("DIGESTHERE");
 
     NestedDirectory directory;
     directory.add(file, "sample");
@@ -111,10 +111,10 @@ TEST(NestedDirectoryTest, TrivialNestedDirectory)
 TEST(NestedDirectoryTest, Subdirectories)
 {
     File file;
-    file.digest.set_hash("HASH1");
+    file.d_digest.set_hash("HASH1");
 
     File file2;
-    file2.digest.set_hash("HASH2");
+    file2.d_digest.set_hash("HASH2");
 
     NestedDirectory directory;
     directory.add(file, "sample");
@@ -153,10 +153,10 @@ TEST(NestedDirectoryTest, Subdirectories)
 TEST(NestedDirectoryTest, SubdirectoriesToTree)
 {
     File file;
-    file.digest.set_hash("HASH1");
+    file.d_digest.set_hash("HASH1");
 
     File file2;
-    file2.digest.set_hash("HASH2");
+    file2.d_digest.set_hash("HASH2");
 
     NestedDirectory directory;
     directory.add(file, "sample");
@@ -197,19 +197,20 @@ TEST(NestedDirectoryTest, MakeNestedDirectory)
     unordered_map<proto::Digest, string> fileMap;
     auto nestedDirectory = make_nesteddirectory(".", &fileMap);
 
-    EXPECT_EQ(1, nestedDirectory.subdirs->size());
-    EXPECT_EQ(2, nestedDirectory.files.size());
+    EXPECT_EQ(1, nestedDirectory.d_subdirs->size());
+    EXPECT_EQ(2, nestedDirectory.d_files.size());
 
+    EXPECT_EQ(
+        "abc",
+        get_file_contents(
+            fileMap[nestedDirectory.d_files["abc.txt"].d_digest].c_str()));
+
+    auto subdirectory = &(*nestedDirectory.d_subdirs)["subdir"];
+    EXPECT_EQ(0, subdirectory->d_subdirs->size());
+    EXPECT_EQ(1, subdirectory->d_files.size());
     EXPECT_EQ("abc",
               get_file_contents(
-                  fileMap[nestedDirectory.files["abc.txt"].digest].c_str()));
-
-    auto subdirectory = &(*nestedDirectory.subdirs)["subdir"];
-    EXPECT_EQ(0, subdirectory->subdirs->size());
-    EXPECT_EQ(1, subdirectory->files.size());
-    EXPECT_EQ("abc",
-              get_file_contents(
-                  fileMap[subdirectory->files["abc.txt"].digest].c_str()));
+                  fileMap[subdirectory->d_files["abc.txt"].d_digest].c_str()));
 }
 
 // Make sure the digest is calculated correctly regardless of the order in
@@ -220,7 +221,7 @@ TEST(NestedDirectoryTest, ConsistentDigestRegardlessOfFileOrder)
     // Get us some mock files
     File files[N];
     for (int i = 0; i < N; i++) {
-        files[i].digest.set_hash("HASH_" + to_string(i));
+        files[i].d_digest.set_hash("HASH_" + to_string(i));
     }
 
     // Create Nested Directory and add everything in-order
@@ -249,8 +250,8 @@ TEST(NestedDirectoryTest, NestedDirectoryDigestsReallyBasedOnFiles)
     File files_dir1[N]; // Files to add in the first directory
     File files_dir2[N]; // Files to add in the second directory
     for (int i = 0; i < N; i++) {
-        files_dir1[i].digest.set_hash("HASH_DIR1_" + to_string(i));
-        files_dir2[i].digest.set_hash("HASH_DIR2_" + to_string(i));
+        files_dir1[i].d_digest.set_hash("HASH_DIR1_" + to_string(i));
+        files_dir2[i].d_digest.set_hash("HASH_DIR2_" + to_string(i));
     }
 
     // Create Nested Directories and add everything in-order

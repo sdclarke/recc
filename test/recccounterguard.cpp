@@ -27,7 +27,7 @@ using namespace testing;
 
 TEST(ReccCounterGuardTest, NoLimitInitialization)
 {
-    ReccCounterGuard counterGuard(ReccCounterGuard::NO_LIMIT);
+    ReccCounterGuard counterGuard(ReccCounterGuard::s_NO_LIMIT);
     EXPECT_TRUE(counterGuard.is_unlimited());
     EXPECT_TRUE(counterGuard.is_allowed_more());
 }
@@ -74,7 +74,7 @@ TEST(ReccCounterGuardTest, Limit2)
 
 TEST(ReccCounterGuardTest, LimitFromArgs)
 {
-    int no_limit = ReccCounterGuard::NO_LIMIT;
+    int no_limit = ReccCounterGuard::s_NO_LIMIT;
     EXPECT_EQ(no_limit, ReccCounterGuard::get_limit_from_args(0));
 
     EXPECT_EQ(no_limit, ReccCounterGuard::get_limit_from_args(-1));

@@ -54,11 +54,11 @@ ActionBuilder::BuildAction(ParsedCommand command, const string cwd,
 
             /* Can throw subprocess_failed_error */
             auto fileInfo = get_file_info(command);
-            deps = fileInfo.dependencies;
+            deps = fileInfo.d_dependencies;
 
             if (RECC_OUTPUT_DIRECTORIES_OVERRIDE.empty() &&
                 RECC_OUTPUT_FILES_OVERRIDE.empty()) {
-                products = fileInfo.possibleProducts;
+                products = fileInfo.d_possibleProducts;
             }
         }
 
@@ -78,7 +78,7 @@ ActionBuilder::BuildAction(ParsedCommand command, const string cwd,
             merklePath = normalize_path(merklePath.c_str());
             File file(dep.c_str());
             nestedDirectory.add(file, merklePath.c_str());
-            (*filenames)[file.digest] = dep;
+            (*filenames)[file.d_digest] = dep;
         }
     }
     for (const auto &product : products) {

@@ -34,10 +34,10 @@ namespace recc {
 File::File(const char *path)
 {
     RECC_LOG_VERBOSE("Making File object for " << path);
-    executable = is_executable(path);
-    digest = make_digest(get_file_contents(path));
-    RECC_LOG_VERBOSE("executable: " << (executable ? "yes" : "no"));
-    RECC_LOG_VERBOSE("digest: " << digest.ShortDebugString());
+    d_executable = is_executable(path);
+    d_digest = make_digest(get_file_contents(path));
+    RECC_LOG_VERBOSE("executable: " << (d_executable ? "yes" : "no"));
+    RECC_LOG_VERBOSE("digest: " << d_digest.ShortDebugString());
     return;
 }
 
@@ -45,8 +45,8 @@ proto::FileNode File::to_filenode(string name) const
 {
     proto::FileNode result;
     result.set_name(name);
-    *result.mutable_digest() = digest;
-    result.set_is_executable(executable);
+    *result.mutable_digest() = d_digest;
+    result.set_is_executable(d_executable);
     return result;
 }
 
@@ -59,26 +59,26 @@ void NestedDirectory::add(File file, const char *relativePath)
             this->add(file, slash + 1);
         }
         else {
-            (*subdirs)[subdirKey].add(file, slash + 1);
+            (*d_subdirs)[subdirKey].add(file, slash + 1);
         }
     }
     else {
-        files[string(relativePath)] = file;
+        d_files[string(relativePath)] = file;
     }
 }
 
 proto::Digest NestedDirectory::to_digest(
     unordered_map<proto::Digest, string> *digestMap) const
 {
-    // The 'files' and 'subdirs' maps make sure everything is sorted by name
-    // thus the iterators will iterate lexicographically
+    // The 'd_files' and 'd_subdirs' maps make sure everything is sorted by
+    // name thus the iterators will iterate lexicographically
 
     proto::Directory directoryMessage;
-    for (const auto &fileIter : files) {
+    for (const auto &fileIter : d_files) {
         *directoryMessage.add_files() =
             fileIter.second.to_filenode(fileIter.first);
     }
-    for (const auto &subdirIter : *subdirs) {
+    for (const auto &subdirIter : *d_subdirs) {
         auto subdirNode = directoryMessage.add_directories();
         subdirNode->set_name(subdirIter.first);
         auto subdirDigest = subdirIter.second.to_digest(digestMap);
@@ -96,10 +96,10 @@ proto::Tree NestedDirectory::to_tree() const
 {
     proto::Tree result;
     auto root = result.mutable_root();
-    for (const auto &fileIter : files) {
+    for (const auto &fileIter : d_files) {
         *root->add_files() = fileIter.second.to_filenode(fileIter.first);
     }
-    for (const auto &subdirIter : *subdirs) {
+    for (const auto &subdirIter : *d_subdirs) {
         auto subtree = subdirIter.second.to_tree();
         result.mutable_children()->MergeFrom(subtree.children());
         *result.add_children() = subtree.root();
@@ -167,14 +167,14 @@ make_nesteddirectory(const char *path,
             continue;
         }
         if (S_ISDIR(statResult.st_mode)) {
-            (*result.subdirs)[entityName] =
+            (*result.d_subdirs)[entityName] =
                 make_nesteddirectory(entityPath.c_str(), fileMap);
         }
         else {
             File file(entityPath.c_str());
-            result.files[entityName] = file;
+            result.d_files[entityName] = file;
             if (fileMap != nullptr) {
-                (*fileMap)[file.digest] = entityPath;
+                (*fileMap)[file.d_digest] = entityPath;
             }
         }
     }

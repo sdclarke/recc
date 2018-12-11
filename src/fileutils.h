@@ -34,10 +34,10 @@ class TemporaryDirectory {
      */
     ~TemporaryDirectory();
 
-    const char *name() const { return _name.c_str(); };
+    const char *name() const { return d_name.c_str(); };
 
   private:
-    std::string _name;
+    std::string d_name;
 };
 
 /**

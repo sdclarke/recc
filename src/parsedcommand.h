@@ -68,13 +68,13 @@ class ParsedCommand {
     /**
      * Returns true if the given command is a supported compiler command.
      */
-    bool is_compiler_command() const { return compilerCommand; }
+    bool is_compiler_command() const { return d_compilerCommand; }
 
     /**
      * Returns the original command that was passed to the constructor, with
      * absolute paths replaced with equivalent relative paths.
      */
-    std::vector<std::string> get_command() const { return command; }
+    std::vector<std::string> get_command() const { return d_command; }
 
     /**
      * Return a command that prints this command's dependencies in Makefile
@@ -83,7 +83,7 @@ class ParsedCommand {
      */
     std::vector<std::string> get_dependencies_command() const
     {
-        return dependenciesCommand;
+        return d_dependenciesCommand;
     }
 
     /**
@@ -93,21 +93,21 @@ class ParsedCommand {
      * example, if no output files are specified, many compilers will write to
      * a.out by default.)
      */
-    std::set<std::string> get_products() const { return commandProducts; }
+    std::set<std::string> get_products() const { return d_commandProducts; }
 
     /**
      * If true, the dependencies command will produce nonstandard Sun-style
      * make rules where one dependency is listed per line and spaces aren't
      * escaped.
      */
-    bool produces_sun_make_rules() const { return producesSunMakeRules; }
+    bool produces_sun_make_rules() const { return d_producesSunMakeRules; }
 
   private:
-    bool compilerCommand;
-    std::vector<std::string> command;
-    std::vector<std::string> dependenciesCommand;
-    std::set<std::string> commandProducts;
-    bool producesSunMakeRules;
+    bool d_compilerCommand;
+    std::vector<std::string> d_command;
+    std::vector<std::string> d_dependenciesCommand;
+    std::set<std::string> d_commandProducts;
+    bool d_producesSunMakeRules;
 };
 
 /**

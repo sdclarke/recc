@@ -107,7 +107,7 @@ SubprocessResult execute(vector<string> command, bool pipeStdOut,
         if (FD_ISSET(stdOutPipeFDs[0], &readFDSet)) {
             int bytesRead = read(stdOutPipeFDs[0], buffer, sizeof(buffer));
             if (bytesRead > 0) {
-                result.stdOut.append(buffer, bytesRead);
+                result.d_stdOut.append(buffer, bytesRead);
             }
             else {
                 close(stdOutPipeFDs[0]);
@@ -117,7 +117,7 @@ SubprocessResult execute(vector<string> command, bool pipeStdOut,
         if (FD_ISSET(stdErrPipeFDs[0], &readFDSet)) {
             int bytesRead = read(stdErrPipeFDs[0], buffer, sizeof(buffer));
             if (bytesRead > 0) {
-                result.stdErr.append(buffer, bytesRead);
+                result.d_stdErr.append(buffer, bytesRead);
             }
             else {
                 close(stdErrPipeFDs[0]);
@@ -131,7 +131,7 @@ SubprocessResult execute(vector<string> command, bool pipeStdOut,
     if (waitpid(pid, &status, 0) == -1) {
         throw system_error(errno, system_category());
     }
-    result.exitCode = WEXITSTATUS(status);
+    result.d_exitCode = WEXITSTATUS(status);
     return result;
 }
 } // namespace recc

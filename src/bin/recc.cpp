@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
             ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
     }
     catch (const subprocess_failed_error &e) {
-        exit(e.error_code);
+        exit(e.d_error_code);
     }
 
     if (!actionPtr) {
@@ -153,12 +153,12 @@ int main(int argc, char *argv[])
     auto result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
 
     /* These don't use logging macros because they are compiler output */
-    cout << client.get_outputblob(result.stdOut);
-    cerr << client.get_outputblob(result.stdErr);
+    cout << client.get_outputblob(result.d_stdOut);
+    cerr << client.get_outputblob(result.d_stdErr);
 
     if (!RECC_DONT_SAVE_OUTPUT) {
         client.write_files_to_disk(result);
     }
 
-    return result.exitCode;
+    return result.d_exitCode;
 }

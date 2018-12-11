@@ -30,13 +30,13 @@ namespace recc {
  * Represents a single file.
  */
 struct File {
-    proto::Digest digest;
-    bool executable;
+    proto::Digest d_digest;
+    bool d_executable;
 
     File(){};
 
     File(proto::Digest digest, bool executable)
-        : digest(digest), executable(executable){};
+        : d_digest(digest), d_executable(executable){};
 
     /**
      * Constructs a File given the path to a file on disk.
@@ -56,11 +56,11 @@ struct NestedDirectory {
     // Important to use a sorted map to keep subdirectories ordered by name
     typedef std::map<std::string, NestedDirectory> subdir_map;
 
-    std::unique_ptr<subdir_map> subdirs;
+    std::unique_ptr<subdir_map> d_subdirs;
     // Important to use a sorted map to keep files ordered by name
-    std::map<std::string, File> files;
+    std::map<std::string, File> d_files;
 
-    NestedDirectory() : subdirs(new subdir_map){};
+    NestedDirectory() : d_subdirs(new subdir_map){};
 
     /**
      * Add the given File to this NestedDirectory at the given relative path,

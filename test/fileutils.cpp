@@ -230,8 +230,8 @@ TEST(FileUtilsTest, GetCurrentWorkingDirectory)
 {
     const vector<string> command = {"pwd"};
     const auto commandResult = execute(command, true);
-    if (commandResult.exitCode == 0) {
-        EXPECT_EQ(commandResult.stdOut,
+    if (commandResult.d_exitCode == 0) {
+        EXPECT_EQ(commandResult.d_stdOut,
                   get_current_working_directory() + "\n");
     }
 }

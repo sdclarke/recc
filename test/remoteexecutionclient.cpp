@@ -139,26 +139,27 @@ TEST(RemoteExecutionClientTest, ExecuteActionTest)
     // Ask the client to execute the action, and make sure the result is
     // correct.
     auto actionResult = client.execute_action(actionDigest);
-    EXPECT_EQ(actionResult.exitCode, 123);
-    EXPECT_TRUE(actionResult.stdOut.inlined);
-    EXPECT_FALSE(actionResult.stdErr.inlined);
-    EXPECT_EQ(actionResult.stdOut.blob, "Raw stdout.");
-    EXPECT_EQ(actionResult.stdErr.digest.hash(), stdErrDigest.hash());
+    EXPECT_EQ(actionResult.d_exitCode, 123);
+    EXPECT_TRUE(actionResult.d_stdOut.d_inlined);
+    EXPECT_FALSE(actionResult.d_stdErr.d_inlined);
+    EXPECT_EQ(actionResult.d_stdOut.d_blob, "Raw stdout.");
+    EXPECT_EQ(actionResult.d_stdErr.d_digest.hash(), stdErrDigest.hash());
 
+    EXPECT_EQ(actionResult.d_outputFiles["some/path/with/slashes.txt"]
+                  .d_digest.hash(),
+              "File hash goes here");
     EXPECT_EQ(
-        actionResult.outputFiles["some/path/with/slashes.txt"].digest.hash(),
+        actionResult.d_outputFiles["output/directory/out.txt"].d_digest.hash(),
         "File hash goes here");
-    EXPECT_EQ(
-        actionResult.outputFiles["output/directory/out.txt"].digest.hash(),
-        "File hash goes here");
-    EXPECT_TRUE(actionResult.outputFiles["output/directory/subdirectory/a.out"]
-                    .executable);
-    EXPECT_EQ(actionResult.outputFiles["output/directory/subdirectory/a.out"]
-                  .digest.hash(),
+    EXPECT_TRUE(
+        actionResult.d_outputFiles["output/directory/subdirectory/a.out"]
+            .d_executable);
+    EXPECT_EQ(actionResult.d_outputFiles["output/directory/subdirectory/a.out"]
+                  .d_digest.hash(),
               "Executable file hash");
     EXPECT_EQ(
-        actionResult.outputFiles["output/directory/subdirectory/nested/q.mk"]
-            .digest.hash(),
+        actionResult.d_outputFiles["output/directory/subdirectory/nested/q.mk"]
+            .d_digest.hash(),
         "q.mk file hash");
 }
 
@@ -169,16 +170,16 @@ TEST(RemoteExecutionClientTest, WriteFilesToDisk)
 
     ActionResult testResult;
     File testFile;
-    testFile.executable = true;
-    testFile.digest.set_hash("Test file hash");
-    testFile.digest.set_size_bytes(18);
-    testResult.outputFiles["test.txt"] = testFile;
+    testFile.d_executable = true;
+    testFile.d_digest.set_hash("Test file hash");
+    testFile.d_digest.set_size_bytes(18);
+    testResult.d_outputFiles["test.txt"] = testFile;
 
     // Allow the client to fetch the file from CAS.
     google::bytestream::ReadRequest expectedByteStreamRequest;
     expectedByteStreamRequest.set_resource_name(
-        "blobs/" + testFile.digest.hash() + "/" +
-        std::to_string(testFile.digest.size_bytes()));
+        "blobs/" + testFile.d_digest.hash() + "/" +
+        std::to_string(testFile.d_digest.size_bytes()));
     auto reader = new grpc::testing::MockClientReader<
         google::bytestream::ReadResponse>();
     google::bytestream::ReadResponse readResponse;
