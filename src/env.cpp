@@ -246,7 +246,7 @@ void handle_special_defaults(Source file)
                          << RECC_CAS_SERVER << ")");
     }
 
-    if (file == Source::Reccworker) {
+    if (file == Source::e_Reccworker) {
         if (RECC_MAX_CONCURRENT_JOBS <= 0) {
             RECC_LOG_WARNING(
                 "Warning: no RECC_MAX_CONCURRENT_JOBS specified.");

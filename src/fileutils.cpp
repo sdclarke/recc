@@ -36,15 +36,15 @@ namespace recc {
 
 TemporaryDirectory::TemporaryDirectory(const char *prefix)
 {
-    _name = TMPDIR + "/" + string(prefix) + "XXXXXX";
-    if (mkdtemp(&_name[0]) == nullptr) {
+    d_name = TMPDIR + "/" + string(prefix) + "XXXXXX";
+    if (mkdtemp(&d_name[0]) == nullptr) {
         throw system_error(errno, system_category());
     }
 }
 
 TemporaryDirectory::~TemporaryDirectory()
 {
-    vector<string> rmCommand = {"rm", "-rf", _name};
+    vector<string> rmCommand = {"rm", "-rf", d_name};
     execute(rmCommand);
 }
 

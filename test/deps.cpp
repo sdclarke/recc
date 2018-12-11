@@ -39,7 +39,7 @@ TEST(DepsTest, Empty)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.", "empty.c"};
     set<string> expectedDeps = {"empty.c"};
     EXPECT_EQ(expectedDeps,
-              normalize_all(get_file_info(command).dependencies));
+              normalize_all(get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, SimpleInclude)
@@ -48,7 +48,7 @@ TEST(DepsTest, SimpleInclude)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c"};
     set<string> expected = {"includes_empty.c", "empty.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, RecursiveDependency)
@@ -58,7 +58,7 @@ TEST(DepsTest, RecursiveDependency)
                              "includes_includes_empty.c"};
     set<string> expected = {"includes_includes_empty.c", "includes_empty.h",
                             "empty.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, MultiFile)
@@ -68,7 +68,7 @@ TEST(DepsTest, MultiFile)
                              "includes_includes_empty.c", "includes_empty.c"};
     set<string> expected = {"includes_includes_empty.c", "includes_empty.c",
                             "includes_empty.h", "empty.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, EdgeCases)
@@ -77,7 +77,7 @@ TEST(DepsTest, EdgeCases)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "edge_cases.c"};
     set<string> expected = {"edge_cases.c", "empty.h", "header with spaces.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, OutputArgument)
@@ -86,7 +86,7 @@ TEST(DepsTest, OutputArgument)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c",     "-o", "/dev/null"};
     set<string> expected = {"includes_empty.c", "empty.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, OutputArgumentNoSpace)
@@ -95,7 +95,7 @@ TEST(DepsTest, OutputArgumentNoSpace)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c", "-o/dev/null"};
     set<string> expected = {"includes_empty.c", "empty.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, PreprocessorOutputArgument)
@@ -105,7 +105,7 @@ TEST(DepsTest, PreprocessorOutputArgument)
                                  "includes_empty.c", "-Wp,-MMD,'/dev/null'"};
         set<string> expected = {"includes_empty.c", "empty.h"};
         EXPECT_EQ(expected,
-                  normalize_all(get_file_info(command).dependencies));
+                  normalize_all(get_file_info(command).d_dependencies));
     }
 }
 
@@ -116,7 +116,7 @@ TEST(DepsTest, Subdirectory)
                              "-Isubdirectory", "includes_from_subdirectory.c"};
     set<string> expected = {"includes_from_subdirectory.c",
                             "subdirectory/header.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, InputInSubdirectory)
@@ -125,7 +125,7 @@ TEST(DepsTest, InputInSubdirectory)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c",
                              "subdirectory/empty.c"};
     set<string> expected = {"subdirectory/empty.c"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).dependencies));
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, SubprocessFailure)
@@ -142,7 +142,7 @@ TEST(ProductsTest, OutputArgument)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-o",
                              "some_output.exe", "empty.c"};
 
-    auto products = get_file_info(command).possibleProducts;
+    auto products = get_file_info(command).d_possibleProducts;
 
     EXPECT_EQ(1, products.count(string("some_output.exe")));
 }
@@ -153,7 +153,7 @@ TEST(ProductsTest, NormalizesPath)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-o",
                              "out/subdir/../../../empty", "empty.c"};
 
-    auto products = get_file_info(command).possibleProducts;
+    auto products = get_file_info(command).d_possibleProducts;
 
     EXPECT_EQ(1, products.count(string("../empty")));
 }
@@ -164,7 +164,7 @@ TEST(ProductsTest, OutputArgumentNoSpace)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-osome_output.exe",
                              "empty.c"};
 
-    auto products = get_file_info(command).possibleProducts;
+    auto products = get_file_info(command).d_possibleProducts;
 
     EXPECT_EQ(1, products.count(string("some_output.exe")));
 }
@@ -174,7 +174,7 @@ TEST(ProductsTest, DefaultOutput)
     parse_config_variables();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "empty.c"};
 
-    auto products = get_file_info(command).possibleProducts;
+    auto products = get_file_info(command).d_possibleProducts;
 
     EXPECT_EQ(1, products.count(string("a.out")));
     EXPECT_EQ(1, products.count(string("empty.o")));
@@ -186,7 +186,7 @@ TEST(ProductsTest, Subdirectory)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c",
                              "subdirectory/empty.c"};
 
-    auto products = get_file_info(command).possibleProducts;
+    auto products = get_file_info(command).d_possibleProducts;
 
     EXPECT_EQ(1, products.count("empty.o"));
     EXPECT_EQ(1, products.count("subdirectory/empty.c.gch"));
@@ -199,7 +199,7 @@ TEST(ProductsTest, PreprocessorArgument)
                                  "-Wp,-MMD,'some/test.d'", "-o", "empty.o"};
         set<string> deps = {"empty.c"};
 
-        auto products = get_file_info(command).possibleProducts;
+        auto products = get_file_info(command).d_possibleProducts;
 
         EXPECT_EQ(1, products.count("empty.o"));
         EXPECT_EQ(1, products.count("some/test.d"));

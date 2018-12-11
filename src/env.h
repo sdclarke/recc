@@ -27,7 +27,7 @@ namespace recc {
  * enum class for specifying source binary which calls
  * handle_special_defaults
  */
-enum class Source { Baseline, Reccworker };
+enum class Source { e_Baseline, e_Reccworker };
 
 /**
  * The URI of the server to use, e.g. localhost:8085
@@ -186,7 +186,7 @@ void find_and_parse_config_files();
 /**
  * Handles the case that RECC_SERVER and RECC_CAS_SERVER have not been set.
  */
-void handle_special_defaults(Source file = Source::Baseline);
+void handle_special_defaults(Source file = Source::e_Baseline);
 
 /*
  * Evaluates ENV and Returns a prioritized deque with the config locations
@@ -222,7 +222,7 @@ extern "C" char **environ;
  * parameter specyfying source file which calls it, to pass to
  * handle_special_defaults
  */
-inline void parse_config_variables(Source file = Source::Baseline)
+inline void parse_config_variables(Source file = Source::e_Baseline)
 {
     find_and_parse_config_files();
     parse_config_variables(environ);

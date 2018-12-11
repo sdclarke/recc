@@ -30,7 +30,7 @@ using namespace google::longrunning;
 namespace BloombergLP {
 namespace recc {
 
-std::atomic_bool RemoteExecutionClient::sigint_received(false);
+std::atomic_bool RemoteExecutionClient::s_sigint_received(false);
 
 /**
  * Return the ActionResult for the given Operation. Throws an exception
@@ -70,8 +70,8 @@ void add_from_directory(
 {
     for (int i = 0; i < directory.files_size(); ++i) {
         File file;
-        file.digest = directory.files(i).digest();
-        file.executable = directory.files(i).is_executable();
+        file.d_digest = directory.files(i).digest();
+        file.d_executable = directory.files(i).is_executable();
         (*outputFiles)[prefix + directory.files(i).name()] = file;
     }
 
@@ -120,7 +120,7 @@ void RemoteExecutionClient::read_operation(ReaderPointer &reader_ptr,
     std::future_status status;
     do {
         status = future.wait_for(DEFAULT_RECC_POLL_WAIT);
-        if (RemoteExecutionClient::sigint_received) {
+        if (RemoteExecutionClient::s_sigint_received) {
             RECC_LOG_VERBOSE("Cancelling job");
             /* Cancel the operation if the execution service gave it a name */
             if (operation_ptr->name() != "") {
@@ -136,7 +136,7 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
 {
     /* Prepare an asynchonous Execute request */
     proto::ExecuteRequest executeRequest;
-    executeRequest.set_instance_name(instance);
+    executeRequest.set_instance_name(d_instance);
     *executeRequest.mutable_action_digest() = actionDigest;
     executeRequest.set_skip_cache_lookup(skipCache);
 
@@ -145,7 +145,7 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
     setup_signal_handler(SIGINT, RemoteExecutionClient::set_sigint_received);
 
     ReaderPointer reader_ptr =
-        std::move(executionStub->Execute(&context, executeRequest));
+        std::move(d_executionStub->Execute(&context, executeRequest));
 
     /* Read the result of the Execute request into an OperationPointer */
     OperationPointer operation_ptr = std::make_shared<Operation>();
@@ -160,16 +160,16 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
     auto resultProto = get_actionresult(operation);
 
     ActionResult result;
-    result.exitCode = resultProto.exit_code();
-    result.stdOut =
+    result.d_exitCode = resultProto.exit_code();
+    result.d_stdOut =
         OutputBlob(resultProto.stdout_raw(), resultProto.stdout_digest());
-    result.stdErr =
+    result.d_stdErr =
         OutputBlob(resultProto.stderr_raw(), resultProto.stderr_digest());
 
     for (int i = 0; i < resultProto.output_files_size(); ++i) {
         auto fileProto = resultProto.output_files(i);
         File file(fileProto.digest(), fileProto.is_executable());
-        result.outputFiles[fileProto.path()] = file;
+        result.d_outputFiles[fileProto.path()] = file;
     }
 
     for (int i = 0; i < resultProto.output_directories_size(); ++i) {
@@ -180,7 +180,7 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
         for (int j = 0; j < tree.children_size(); ++j) {
             digestMap[make_digest(tree.children(j))] = tree.children(j);
         }
-        add_from_directory(&result.outputFiles, tree.root(),
+        add_from_directory(&result.d_outputFiles, tree.root(),
                            outputDirectoryProto.path() + "/", digestMap);
     }
 
@@ -196,8 +196,8 @@ void RemoteExecutionClient::cancel_operation(const std::string &operationName)
     grpc::ClientContext cancelContext;
 
     /* Send the execution request and report any errors */
-    grpc::Status s = operationsStub->CancelOperation(&cancelContext,
-                                                     cancelRequest, nullptr);
+    grpc::Status s = d_operationsStub->CancelOperation(&cancelContext,
+                                                       cancelRequest, nullptr);
     if (!s.ok()) {
         RECC_LOG_ERROR("Failed to cancel job " << operationName << ": "
                                                << s.error_message());
@@ -210,11 +210,11 @@ void RemoteExecutionClient::cancel_operation(const std::string &operationName)
 void RemoteExecutionClient::write_files_to_disk(ActionResult result,
                                                 const char *root)
 {
-    for (const auto &fileIter : result.outputFiles) {
+    for (const auto &fileIter : result.d_outputFiles) {
         string path = string(root) + "/" + fileIter.first;
         RECC_LOG_VERBOSE("Writing " << path);
-        write_file(path.c_str(), fetch_blob(fileIter.second.digest));
-        if (fileIter.second.executable) {
+        write_file(path.c_str(), fetch_blob(fileIter.second.d_digest));
+        if (fileIter.second.d_executable) {
             make_executable(path.c_str());
         }
     }

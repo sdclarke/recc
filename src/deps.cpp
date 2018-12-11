@@ -98,27 +98,27 @@ CommandFileInfo get_file_info(ParsedCommand parsedCommand)
     CommandFileInfo result;
     auto subprocessResult = execute(parsedCommand.get_dependencies_command(),
                                     true, false, RECC_DEPS_ENV);
-    if (subprocessResult.exitCode != 0) {
+    if (subprocessResult.d_exitCode != 0) {
         string errorMsg = "Failed to execute get dependencies command: ";
         for (const auto &token : parsedCommand.get_dependencies_command()) {
             errorMsg += (token + " ");
         }
         RECC_LOG_ERROR(errorMsg);
-        throw subprocess_failed_error(subprocessResult.exitCode);
+        throw subprocess_failed_error(subprocessResult.d_exitCode);
     }
-    result.dependencies = dependencies_from_make_rules(
-        subprocessResult.stdOut, parsedCommand.produces_sun_make_rules(),
+    result.d_dependencies = dependencies_from_make_rules(
+        subprocessResult.d_stdOut, parsedCommand.produces_sun_make_rules(),
         false);
     set<string> products;
     if (parsedCommand.get_products().size() > 0) {
         products = parsedCommand.get_products();
     }
     else {
-        products = guess_products(result.dependencies);
+        products = guess_products(result.d_dependencies);
     }
 
     for (const auto &product : products) {
-        result.possibleProducts.insert(normalize_path(product.c_str()));
+        result.d_possibleProducts.insert(normalize_path(product.c_str()));
     }
     return result;
 }

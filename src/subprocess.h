@@ -26,9 +26,9 @@ namespace recc {
  * Represents the result of executing a subprocess.
  */
 struct SubprocessResult {
-    int exitCode;
-    std::string stdOut; // Only valid if pipeStdOut was true
-    std::string stdErr; // Only valid if pipeStdErr was true
+    int d_exitCode;
+    std::string d_stdOut; // Only valid if pipeStdOut was true
+    std::string d_stdErr; // Only valid if pipeStdErr was true
 };
 
 /**

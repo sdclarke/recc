@@ -23,23 +23,23 @@ TEST(SubprocessTest, True)
 {
     vector<string> command = {"true"};
     auto result = execute(command);
-    EXPECT_EQ(result.exitCode, 0);
+    EXPECT_EQ(result.d_exitCode, 0);
 }
 
 TEST(SubprocessTest, False)
 {
     vector<string> command = {"false"};
     auto result = execute(command);
-    EXPECT_TRUE(result.exitCode != 0);
+    EXPECT_TRUE(result.d_exitCode != 0);
 }
 
 TEST(SubprocessTest, OutputPipes)
 {
     vector<string> command = {"echo", "hello", "world"};
     auto result = execute(command, true, true);
-    EXPECT_EQ(result.exitCode, 0);
-    EXPECT_EQ(result.stdOut, "hello world\n");
-    EXPECT_EQ(result.stdErr, "");
+    EXPECT_EQ(result.d_exitCode, 0);
+    EXPECT_EQ(result.d_stdOut, "hello world\n");
+    EXPECT_EQ(result.d_stdErr, "");
 }
 
 TEST(SubprocessTest, Environment)
@@ -47,9 +47,9 @@ TEST(SubprocessTest, Environment)
     vector<string> command = {"env"};
     map<string, string> env = {{"RECC_SUBPROCESS_TEST_VAR", "value123456"}};
     auto result = execute(command, true, true, env);
-    EXPECT_TRUE(result.stdOut.find("RECC_SUBPROCESS_TEST_VAR=value123456") !=
+    EXPECT_TRUE(result.d_stdOut.find("RECC_SUBPROCESS_TEST_VAR=value123456") !=
                 string::npos);
-    EXPECT_EQ(result.exitCode, 0);
+    EXPECT_EQ(result.d_exitCode, 0);
 }
 
 TEST(SubprocessTest, WorkingDirectory)
@@ -57,6 +57,6 @@ TEST(SubprocessTest, WorkingDirectory)
     vector<string> command = {"pwd"};
     map<string, string> env;
     auto result = execute(command, true, false, env, "/usr/");
-    EXPECT_EQ(result.exitCode, 0);
-    EXPECT_EQ(result.stdOut, "/usr\n");
+    EXPECT_EQ(result.d_exitCode, 0);
+    EXPECT_EQ(result.d_stdOut, "/usr\n");
 }

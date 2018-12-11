@@ -42,12 +42,12 @@ int main(int argc, char *argv[])
     }
     try {
         const auto deps =
-            get_file_info(ParsedCommand(&argv[1], cwd.c_str())).dependencies;
+            get_file_info(ParsedCommand(&argv[1], cwd.c_str())).d_dependencies;
         for (const auto &dep : deps) {
             RECC_LOG(dep);
         }
     }
     catch (const subprocess_failed_error &e) {
-        exit(e.error_code);
+        exit(e.d_error_code);
     }
 }

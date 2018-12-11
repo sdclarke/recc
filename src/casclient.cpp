@@ -68,10 +68,10 @@ void CASClient::upload_blob(proto::Digest digest, string blob)
 {
     grpc::ClientContext context;
     google::bytestream::WriteResponse response;
-    auto writer = byteStreamStub->Write(&context, &response);
+    auto writer = d_byteStreamStub->Write(&context, &response);
     google::bytestream::WriteRequest initialRequest;
-    string resourceName = instance;
-    if (instance.length() > 0) {
+    string resourceName = d_instance;
+    if (d_instance.length() > 0) {
         resourceName += "/";
     }
     resourceName += "uploads/" + GUID + "/blobs/" + digest.hash() + "/" +
@@ -106,8 +106,8 @@ void CASClient::upload_blob(proto::Digest digest, string blob)
 
 string CASClient::fetch_blob(proto::Digest digest)
 {
-    string resourceName = instance;
-    if (!instance.empty()) {
+    string resourceName = d_instance;
+    if (!d_instance.empty()) {
         resourceName += "/";
     }
     resourceName += "blobs/";
@@ -119,7 +119,7 @@ string CASClient::fetch_blob(proto::Digest digest)
     request.set_resource_name(resourceName);
 
     grpc::ClientContext context;
-    auto reader = byteStreamStub->Read(&context, request);
+    auto reader = d_byteStreamStub->Read(&context, request);
     string result;
     google::bytestream::ReadResponse readResponse;
     while (reader->Read(&readResponse)) {
@@ -148,7 +148,7 @@ void CASClient::upload_resources(
     auto digestIter = digestsToUpload.cbegin();
     while (digestIter != digestsToUpload.cend()) {
         proto::FindMissingBlobsRequest missingBlobsRequest;
-        missingBlobsRequest.set_instance_name(instance);
+        missingBlobsRequest.set_instance_name(d_instance);
         while (missingBlobsRequest.blob_digests_size() <
                    MAX_MISSING_BLOBS_REQUEST_ITEMS &&
                digestIter != digestsToUpload.cend()) {
@@ -159,7 +159,7 @@ void CASClient::upload_resources(
                          << missingBlobsRequest.ShortDebugString());
         grpc::ClientContext missingBlobsContext;
         proto::FindMissingBlobsResponse missingBlobsResponse;
-        ensure_ok(executionStub->FindMissingBlobs(
+        ensure_ok(d_executionStub->FindMissingBlobs(
             &missingBlobsContext, missingBlobsRequest, &missingBlobsResponse));
         RECC_LOG_VERBOSE("Got missing blobs response: "
                          << missingBlobsResponse.ShortDebugString());
@@ -171,7 +171,7 @@ void CASClient::upload_resources(
     }
 
     proto::BatchUpdateBlobsRequest batchUpdateRequest;
-    batchUpdateRequest.set_instance_name(instance);
+    batchUpdateRequest.set_instance_name(d_instance);
     int batchSize = 0;
     for (const auto &digest : missingDigests) {
         string blob;
@@ -193,13 +193,13 @@ void CASClient::upload_resources(
             grpc::ClientContext context;
             proto::BatchUpdateBlobsResponse response;
             RECC_LOG_VERBOSE("Sending batch update request");
-            ensure_ok(executionStub->BatchUpdateBlobs(
+            ensure_ok(d_executionStub->BatchUpdateBlobs(
                 &context, batchUpdateRequest, &response));
             for (int j = 0; j < response.responses_size(); ++j) {
                 ensure_ok(response.responses(j).status());
             }
             batchUpdateRequest = proto::BatchUpdateBlobsRequest();
-            batchUpdateRequest.set_instance_name(instance);
+            batchUpdateRequest.set_instance_name(d_instance);
             batchSize = 0;
         }
 
@@ -214,8 +214,8 @@ void CASClient::upload_resources(
         grpc::ClientContext context;
         proto::BatchUpdateBlobsResponse response;
         RECC_LOG_VERBOSE("Sending final batch update request");
-        ensure_ok(executionStub->BatchUpdateBlobs(&context, batchUpdateRequest,
-                                                  &response));
+        ensure_ok(d_executionStub->BatchUpdateBlobs(
+            &context, batchUpdateRequest, &response));
         for (int i = 0; i < response.responses_size(); ++i) {
             ensure_ok(response.responses(i).status());
         }

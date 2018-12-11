@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     for (int i = 1; i < argc; ++i) {
         File file(argv[i]);
         nestedDirectory.add(file, argv[i]);
-        filenames[file.digest] = argv[i];
+        filenames[file.d_digest] = argv[i];
     }
 
     auto directoryDigest = nestedDirectory.to_digest(&blobs);

@@ -326,17 +326,17 @@ const map<string, command_parser> commandParsers = make_command_parser_map({
 ParsedCommand::ParsedCommand(vector<string> command,
                              const char *workingDirectory)
 {
-    compilerCommand = false;
-    producesSunMakeRules = false;
+    d_compilerCommand = false;
+    d_producesSunMakeRules = false;
     if (command.size() > 0) {
         auto basename = command_basename(command[0]);
         if (commandParsers.count(basename) > 0) {
-            compilerCommand = commandParsers.at(basename)(
-                &command, workingDirectory, &dependenciesCommand,
-                &commandProducts, &producesSunMakeRules);
+            d_compilerCommand = commandParsers.at(basename)(
+                &command, workingDirectory, &d_dependenciesCommand,
+                &d_commandProducts, &d_producesSunMakeRules);
         }
     }
-    this->command = command;
+    this->d_command = command;
 }
 
 bool is_version_character(char character)

@@ -31,9 +31,9 @@ namespace recc {
  */
 class subprocess_failed_error : public std::runtime_error {
   public:
-    const int error_code;
+    const int d_error_code;
     subprocess_failed_error(int code)
-        : std::runtime_error("Subprocess failed"), error_code(code){};
+        : std::runtime_error("Subprocess failed"), d_error_code(code){};
 };
 
 /**
@@ -41,8 +41,8 @@ class subprocess_failed_error : public std::runtime_error {
  * output file locations.
  */
 struct CommandFileInfo {
-    std::set<std::string> dependencies;
-    std::set<std::string> possibleProducts;
+    std::set<std::string> d_dependencies;
+    std::set<std::string> d_possibleProducts;
 };
 
 /**

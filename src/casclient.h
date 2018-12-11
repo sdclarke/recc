@@ -32,32 +32,32 @@ typedef std::shared_ptr<grpc::Channel> channel_ref;
 class CASClient {
   private:
     std::unique_ptr<proto::ContentAddressableStorage::StubInterface>
-        executionStub;
+        d_executionStub;
     std::unique_ptr<google::bytestream::ByteStream::StubInterface>
-        byteStreamStub;
+        d_byteStreamStub;
 
   public:
-    std::string instance;
+    std::string d_instance;
 
     CASClient(proto::ContentAddressableStorage::StubInterface *executionStub,
               google::bytestream::ByteStream::StubInterface *byteStreamStub,
               std::string instance)
-        : executionStub(executionStub), byteStreamStub(byteStreamStub),
-          instance(instance)
+        : d_executionStub(executionStub), d_byteStreamStub(byteStreamStub),
+          d_instance(instance)
     {
     }
 
     CASClient(std::shared_ptr<grpc::Channel> channel, std::string instance)
-        : executionStub(proto::ContentAddressableStorage::NewStub(channel)),
-          byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
-          instance(instance)
+        : d_executionStub(proto::ContentAddressableStorage::NewStub(channel)),
+          d_byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
+          d_instance(instance)
     {
     }
 
     CASClient(std::shared_ptr<grpc::Channel> channel)
-        : executionStub(proto::ContentAddressableStorage::NewStub(channel)),
-          byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
-          instance()
+        : d_executionStub(proto::ContentAddressableStorage::NewStub(channel)),
+          d_byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
+          d_instance()
     {
     }
 

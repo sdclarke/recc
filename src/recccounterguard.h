@@ -20,10 +20,10 @@ namespace recc {
 
 class ReccCounterGuard {
   private:
-    int limit_left;
+    int d_limit_left;
 
   public:
-    static const int NO_LIMIT = -1;
+    static const int s_NO_LIMIT = -1;
     ReccCounterGuard(int limit);
     bool is_unlimited();
     bool is_allowed_more();
