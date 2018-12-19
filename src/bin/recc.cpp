@@ -137,28 +137,37 @@ int main(int argc, char *argv[])
     auto actionDigest = make_digest(action);
 
     blobs[actionDigest] = action.SerializeAsString();
-    std::shared_ptr<grpc::ChannelCredentials> creds;
-    if (RECC_SERVER_AUTH_GOOGLEAPI) {
-        creds = grpc::GoogleDefaultCredentials();
-    }
-    else {
-        creds = grpc::InsecureChannelCredentials();
-    }
-    auto channel = grpc::CreateChannel(RECC_SERVER, creds);
-    auto casChannel = grpc::CreateChannel(RECC_CAS_SERVER, creds);
-    RemoteExecutionClient client(channel, casChannel, RECC_INSTANCE);
-    RECC_LOG_VERBOSE("Uploading resources...");
-    client.upload_resources(blobs, filenames);
-    RECC_LOG_VERBOSE("Executing action...");
-    auto result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
 
-    /* These don't use logging macros because they are compiler output */
-    cout << client.get_outputblob(result.d_stdOut);
-    cerr << client.get_outputblob(result.d_stdErr);
+    int rc = -1;
+    try {
+        std::shared_ptr<grpc::ChannelCredentials> creds;
+        if (RECC_SERVER_AUTH_GOOGLEAPI) {
+            creds = grpc::GoogleDefaultCredentials();
+        }
+        else {
+            creds = grpc::InsecureChannelCredentials();
+        }
+        auto channel = grpc::CreateChannel(RECC_SERVER, creds);
+        auto casChannel = grpc::CreateChannel(RECC_CAS_SERVER, creds);
+        RemoteExecutionClient client(channel, casChannel, RECC_INSTANCE);
+        RECC_LOG_VERBOSE("Uploading resources...");
+        client.upload_resources(blobs, filenames);
+        RECC_LOG_VERBOSE("Executing action...");
+        auto result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
+        rc = result.d_exitCode;
 
-    if (!RECC_DONT_SAVE_OUTPUT) {
-        client.write_files_to_disk(result);
+        /* These don't use logging macros because they are compiler output */
+        cout << client.get_outputblob(result.d_stdOut);
+        cerr << client.get_outputblob(result.d_stdErr);
+
+        if (!RECC_DONT_SAVE_OUTPUT) {
+            client.write_files_to_disk(result);
+        }
+    }
+    catch (const runtime_error &e) {
+        RECC_LOG_ERROR(e.what());
+        rc = (rc == 0 ? -1 : rc);
     }
 
-    return result.d_exitCode;
+    return rc;
 }
