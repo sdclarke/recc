@@ -29,6 +29,7 @@ void setup_signal_handler(int signal, void (*handler)(int))
     /* Set up signal handling for the Execute() request */
     struct sigaction sa;
     sa.sa_handler = handler;
+    sa.sa_flags = SA_RESETHAND; // If the user hits Control-C again, stop.
     if (sigemptyset(&sa.sa_mask) != 0) {
         RECC_LOG_PERROR("Unable to clear signal set");
         return;
