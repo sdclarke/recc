@@ -207,8 +207,9 @@ void RemoteExecutionClient::cancel_operation(const std::string &operationName)
     grpc::ClientContext cancelContext;
 
     /* Send the cancellation request and report any errors */
+    google::protobuf::Empty empty;
     grpc::Status s = d_operationsStub->CancelOperation(&cancelContext,
-                                                       cancelRequest, nullptr);
+                                                       cancelRequest, &empty);
     if (!s.ok()) {
         RECC_LOG_ERROR("Failed to cancel job " << operationName << ": "
                                                << s.error_message());
