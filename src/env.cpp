@@ -264,14 +264,13 @@ std::deque<std::string> evaluate_config_locations()
     // is significant.
     deque<std::string> config_order;
 
-    string home = getenv("HOME");
+    const char *home = getenv("HOME");
     const string cwd_recc = "./recc";
 
     config_order.push_front(cwd_recc);
 
-    if (!home.empty()) {
-        home += "/.recc";
-        config_order.push_front(home);
+    if (home != nullptr and home[0] != '\0') {
+        config_order.push_front(home + std::string("/.recc"));
     }
 
     if (!RECC_CUSTOM_PREFIX.empty()) {
