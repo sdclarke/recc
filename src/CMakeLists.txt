@@ -6,6 +6,7 @@ set(SRCS
     deps.cpp
     env.cpp
     fileutils.cpp
+    grpcretry.cpp
     merklize.cpp
     parsedcommand.cpp
     recccounterguard.cpp

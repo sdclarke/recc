@@ -13,15 +13,17 @@
 // limitations under the License.
 
 #include <fileutils.h>
+#include <grpcretry.h>
 #include <logging.h>
 #include <merklize.h>
 #include <reccdefaults.h>
 #include <remoteexecutionclient.h>
 #include <remoteexecutionsignals.h>
 
-#include <future>
 #include <signal.h>
 
+#include <functional>
+#include <future>
 #include <sstream>
 
 using namespace std;
@@ -140,23 +142,31 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
     *executeRequest.mutable_action_digest() = actionDigest;
     executeRequest.set_skip_cache_lookup(skipCache);
 
-    grpc::ClientContext context;
-
     setup_signal_handler(SIGINT, RemoteExecutionClient::set_sigint_received);
 
-    ReaderPointer reader_ptr =
-        std::move(d_executionStub->Execute(&context, executeRequest));
+    ReaderPointer reader_ptr;
+    OperationPointer operation_ptr;
 
-    /* Read the result of the Execute request into an OperationPointer */
-    OperationPointer operation_ptr = std::make_shared<Operation>();
-    read_operation(reader_ptr, operation_ptr);
+    /* Create the lambda to pass to grpc_retry */
+    auto execute_lambda = [&](grpc::ClientContext &context) {
+        reader_ptr =
+            std::move(d_executionStub->Execute(&context, executeRequest));
 
-    ensure_ok(reader_ptr->Finish());
+        /* Read the result of the Execute request into an OperationPointer */
+        operation_ptr = std::make_shared<Operation>();
+        read_operation(reader_ptr, operation_ptr);
+
+        grpc::Status status = reader_ptr->Finish();
+        return status;
+    };
+
+    grpc_retry(execute_lambda);
 
     Operation operation = *operation_ptr;
     if (!operation.done()) {
         throw runtime_error("Server closed stream before Operation finished");
     }
+
     auto resultProto = get_actionresult(operation);
 
     ActionResult result;
@@ -195,7 +205,7 @@ void RemoteExecutionClient::cancel_operation(const std::string &operationName)
     /* Can't use the same context for simultaneous async RPCs */
     grpc::ClientContext cancelContext;
 
-    /* Send the execution request and report any errors */
+    /* Send the cancellation request and report any errors */
     grpc::Status s = d_operationsStub->CancelOperation(&cancelContext,
                                                        cancelRequest, nullptr);
     if (!s.ok()) {
