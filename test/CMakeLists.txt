@@ -81,3 +81,7 @@ target_link_libraries(actionbuilder_tests GTest::GTest remoteexecution)
 add_test(NAME actionbuilder_tests
          COMMAND actionbuilder_tests
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/actionbuilder)
+
+add_executable(grpcretry_tests grpcretry.cpp main.cpp)
+target_link_libraries(grpcretry_tests GTest::GTest remoteexecution)
+add_test(NAME grpcretry_tests COMMAND grpcretry_tests)

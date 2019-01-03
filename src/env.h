@@ -92,6 +92,17 @@ extern bool RECC_DONT_SAVE_OUTPUT;
 extern bool RECC_SERVER_AUTH_GOOGLEAPI;
 
 /**
+ * The maximum number of times to retry an RPC call before failing.
+ */
+extern int RECC_RETRY_LIMIT;
+
+/**
+ * The base delay between retries. If the first request is request 0,
+ * the delay between request n and request n+1 is RECC_RETRY_DELAY * 2^n.
+ */
+extern int RECC_RETRY_DELAY;
+
+/**
  * The maximum number of execution jobs to run concurrently. (Used only by the
  * worker.)
  */

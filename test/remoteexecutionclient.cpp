@@ -26,6 +26,7 @@
 #include <gtest/gtest.h>
 #include <unistd.h>
 
+#include <env.h>
 #include <fstream>
 #include <iostream>
 #include <signal.h>
@@ -37,81 +38,125 @@ using namespace testing;
 
 const string emptyString;
 
-#define WITH_CLIENT()                                                         \
-    auto executionStub = new proto::MockExecutionStub();                      \
-    auto casStub = new proto::MockContentAddressableStorageStub();            \
-    auto operationsStub = new google::longrunning::MockOperationsStub();      \
-    auto byteStreamStub = new google::bytestream::MockByteStreamStub;         \
-    RemoteExecutionClient client(executionStub, casStub, operationsStub,      \
-                                 byteStreamStub, string())
+/*
+ * This fixture sets up all of the dependencies for execute_action
+ *
+ * Any dependencies can be overridden by setting them in the respective tests
+ */
+class RemoteExecutionClientTestFixture : public ::testing::Test {
+  protected:
+    proto::MockExecutionStub *executionStub;
+    proto::MockContentAddressableStorageStub *casStub;
+    google::longrunning::MockOperationsStub *operationsStub;
+    google::bytestream::MockByteStreamStub *byteStreamStub;
+    RemoteExecutionClient *client;
+
+    proto::Digest actionDigest;
+    proto::ExecuteRequest expectedExecuteRequest;
+
+    proto::Digest stdErrDigest;
+
+    google::longrunning::Operation operation;
+    grpc::testing::MockClientReader<google::longrunning::Operation>
+        *operationReader;
+
+    google::bytestream::ReadRequest expectedByteStreamRequest;
+
+    grpc::testing::MockClientReader<google::bytestream::ReadResponse> *reader;
+
+    google::bytestream::ReadResponse readResponse;
+
+    RemoteExecutionClientTestFixture()
+    {
+        // Construct the mock stubs
+        executionStub = new proto::MockExecutionStub();
+        casStub = new proto::MockContentAddressableStorageStub();
+        operationsStub = new google::longrunning::MockOperationsStub();
+        byteStreamStub = new google::bytestream::MockByteStreamStub;
+        client = new RemoteExecutionClient(
+            executionStub, casStub, operationsStub, byteStreamStub, string());
+
+        // Construct the Digest we're passing in, and the ExecuteRequest we
+        // expect the RemoteExecutionClient to send as a result.
+        actionDigest.set_hash("Action digest hash here");
+        *expectedExecuteRequest.mutable_action_digest() = actionDigest;
+
+        // Begin contructing a fake ExecuteResponse to return to the client.
+        proto::ExecuteResponse executeResponse;
+        auto actionResultProto = executeResponse.mutable_result();
+        actionResultProto->set_stdout_raw("Raw stdout.");
+        string stdErr("Stderr, which will be sent as a digest.");
+        stdErrDigest = make_digest(stdErr);
+        *actionResultProto->mutable_stderr_digest() = stdErrDigest;
+        actionResultProto->set_exit_code(123);
+
+        // Add an output file to the response.
+        proto::OutputFile outputFile;
+        outputFile.set_path("some/path/with/slashes.txt");
+        outputFile.mutable_digest()->set_hash("File hash goes here");
+        outputFile.mutable_digest()->set_size_bytes(1);
+        *actionResultProto->add_output_files() = outputFile;
+
+        // Add an output tree (with nested subdirectories) to the response.
+        proto::Tree tree;
+        auto treeRootFile = tree.mutable_root()->add_files();
+        treeRootFile->mutable_digest()->set_hash("File hash goes here");
+        treeRootFile->mutable_digest()->set_size_bytes(1);
+        treeRootFile->set_name("out.txt");
+        auto childDirectory = tree.add_children();
+        auto childDirectoryFile = childDirectory->add_files();
+        childDirectoryFile->set_name("a.out");
+        childDirectoryFile->mutable_digest()->set_hash("Executable file hash");
+        childDirectoryFile->mutable_digest()->set_size_bytes(1);
+        childDirectoryFile->set_is_executable(true);
+        auto nestedChildDirectory = tree.add_children();
+        auto nestedChildDirectoryFile = nestedChildDirectory->add_files();
+        nestedChildDirectoryFile->set_name("q.mk");
+        nestedChildDirectoryFile->mutable_digest()->set_hash("q.mk file hash");
+        nestedChildDirectoryFile->mutable_digest()->set_size_bytes(1);
+        *childDirectory->add_directories()->mutable_digest() =
+            make_digest(*nestedChildDirectory);
+        childDirectory->mutable_directories(0)->set_name("nested");
+        *tree.mutable_root()->add_directories()->mutable_digest() =
+            make_digest(*childDirectory);
+        tree.mutable_root()->mutable_directories(0)->set_name("subdirectory");
+        auto treeDigest = make_digest(tree);
+        *actionResultProto->add_output_directories()->mutable_tree_digest() =
+            treeDigest;
+        actionResultProto->mutable_output_directories(0)->set_path(
+            "output/directory");
+
+        // Return a completed Operation when the client sends the Execute
+        // request.
+        operation.set_done(true);
+        operation.mutable_response()->PackFrom(executeResponse);
+        operationReader = new grpc::testing::MockClientReader<
+            google::longrunning::Operation>();
+
+        reader = new grpc::testing::MockClientReader<
+            google::bytestream::ReadResponse>();
+
+        // Allow the client to fetch the output tree from CAS.
+        expectedByteStreamRequest.set_resource_name(
+            "blobs/" + treeDigest.hash() + "/" +
+            std::to_string(treeDigest.size_bytes()));
+        readResponse.set_data(tree.SerializeAsString());
+    }
+
+    ~RemoteExecutionClientTestFixture()
+    {
+        delete client; // deletes stubs internally
+    }
+};
 
 MATCHER_P(MessageEq, expected, "")
 {
     return google::protobuf::util::MessageDifferencer::Equals(expected, arg);
 }
 
-TEST(RemoteExecutionClientTest, ExecuteActionTest)
+TEST_F(RemoteExecutionClientTestFixture, ExecuteActionTest)
 {
-    WITH_CLIENT();
-
-    // Construct the Digest we're passing in, and the ExecuteRequest we expect
-    // the RemoteExecutionClient to send as a result.
-    proto::Digest actionDigest;
-    actionDigest.set_hash("Action digest hash here");
-    proto::ExecuteRequest expectedExecuteRequest;
-    *expectedExecuteRequest.mutable_action_digest() = actionDigest;
-
-    // Begin contructing a fake ExecuteResponse to return to the client.
-    proto::ExecuteResponse executeResponse;
-    auto actionResultProto = executeResponse.mutable_result();
-    actionResultProto->set_stdout_raw("Raw stdout.");
-    string stdErr("Stderr, which will be sent as a digest.");
-    auto stdErrDigest = make_digest(stdErr);
-    *actionResultProto->mutable_stderr_digest() = stdErrDigest;
-    actionResultProto->set_exit_code(123);
-
-    // Add an output file to the response.
-    proto::OutputFile outputFile;
-    outputFile.set_path("some/path/with/slashes.txt");
-    outputFile.mutable_digest()->set_hash("File hash goes here");
-    outputFile.mutable_digest()->set_size_bytes(1);
-    *actionResultProto->add_output_files() = outputFile;
-
-    // Add an output tree (with nested subdirectories) to the response.
-    proto::Tree tree;
-    auto treeRootFile = tree.mutable_root()->add_files();
-    treeRootFile->mutable_digest()->set_hash("File hash goes here");
-    treeRootFile->mutable_digest()->set_size_bytes(1);
-    treeRootFile->set_name("out.txt");
-    auto childDirectory = tree.add_children();
-    auto childDirectoryFile = childDirectory->add_files();
-    childDirectoryFile->set_name("a.out");
-    childDirectoryFile->mutable_digest()->set_hash("Executable file hash");
-    childDirectoryFile->mutable_digest()->set_size_bytes(1);
-    childDirectoryFile->set_is_executable(true);
-    auto nestedChildDirectory = tree.add_children();
-    auto nestedChildDirectoryFile = nestedChildDirectory->add_files();
-    nestedChildDirectoryFile->set_name("q.mk");
-    nestedChildDirectoryFile->mutable_digest()->set_hash("q.mk file hash");
-    nestedChildDirectoryFile->mutable_digest()->set_size_bytes(1);
-    *childDirectory->add_directories()->mutable_digest() =
-        make_digest(*nestedChildDirectory);
-    childDirectory->mutable_directories(0)->set_name("nested");
-    *tree.mutable_root()->add_directories()->mutable_digest() =
-        make_digest(*childDirectory);
-    tree.mutable_root()->mutable_directories(0)->set_name("subdirectory");
-    auto treeDigest = make_digest(tree);
-    *actionResultProto->add_output_directories()->mutable_tree_digest() =
-        treeDigest;
-    actionResultProto->mutable_output_directories(0)->set_path(
-        "output/directory");
-
-    // Return a completed Operation when the client sends the Execute request.
-    google::longrunning::Operation operation;
-    operation.set_done(true);
-    operation.mutable_response()->PackFrom(executeResponse);
-    auto operationReader =
-        new grpc::testing::MockClientReader<google::longrunning::Operation>();
+    // Set up the behavior for the various mock dependencies
     EXPECT_CALL(*executionStub,
                 ExecuteRaw(_, MessageEq(expectedExecuteRequest)))
         .WillOnce(Return(operationReader));
@@ -119,15 +164,6 @@ TEST(RemoteExecutionClientTest, ExecuteActionTest)
         .WillOnce(DoAll(SetArgPointee<0>(operation), Return(true)));
     EXPECT_CALL(*operationReader, Finish()).WillOnce(Return(grpc::Status::OK));
 
-    // Allow the client to fetch the output tree from CAS.
-    google::bytestream::ReadRequest expectedByteStreamRequest;
-    expectedByteStreamRequest.set_resource_name(
-        "blobs/" + treeDigest.hash() + "/" +
-        std::to_string(treeDigest.size_bytes()));
-    auto reader = new grpc::testing::MockClientReader<
-        google::bytestream::ReadResponse>();
-    google::bytestream::ReadResponse readResponse;
-    readResponse.set_data(tree.SerializeAsString());
     EXPECT_CALL(*byteStreamStub,
                 ReadRaw(_, MessageEq(expectedByteStreamRequest)))
         .WillOnce(Return(reader));
@@ -138,7 +174,8 @@ TEST(RemoteExecutionClientTest, ExecuteActionTest)
 
     // Ask the client to execute the action, and make sure the result is
     // correct.
-    auto actionResult = client.execute_action(actionDigest);
+    auto actionResult = client->execute_action(actionDigest);
+
     EXPECT_EQ(actionResult.d_exitCode, 123);
     EXPECT_TRUE(actionResult.d_stdOut.d_inlined);
     EXPECT_FALSE(actionResult.d_stdErr.d_inlined);
@@ -163,9 +200,48 @@ TEST(RemoteExecutionClientTest, ExecuteActionTest)
         "q.mk file hash");
 }
 
-TEST(RemoteExecutionClientTest, WriteFilesToDisk)
+TEST_F(RemoteExecutionClientTestFixture, RpcRetryTest)
 {
-    WITH_CLIENT();
+    int old_retry_limit = RECC_RETRY_LIMIT;
+    RECC_RETRY_LIMIT = 2;
+
+    grpc::testing::MockClientReader<
+        google::longrunning::Operation> *brokenOperationReader =
+        new grpc::testing::MockClientReader<google::longrunning::Operation>();
+
+    // Execution stuff
+    EXPECT_CALL(*executionStub,
+                ExecuteRaw(_, MessageEq(expectedExecuteRequest)))
+        .WillOnce(Return(brokenOperationReader))
+        .WillOnce(Return(operationReader));
+
+    EXPECT_CALL(*brokenOperationReader, Read(_))
+        .WillOnce(DoAll(SetArgPointee<0>(operation), Return(false)));
+    EXPECT_CALL(*brokenOperationReader, Finish())
+        .WillOnce(Return(grpc::Status(grpc::FAILED_PRECONDITION, "failed")));
+
+    EXPECT_CALL(*operationReader, Read(_))
+        .WillOnce(DoAll(SetArgPointee<0>(operation), Return(true)));
+    EXPECT_CALL(*operationReader, Finish()).WillOnce(Return(grpc::Status::OK));
+
+    // CAS Stuff
+    EXPECT_CALL(*byteStreamStub,
+                ReadRaw(_, MessageEq(expectedByteStreamRequest)))
+        .WillOnce(Return(reader));
+    EXPECT_CALL(*reader, Read(_))
+        .WillOnce(DoAll(SetArgPointee<0>(readResponse), Return(true)))
+        .WillOnce(Return(false));
+    EXPECT_CALL(*reader, Finish()).WillOnce(Return(grpc::Status::OK));
+
+    // Ask the client to execute the action, and make sure the result is
+    // correct.
+    auto actionResult = client->execute_action(actionDigest);
+
+    RECC_RETRY_LIMIT = old_retry_limit;
+}
+
+TEST_F(RemoteExecutionClientTestFixture, WriteFilesToDisk)
+{
     TemporaryDirectory tempDir;
 
     ActionResult testResult;
@@ -180,8 +256,6 @@ TEST(RemoteExecutionClientTest, WriteFilesToDisk)
     expectedByteStreamRequest.set_resource_name(
         "blobs/" + testFile.d_digest.hash() + "/" +
         std::to_string(testFile.d_digest.size_bytes()));
-    auto reader = new grpc::testing::MockClientReader<
-        google::bytestream::ReadResponse>();
     google::bytestream::ReadResponse readResponse;
     readResponse.set_data("Test file content!");
     EXPECT_CALL(*byteStreamStub,
@@ -192,31 +266,15 @@ TEST(RemoteExecutionClientTest, WriteFilesToDisk)
         .WillOnce(Return(false));
     EXPECT_CALL(*reader, Finish()).WillOnce(Return(grpc::Status::OK));
 
-    client.write_files_to_disk(testResult, tempDir.name());
+    client->write_files_to_disk(testResult, tempDir.name());
 
     string expectedPath = string(tempDir.name()) + "/test.txt";
     EXPECT_TRUE(is_executable(expectedPath.c_str()));
     EXPECT_EQ(get_file_contents(expectedPath.c_str()), "Test file content!");
 }
 
-TEST(RemoteExecutionClientTest, CancelOperation)
+TEST_F(RemoteExecutionClientTestFixture, CancelOperation)
 {
-    WITH_CLIENT();
-
-    // Construct the Digest we're passing in, and the ExecuteRequest we expect
-    // the RemoteExecutionClient to send as a result.
-    proto::Digest actionDigest;
-    actionDigest.set_hash("Action digest hash here");
-    proto::ExecuteRequest expectedExecuteRequest;
-    *expectedExecuteRequest.mutable_action_digest() = actionDigest;
-
-    // Return a completed Operation when the client sends the Execute request.
-    google::longrunning::Operation operation;
-    operation.set_done(false);
-    operation.set_name("fake-operation");
-    auto operationReader =
-        new grpc::testing::MockClientReader<google::longrunning::Operation>();
-
     /**
      * This test is a bit gross, so it warrants an explanation.
      *
@@ -280,6 +338,16 @@ TEST(RemoteExecutionClientTest, CancelOperation)
                  * has already been set up in execute_action.
                  */
 
+                // Return an incomplete Operation when the client sends the
+                // Execute request.
+                operation.set_done(false);
+                operation.set_name("fake-operation");
+
+                // We need to declare operationReader locally to capture it
+                // in the lambda
+                auto operationReader = new grpc::testing::MockClientReader<
+                    google::longrunning::Operation>();
+
                 EXPECT_CALL(*executionStub,
                             ExecuteRaw(_, MessageEq(expectedExecuteRequest)))
                     .WillOnce(testing::InvokeWithoutArgs([&timingPipe,
@@ -296,14 +364,16 @@ TEST(RemoteExecutionClientTest, CancelOperation)
                 EXPECT_CALL(*operationsStub, CancelOperation(_, _, _))
                     .WillOnce(Return(grpc::Status::OK));
 
-                /* Since we call exit(), we leak several mocks and make GTest
+                /*
+                 * Since we call exit(), we leak several mocks and make GTest
                  * unhappy. We need to tell GTest to ignore these leaks during
-                 * the memory check. */
+                 * the memory check.
+                 */
                 Mock::AllowLeak(executionStub);
                 Mock::AllowLeak(operationReader);
                 Mock::AllowLeak(operationsStub);
 
-                client.execute_action(actionDigest);
+                client->execute_action(actionDigest);
             },
             ::testing::ExitedWithCode(130), ".*");
     }

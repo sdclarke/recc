@@ -59,6 +59,8 @@ bool RECC_SKIP_CACHE = DEFAULT_RECC_SKIP_CACHE;
 bool RECC_DONT_SAVE_OUTPUT = DEFAULT_RECC_DONT_SAVE_OUTPUT;
 bool RECC_SERVER_AUTH_GOOGLEAPI = DEFAULT_RECC_SERVER_AUTH_GOOGLEAPI;
 
+int RECC_RETRY_LIMIT = DEFAULT_RECC_RETRY_LIMIT;
+int RECC_RETRY_DELAY = DEFAULT_RECC_RETRY_DELAY;
 int RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
 int RECC_JOBS_COUNT = DEFAULT_RECC_JOBS_COUNT;
 
@@ -201,6 +203,8 @@ void parse_config_variables(const char *const *environ)
         BOOLVAR(RECC_DONT_SAVE_OUTPUT)
         BOOLVAR(RECC_SERVER_AUTH_GOOGLEAPI)
 
+        INTVAR(RECC_RETRY_LIMIT)
+        INTVAR(RECC_RETRY_DELAY)
         INTVAR(RECC_MAX_CONCURRENT_JOBS)
         INTVAR(RECC_JOBS_COUNT)
 
@@ -254,6 +258,18 @@ void handle_special_defaults(Source file)
                              << DEFAULT_RECC_MAX_CONCURRENT_JOBS
                              << " job(s) at a time (default option).");
             RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
+        }
+        if (RECC_RETRY_LIMIT < 0) {
+            RECC_LOG_WARNING("Warning: invalid RECC_RETRY_LIMIT setting.");
+            RECC_LOG_WARNING("Retry limit set to " << DEFAULT_RECC_RETRY_LIMIT
+                                                   << " (default value).");
+            RECC_RETRY_LIMIT = DEFAULT_RECC_RETRY_LIMIT;
+        }
+        if (RECC_RETRY_DELAY < 0) {
+            RECC_LOG_WARNING("Warning: invalid RECC_RETRY_DELAY setting.");
+            RECC_LOG_WARNING("Retry delay set to " << DEFAULT_RECC_RETRY_DELAY
+                                                   << "ms (default value).");
+            RECC_RETRY_DELAY = DEFAULT_RECC_RETRY_DELAY;
         }
     }
 }

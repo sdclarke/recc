@@ -94,7 +94,12 @@ const string HELP(
     "\n"
     "RECC_REMOTE_PLATFORM_[key] - specifies required Platform property,\n"
     "                             which the build server uses to select\n"
-    "                             the build worker");
+    "                             the build worker\n"
+    "\n"
+    "RECC_RETRY_LIMIT - number of times to retry failed requests (default 0)\n"
+    "\n"
+    "RECC_RETRY_DELAY - base delay (in ms) between retries\n"
+    "                   grows exponentially (default 100ms)");
 
 int main(int argc, char *argv[])
 {
