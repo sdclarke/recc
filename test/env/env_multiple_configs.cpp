@@ -19,7 +19,6 @@
 #include <string>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
 /*
  * Test modifies RECC_CONFIG_LOCATIONS directly.
@@ -31,8 +30,8 @@ TEST(EnvTest, EnvMultipleConfigs)
     unsetenv("RECC_SERVER");
 
     // this should be in {SOMEWHERE}/test/ if running 'make test'
-    string cwd_recc = "./recc";
-    string home = "./.recc";
+    std::string cwd_recc = "./recc";
+    std::string home = "./.recc";
 
     RECC_CONFIG_LOCATIONS.push_back(cwd_recc);
 

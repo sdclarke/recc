@@ -40,7 +40,8 @@ extern std::string RECC_SERVER;
 extern std::string RECC_CAS_SERVER;
 
 /**
- * The instance name to pass to the server. The default is the empty string.
+ * The instance name to pass to the server. The default is the empty
+ * std::string.
  */
 extern std::string RECC_INSTANCE;
 
@@ -183,8 +184,8 @@ extern std::deque<std::string> RECC_CONFIG_LOCATIONS;
  * Parse the given environment and store it in the corresponding global
  * variables.
  *
- * environ should be an array of "VARIABLE=value" strings whose last entry is
- * nullptr.
+ * environ should be an array of "VARIABLE=value" std::strings whose last entry
+ * is nullptr.
  */
 void parse_config_variables(const char *const *environ);
 

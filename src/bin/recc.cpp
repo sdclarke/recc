@@ -35,9 +35,8 @@
 #include <unistd.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
-const string HELP(
+const std::string HELP(
     "USAGE: recc <command>\n"
     "\n"
     "If the given command is a compile command, runs it on a remote build\n"
@@ -116,11 +115,11 @@ int main(int argc, char *argv[])
 
     set_config_locations();
     parse_config_variables();
-    const string cwd = get_current_working_directory();
+    const std::string cwd = get_current_working_directory();
     ParsedCommand command(&argv[1], cwd.c_str());
 
-    unordered_map<proto::Digest, string> blobs;
-    unordered_map<proto::Digest, string> filenames;
+    std::unordered_map<proto::Digest, std::string> blobs;
+    std::unordered_map<proto::Digest, std::string> filenames;
 
     std::shared_ptr<proto::Action> actionPtr;
 
@@ -162,14 +161,14 @@ int main(int argc, char *argv[])
         rc = result.d_exitCode;
 
         /* These don't use logging macros because they are compiler output */
-        cout << client.get_outputblob(result.d_stdOut);
-        cerr << client.get_outputblob(result.d_stdErr);
+        std::cout << client.get_outputblob(result.d_stdOut);
+        std::cerr << client.get_outputblob(result.d_stdErr);
 
         if (!RECC_DONT_SAVE_OUTPUT) {
             client.write_files_to_disk(result);
         }
     }
-    catch (const runtime_error &e) {
+    catch (const std::runtime_error &e) {
         RECC_LOG_ERROR(e.what());
         rc = (rc == 0 ? -1 : rc);
     }

@@ -20,7 +20,6 @@
 #include <gtest/gtest.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
 /* This test is here to make sure the order advertised in README.md and
  *  the comments of src/env.h remain accurate
@@ -38,7 +37,7 @@ TEST(EnvTest, EnvConfigOrderAdvertised)
     RECC_CUSTOM_PREFIX = "/tmp/recc/custom/prefix";
     RECC_INSTALL_DIR = "/tmp/recc/install/dir";
 
-    deque<string> config_order = evaluate_config_locations();
+    const std::deque<std::string> config_order = evaluate_config_locations();
     /* config_order.size() must be at least 4, might be higher if more
      * locations are defined in reccdefaults.h
      */
@@ -46,7 +45,8 @@ TEST(EnvTest, EnvConfigOrderAdvertised)
 
     // Doing it in reverse just so that it's easier to compare against the
     // prioritized list
-    deque<string>::reverse_iterator rit = config_order.rbegin();
+    std::deque<std::string>::const_reverse_iterator rit =
+        config_order.rbegin();
 
     EXPECT_EQ("./recc", *rit);
     rit++;

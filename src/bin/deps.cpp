@@ -21,9 +21,8 @@
 #include <regex>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
-const string HELP(
+const std::string HELP(
     "USAGE: deps<command>\n"
     "\n"
     "Attempts to determine the files needed to execute the given compiler\n"
@@ -33,7 +32,7 @@ int main(int argc, char *argv[])
 {
     set_config_locations();
     parse_config_variables();
-    const string cwd = get_current_working_directory();
+    const std::string cwd = get_current_working_directory();
 
     if (argc <= 1 || strcmp(argv[1], "--help") == 0 ||
         strcmp(argv[1], "-h") == 0) {

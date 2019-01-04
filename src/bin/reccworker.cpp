@@ -41,9 +41,8 @@
 #include <unistd.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
-const string HELP(
+const std::string HELP(
     "USAGE: reccworker [id]\n"
     "\n"
     "Start a remote worker with the given ID. If the ID is unspecified,\n"
@@ -88,26 +87,26 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
 
     casClient.download_directory(action.input_root_digest(), tmpdir.name());
 
-    const string pathPrefix = string(tmpdir.name()) + "/";
+    const std::string pathPrefix = std::string(tmpdir.name()) + "/";
 
     // Fetch command from CAS and read it
     const auto commandProto =
         casClient.fetch_message<proto::Command>(action.command_digest());
-    vector<string> command;
+    std::vector<std::string> command;
     for (auto &arg : commandProto.arguments()) {
         command.push_back(arg);
     }
-    map<string, string> env;
+    std::map<std::string, std::string> env;
     for (auto &envVar : commandProto.environment_variables()) {
         env[envVar.name()] = envVar.value();
     }
-    const string workingDirectory =
+    const std::string workingDirectory =
         pathPrefix + commandProto.working_directory();
-    const string outputPathPrefix = workingDirectory + "/";
+    const std::string outputPathPrefix = workingDirectory + "/";
 
     // Create parent directories for the Command's output files
     for (auto &file : commandProto.output_files()) {
-        if (file.find("/") != string::npos) {
+        if (file.find("/") != std::string::npos) {
             create_directory_recursive(
                 (outputPathPrefix + file.substr(0, file.rfind("/"))).c_str());
         }
@@ -126,8 +125,8 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
     result.set_stdout_raw(subprocessResult.d_stdOut);
     result.set_stderr_raw(subprocessResult.d_stdErr);
 
-    unordered_map<proto::Digest, string> blobsToUpload;
-    unordered_map<proto::Digest, string> filesToUpload;
+    std::unordered_map<proto::Digest, std::string> blobsToUpload;
+    std::unordered_map<proto::Digest, std::string> filesToUpload;
 
     // Add any output files that exist to ActionResult and filesToUpload
     for (auto &outputFilename : commandProto.output_files()) {
@@ -178,9 +177,11 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
  * and activeJobs set. `sessionCondition` will be notified once the job has
  * completed. `casChannel` will be used to connect to the CAS service.
  */
-void worker_thread(proto::BotSession *session, set<string> *activeJobs,
-                   mutex *sessionMutex, condition_variable *sessionCondition,
-                   shared_ptr<grpc::Channel> casChannel, string leaseID)
+void worker_thread(proto::BotSession *session,
+                   std::set<std::string> *activeJobs, std::mutex *sessionMutex,
+                   std::condition_variable *sessionCondition,
+                   std::shared_ptr<grpc::Channel> casChannel,
+                   std::string leaseID)
 {
     proto::ActionResult result;
 
@@ -189,7 +190,7 @@ void worker_thread(proto::BotSession *session, set<string> *activeJobs,
         proto::Action action;
         {
             // Get the Action to execute from the session.
-            lock_guard<mutex> lock(*sessionMutex);
+            std::lock_guard<std::mutex> lock(*sessionMutex);
             bool foundLease = false;
             for (auto &lease : session->leases()) {
                 if (lease.id() == leaseID) {
@@ -203,7 +204,7 @@ void worker_thread(proto::BotSession *session, set<string> *activeJobs,
                             actionDigest);
                     }
                     else {
-                        throw runtime_error("Invalid lease payload type");
+                        throw std::runtime_error("Invalid lease payload type");
                     }
                     foundLease = true;
                     break;
@@ -216,11 +217,11 @@ void worker_thread(proto::BotSession *session, set<string> *activeJobs,
 
         result = execute_action(action, casClient);
     }
-    catch (const exception &e) {
+    catch (const std::exception &e) {
         result.set_exit_code(1);
         RECC_LOG_VERBOSE("Caught exception in worker: " << e.what());
-        result.set_stderr_raw(string("Exception in worker: ") + e.what() +
-                              string("\n"));
+        result.set_stderr_raw(std::string("Exception in worker: ") + e.what() +
+                              std::string("\n"));
     }
 
     {
@@ -229,7 +230,7 @@ void worker_thread(proto::BotSession *session, set<string> *activeJobs,
         // We need to search for the lease again because it could have been
         // moved/cancelled/deleted/completed by someone else while we were
         // executing it.
-        lock_guard<mutex> lock(*sessionMutex);
+        std::lock_guard<std::mutex> lock(*sessionMutex);
         for (auto &lease : *session->mutable_leases()) {
             if (lease.id() == leaseID &&
                 lease.state() == proto::LeaseState::ACTIVE) {
@@ -242,16 +243,16 @@ void worker_thread(proto::BotSession *session, set<string> *activeJobs,
     sessionCondition->notify_all();
 }
 
-string generate_default_bot_id()
+std::string generate_default_bot_id()
 {
     char hostname[256] = {0};
     gethostname(hostname, sizeof(hostname));
-    return string(hostname) + "-" + to_string(getpid());
+    return std::string(hostname) + "-" + std::to_string(getpid());
 }
 
 int main(int argc, char *argv[])
 {
-    string bot_id = generate_default_bot_id();
+    std::string bot_id = generate_default_bot_id();
 
     // Parse command-line arguments.
     if (argc > 2) {
@@ -264,7 +265,7 @@ int main(int argc, char *argv[])
             RECC_LOG_WARNING(HELP);
             return 0;
         }
-        bot_id = string(argv[1]);
+        bot_id = std::string(argv[1]);
     }
 
     // Parse configuration from environment variables and defaults
@@ -334,26 +335,26 @@ int main(int argc, char *argv[])
 
     RECC_LOG_VERBOSE("Bot Session created. Now waiting for jobs.");
 
-    mutex sessionMutex;
-    condition_variable sessionCondition;
+    std::mutex sessionMutex;
+    std::condition_variable sessionCondition;
     bool skipPollDelay = true;
 
     // Keep track of Lease IDs that have been accepted but not assigned to a
     // worker yet. Fully managed by the while-loop; used to know if it is
     // permitted to exit upon reaching the JOBS_LIMIT
-    set<string> activeJobsPendingWorker;
+    std::set<std::string> activeJobsPendingWorker;
 
     // Keep track of Lease IDs that have been assigned to a worker
     // Lease IDs are added when the while-loop spawns worker threads and they
     //           are removed when by the worker threads when they're done
-    set<string> activeJobs;
+    std::set<std::string> activeJobs;
 
     // Run this loop until the job limit (if any) was reached, or there
     // are jobs running, or jobs have been accepted and pending a
     // worker assignment
     while (counterGuard.is_allowed_more() || activeJobs.size() ||
            activeJobsPendingWorker.size()) {
-        unique_lock<mutex> lock(sessionMutex);
+        std::unique_lock<std::mutex> lock(sessionMutex);
         if (skipPollDelay) {
             skipPollDelay = false;
         }

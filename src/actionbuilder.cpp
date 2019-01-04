@@ -22,12 +22,10 @@
 namespace BloombergLP {
 namespace recc {
 
-using namespace std;
-
-std::shared_ptr<proto::Action>
-ActionBuilder::BuildAction(ParsedCommand command, const string cwd,
-                           unordered_map<proto::Digest, string> *blobs,
-                           unordered_map<proto::Digest, string> *filenames)
+std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
+    ParsedCommand command, const std::string cwd,
+    std::unordered_map<proto::Digest, std::string> *blobs,
+    std::unordered_map<proto::Digest, std::string> *filenames)
 {
 
     if (!command.is_compiler_command() && !RECC_FORCE_REMOTE) {
@@ -37,7 +35,7 @@ ActionBuilder::BuildAction(ParsedCommand command, const string cwd,
         return nullptr;
     }
 
-    string commandWorkingDirectory;
+    std::string commandWorkingDirectory;
     NestedDirectory nestedDirectory;
 
     std::set<std::string> products = RECC_OUTPUT_FILES_OVERRIDE;
@@ -47,7 +45,7 @@ ActionBuilder::BuildAction(ParsedCommand command, const string cwd,
             RECC_DEPS_DIRECTORY_OVERRIDE.c_str(), filenames);
     }
     else {
-        set<string> deps = RECC_DEPS_OVERRIDE;
+        std::set<std::string> deps = RECC_DEPS_OVERRIDE;
 
         if (RECC_DEPS_OVERRIDE.empty() && !RECC_FORCE_REMOTE) {
             RECC_LOG_VERBOSE("Getting dependencies");
@@ -66,15 +64,15 @@ ActionBuilder::BuildAction(ParsedCommand command, const string cwd,
         int parentsNeeded = 0;
         for (const auto &dep : deps) {
             parentsNeeded =
-                max(parentsNeeded, parent_directory_levels(dep.c_str()));
+                std::max(parentsNeeded, parent_directory_levels(dep.c_str()));
         }
         for (const auto &product : products) {
-            parentsNeeded =
-                max(parentsNeeded, parent_directory_levels(product.c_str()));
+            parentsNeeded = std::max(parentsNeeded,
+                                     parent_directory_levels(product.c_str()));
         }
         commandWorkingDirectory = last_n_segments(cwd.c_str(), parentsNeeded);
         for (const auto &dep : deps) {
-            string merklePath = commandWorkingDirectory + "/" + dep;
+            std::string merklePath = commandWorkingDirectory + "/" + dep;
             merklePath = normalize_path(merklePath.c_str());
             File file(dep.c_str());
             nestedDirectory.add(file, merklePath.c_str());

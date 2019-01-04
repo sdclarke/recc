@@ -18,7 +18,6 @@
 #include <gtest/gtest.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
 TEST(EnvTest, EnvFromFile)
 {
@@ -28,9 +27,9 @@ TEST(EnvTest, EnvFromFile)
     unsetenv("TMPDIR");
 
     // should be set from file
-    string expectedReccServer = "localhost:99999";
-    string expectedRecCasServer = "localhost:66666";
-    string expectedTMPDIR = "/tmp/dir";
+    std::string expectedReccServer = "localhost:99999";
+    std::string expectedRecCasServer = "localhost:66666";
+    std::string expectedTMPDIR = "/tmp/dir";
 
     // In this test use the usual config location list
     set_config_locations();

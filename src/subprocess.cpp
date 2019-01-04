@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <logging.h>
-#include <subprocess.h>
-
 #include <cerrno>
 #include <cstring>
+#include <logging.h>
+#include <map>
+#include <subprocess.h>
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -24,13 +24,12 @@
 #include <system_error>
 #include <unistd.h>
 
-using namespace std;
-
 namespace BloombergLP {
 namespace recc {
 
-SubprocessResult execute(vector<string> command, bool pipeStdOut,
-                         bool pipeStdErr, map<string, string> env,
+SubprocessResult execute(std::vector<std::string> command, bool pipeStdOut,
+                         bool pipeStdErr,
+                         std::map<std::string, std::string> env,
                          const char *cwd)
 {
     // Convert the command to a char*[]
@@ -44,15 +43,15 @@ SubprocessResult execute(vector<string> command, bool pipeStdOut,
     // Pipe, fork and exec
     int stdOutPipeFDs[2] = {0};
     if (pipeStdOut && pipe(stdOutPipeFDs) == -1) {
-        throw system_error(errno, system_category());
+        throw std::system_error(errno, std::system_category());
     }
     int stdErrPipeFDs[2] = {0};
     if (pipeStdErr && pipe(stdErrPipeFDs) == -1) {
-        throw system_error(errno, system_category());
+        throw std::system_error(errno, std::system_category());
     }
     auto pid = fork();
     if (pid == -1) {
-        throw system_error(errno, system_category());
+        throw std::system_error(errno, std::system_category());
     }
     else if (pid == 0) {
         // (runs only in the child)
@@ -129,7 +128,7 @@ SubprocessResult execute(vector<string> command, bool pipeStdOut,
     // Get the status code from the child process
     int status;
     if (waitpid(pid, &status, 0) == -1) {
-        throw system_error(errno, system_category());
+        throw std::system_error(errno, std::system_category());
     }
     result.d_exitCode = WEXITSTATUS(status);
     return result;

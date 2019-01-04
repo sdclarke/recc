@@ -17,15 +17,14 @@
 #include <gtest/gtest.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
 TEST(EnvTest, EnvFromFileOverride)
 {
 
     const char *testEnviron[] = {"RECC_SERVER=somehost:1234", nullptr};
-    string expectedReccServer = "somehost:1234";
+    std::string expectedReccServer = "somehost:1234";
     // should be set from file
-    string expectedRecCasServer = "localhost:66666";
+    std::string expectedRecCasServer = "localhost:66666";
 
     // need this for testing, since we are calling parse_config_variables
     // directly.

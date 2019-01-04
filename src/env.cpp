@@ -13,44 +13,33 @@
 // limitations under the License.
 
 #include <algorithm>
-
 #include <env.h>
-
 #include <cstring>
-
 #include <ctype.h>
-
 #include <fstream>
-
 #include <iostream>
-
-#include <reccdefaults.h>
-
 #include <unistd.h>
-
 #include <logging.h>
-
 #include <vector>
-
 #include <sstream>
-
 #include <string>
 
-using namespace std;
+#include <reccdefaults.h>
 
 namespace BloombergLP {
 namespace recc {
 
 // Leave these empty so that parse_config_variables can print warnings if not
 // specified
-string RECC_SERVER = "";
-string RECC_CAS_SERVER = "";
+std::string RECC_SERVER = "";
+std::string RECC_CAS_SERVER = "";
 
 // Include default values for the following, no need to print warnings if not
 // specified
-string RECC_INSTANCE = DEFAULT_RECC_INSTANCE;
-string RECC_DEPS_DIRECTORY_OVERRIDE = DEFAULT_RECC_DEPS_DIRECTORY_OVERRIDE;
-string TMPDIR = DEFAULT_RECC_TMPDIR;
+std::string RECC_INSTANCE = DEFAULT_RECC_INSTANCE;
+std::string RECC_DEPS_DIRECTORY_OVERRIDE =
+    DEFAULT_RECC_DEPS_DIRECTORY_OVERRIDE;
+std::string TMPDIR = DEFAULT_RECC_TMPDIR;
 
 bool RECC_VERBOSE = DEFAULT_RECC_VERBOSE;
 bool RECC_FORCE_REMOTE = DEFAULT_RECC_FORCE_REMOTE;
@@ -65,52 +54,54 @@ int RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
 int RECC_JOBS_COUNT = DEFAULT_RECC_JOBS_COUNT;
 
 #ifdef CMAKE_INSTALL_DIR
-string RECC_INSTALL_DIR = string(CMAKE_INSTALL_DIR);
+std::string RECC_INSTALL_DIR = std::string(CMAKE_INSTALL_DIR);
 #else
-string RECC_INSTALL_DIR = string("");
+std::string RECC_INSTALL_DIR = std::string("");
 #endif
 
 #ifdef RECC_CONFIG_PREFIX_DIR
-string RECC_CUSTOM_PREFIX = string(RECC_CONFIG_PREFIX_DIR);
+std::string RECC_CUSTOM_PREFIX = std::string(RECC_CONFIG_PREFIX_DIR);
 #else
-string RECC_CUSTOM_PREFIX = string("");
+std::string RECC_CUSTOM_PREFIX = std::string("");
 #endif
 
-set<string> RECC_DEPS_OVERRIDE = DEFAULT_RECC_DEPS_OVERRIDE;
-set<string> RECC_OUTPUT_FILES_OVERRIDE = DEFAULT_RECC_OUTPUT_FILES_OVERRIDE;
-set<string> RECC_OUTPUT_DIRECTORIES_OVERRIDE =
+std::set<std::string> RECC_DEPS_OVERRIDE = DEFAULT_RECC_DEPS_OVERRIDE;
+std::set<std::string> RECC_OUTPUT_FILES_OVERRIDE =
+    DEFAULT_RECC_OUTPUT_FILES_OVERRIDE;
+std::set<std::string> RECC_OUTPUT_DIRECTORIES_OVERRIDE =
     DEFAULT_RECC_OUTPUT_DIRECTORIES_OVERRIDE;
 
-map<string, string> RECC_DEPS_ENV = DEFAULT_RECC_DEPS_ENV;
-map<string, string> RECC_REMOTE_ENV = DEFAULT_RECC_REMOTE_ENV;
-map<string, string> RECC_REMOTE_PLATFORM = DEFAULT_RECC_REMOTE_PLATFORM;
+std::map<std::string, std::string> RECC_DEPS_ENV = DEFAULT_RECC_DEPS_ENV;
+std::map<std::string, std::string> RECC_REMOTE_ENV = DEFAULT_RECC_REMOTE_ENV;
+std::map<std::string, std::string> RECC_REMOTE_PLATFORM =
+    DEFAULT_RECC_REMOTE_PLATFORM;
 
 // Keep this empty initially and have set_default_locations() populate it
-deque<string> RECC_CONFIG_LOCATIONS = {};
+std::deque<std::string> RECC_CONFIG_LOCATIONS = {};
 
 /**
  * Parse a comma-separated list, storing its items in the given set.
  */
-void parse_set(const char *str, set<string> *result)
+void parse_set(const char *str, std::set<std::string> *result)
 {
     while (true) {
         auto comma = strchr(str, ',');
         if (comma == nullptr) {
-            result->insert(string(str));
+            result->insert(std::string(str));
             return;
         }
         else {
-            result->insert(string(str, comma - str));
+            result->insert(std::string(str, comma - str));
             str = comma + 1;
         }
-    } // namespace recc
-} // namespace BloombergLP
+    }
+}
 
 /**
  * Formats line to be used in parse_config_variables.
  * Modifies parameter passed to it by reference
  */
-void format_config_string(string &line)
+void format_config_string(std::string &line)
 {
     // remove whitespace
     line.erase(remove(line.begin(), line.end(), ' '), line.end());
@@ -128,12 +119,12 @@ void format_config_string(string &line)
 /*
  * Parse the config variables, and pass to parse_config_variables
  */
-void parse_config_files(const string &config_file_name)
+void parse_config_files(const std::string &config_file_name)
 {
-    ifstream config(config_file_name);
-    string line;
-    vector<string> env_array;
-    vector<char *> env_cstrings;
+    std::ifstream config(config_file_name);
+    std::string line;
+    std::vector<std::string> env_array;
+    std::vector<char *> env_cstrings;
 
     while (getline(config, line)) {
         if (line.empty() || isspace(line[0]) || line[0] == '#') {
@@ -142,9 +133,9 @@ void parse_config_files(const string &config_file_name)
         format_config_string(line);
         env_array.push_back(line);
     }
-    // first push strings into vector, then push_back char *
+    // first push std::strings into vector, then push_back char *
     // done for easy const char** conversion
-    for (string &i : env_array) {
+    for (std::string &i : env_array) {
         env_cstrings.push_back(const_cast<char *>(i.c_str()));
     }
     env_cstrings.push_back(nullptr);
@@ -161,7 +152,7 @@ void parse_config_variables(const char *const *environ)
 #define STRVAR(name)                                                          \
     else if (strncmp(environ[i], #name "=", strlen(#name "=")) == 0)          \
     {                                                                         \
-        name = string(environ[i] + strlen(#name "="));                        \
+        name = std::string(environ[i] + strlen(#name "="));                   \
     }
 #define BOOLVAR(name)                                                         \
     else if (strncmp(environ[i], #name "=", strlen(#name "=")) == 0)          \
@@ -182,9 +173,9 @@ void parse_config_variables(const char *const *environ)
     else if (strncmp(environ[i], #name "_", strlen(#name "_")) == 0)          \
     {                                                                         \
         auto equals = strchr(environ[i], '=');                                \
-        string key(environ[i] + strlen(#name "_"),                            \
-                   equals - environ[i] - strlen(#name "_"));                  \
-        name[key] = string(equals + 1);                                       \
+        std::string key(environ[i] + strlen(#name "_"),                       \
+                        equals - environ[i] - strlen(#name "_"));             \
+        name[key] = std::string(equals + 1);                                  \
     }
 
     // Parse all the options from ENV
@@ -221,7 +212,7 @@ void parse_config_variables(const char *const *environ)
 void find_and_parse_config_files()
 {
     for (auto file_location : RECC_CONFIG_LOCATIONS) {
-        ifstream config(file_location);
+        std::ifstream config(file_location);
         if (config.good()) {
             // append name of config file, defined by DEFAULT_RECC_CONFIG
             file_location = file_location + "/" + DEFAULT_RECC_CONFIG;
@@ -278,10 +269,10 @@ std::deque<std::string> evaluate_config_locations()
 {
     // Note that the order in which the config locations are pushed
     // is significant.
-    deque<std::string> config_order;
+    std::deque<std::string> config_order;
 
     const char *home = getenv("HOME");
-    const string cwd_recc = "./recc";
+    const std::string cwd_recc = "./recc";
 
     config_order.push_front(cwd_recc);
 

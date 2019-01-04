@@ -26,7 +26,6 @@
 #include <sys/types.h>
 #include <system_error>
 
-using namespace std;
 
 namespace BloombergLP {
 namespace recc {
@@ -41,7 +40,7 @@ File::File(const char *path)
     return;
 }
 
-proto::FileNode File::to_filenode(string name) const
+proto::FileNode File::to_filenode(const std::string &name) const
 {
     proto::FileNode result;
     result.set_name(name);
@@ -54,7 +53,7 @@ void NestedDirectory::add(File file, const char *relativePath)
 {
     const char *slash = strchr(relativePath, '/');
     if (slash) {
-        string subdirKey(relativePath, slash - relativePath);
+        const std::string subdirKey(relativePath, slash - relativePath);
         if (subdirKey.empty()) {
             this->add(file, slash + 1);
         }
@@ -63,12 +62,12 @@ void NestedDirectory::add(File file, const char *relativePath)
         }
     }
     else {
-        d_files[string(relativePath)] = file;
+        d_files[std::string(relativePath)] = file;
     }
 }
 
 proto::Digest NestedDirectory::to_digest(
-    unordered_map<proto::Digest, string> *digestMap) const
+    std::unordered_map<proto::Digest, std::string> *digestMap) const
 {
     // The 'd_files' and 'd_subdirs' maps make sure everything is sorted by
     // name thus the iterators will iterate lexicographically
@@ -113,7 +112,7 @@ proto::Tree NestedDirectory::to_tree() const
 const auto HASH_ALGORITHM = EVP_sha256();
 const unsigned char HEX_DIGITS[] = "0123456789abcdef";
 
-proto::Digest make_digest(string blob)
+proto::Digest make_digest(const std::string &blob)
 {
     proto::Digest result;
 
@@ -129,7 +128,7 @@ proto::Digest make_digest(string blob)
     EVP_MD_CTX_destroy(hashContext);
 
     //  Convert the hash to hexadecimal.
-    string hashHex(hashSize * 2, '\0');
+    std::string hashHex(hashSize * 2, '\0');
     for (int i = 0; i < hashSize; ++i) {
         hashHex[i * 2] = HEX_DIGITS[hash[i] >> 4];
         hashHex[i * 2 + 1] = HEX_DIGITS[hash[i] & 0xF];
@@ -142,24 +141,24 @@ proto::Digest make_digest(string blob)
 
 NestedDirectory
 make_nesteddirectory(const char *path,
-                     unordered_map<proto::Digest, string> *fileMap)
+                     std::unordered_map<proto::Digest, std::string> *fileMap)
 {
     RECC_LOG_VERBOSE("Making NestedDirectory for " << path);
     NestedDirectory result;
     auto dir = opendir(path);
     if (dir == NULL) {
-        throw system_error(errno, system_category());
+        throw std::system_error(errno, std::system_category());
     }
 
-    string pathString(path);
+    std::string pathString(path);
     for (auto dirent = readdir(dir); dirent != nullptr;
          dirent = readdir(dir)) {
         if (strcmp(dirent->d_name, ".") == 0 ||
             strcmp(dirent->d_name, "..") == 0) {
             continue;
         }
-        string entityName(dirent->d_name);
-        string entityPath = pathString + "/" + entityName;
+        std::string entityName(dirent->d_name);
+        std::string entityPath = pathString + "/" + entityName;
 
         struct stat statResult;
         if (stat(entityPath.c_str(), &statResult) != 0) {

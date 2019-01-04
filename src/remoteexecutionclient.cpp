@@ -26,7 +26,6 @@
 #include <future>
 #include <sstream>
 
-using namespace std;
 using namespace google::longrunning;
 
 namespace BloombergLP {
@@ -42,18 +41,18 @@ std::atomic_bool RemoteExecutionClient::s_sigint_received(false);
 proto::ActionResult get_actionresult(Operation operation)
 {
     if (!operation.done()) {
-        throw logic_error(
+        throw std::logic_error(
             "Called get_actionresult on an unfinished Operation");
     }
     else if (operation.has_error()) {
         ensure_ok(operation.error());
     }
     else if (!operation.response().Is<proto::ExecuteResponse>()) {
-        throw runtime_error("Server returned invalid Operation result");
+        throw std::runtime_error("Server returned invalid Operation result");
     }
     proto::ExecuteResponse executeResponse;
     if (!operation.response().UnpackTo(&executeResponse)) {
-        throw runtime_error("Operation response unpacking failed");
+        throw std::runtime_error("Operation response unpacking failed");
     }
     ensure_ok(executeResponse.status());
     return executeResponse.result();
@@ -67,8 +66,9 @@ proto::ActionResult get_actionresult(Operation operation)
  * will be used to look up child directories.
  */
 void add_from_directory(
-    map<string, File> *outputFiles, proto::Directory directory, string prefix,
-    unordered_map<proto::Digest, proto::Directory> digestMap)
+    std::map<std::string, File> *outputFiles, proto::Directory directory,
+    std::string prefix,
+    std::unordered_map<proto::Digest, proto::Directory> digestMap)
 {
     for (int i = 0; i < directory.files_size(); ++i) {
         File file;
@@ -164,7 +164,8 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
 
     Operation operation = *operation_ptr;
     if (!operation.done()) {
-        throw runtime_error("Server closed stream before Operation finished");
+        throw std::runtime_error(
+            "Server closed stream before Operation finished");
     }
 
     auto resultProto = get_actionresult(operation);
@@ -186,7 +187,7 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
         auto outputDirectoryProto = resultProto.output_directories(i);
         auto tree =
             fetch_message<proto::Tree>(outputDirectoryProto.tree_digest());
-        unordered_map<proto::Digest, proto::Directory> digestMap;
+        std::unordered_map<proto::Digest, proto::Directory> digestMap;
         for (int j = 0; j < tree.children_size(); ++j) {
             digestMap[make_digest(tree.children(j))] = tree.children(j);
         }
@@ -221,7 +222,7 @@ void RemoteExecutionClient::write_files_to_disk(ActionResult result,
                                                 const char *root)
 {
     for (const auto &fileIter : result.d_outputFiles) {
-        string path = string(root) + "/" + fileIter.first;
+        std::string path = std::string(root) + "/" + fileIter.first;
         RECC_LOG_VERBOSE("Writing " << path);
         write_file(path.c_str(), fetch_blob(fileIter.second.d_digest));
         if (fileIter.second.d_executable) {

@@ -17,7 +17,6 @@
 #include <gtest/gtest.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
 TEST(EnvTest, EnvSetTest)
 {
@@ -30,11 +29,11 @@ TEST(EnvTest, EnvSetTest)
                                  "RECC_MAX_CONCURRENT_JOBS=15",
                                  "TMPDIR=/some/tmp/dir",
                                  nullptr};
-    string expectedServer = "server:1234";
-    set<string> expectedDeps = {"oneitem"};
-    set<string> expectedOutputFiles = {"one", "two", "three"};
-    map<string, string> expectedRemoteEnv = {{"key", "val"},
-                                             {"anotherkey", "anotherval"}};
+    std::string expectedServer = "server:1234";
+    std::set<std::string> expectedDeps = {"oneitem"};
+    std::set<std::string> expectedOutputFiles = {"one", "two", "three"};
+    std::map<std::string, std::string> expectedRemoteEnv = {
+        {"key", "val"}, {"anotherkey", "anotherval"}};
     parse_config_variables(testEnviron);
 
     EXPECT_EQ(expectedServer, RECC_SERVER);

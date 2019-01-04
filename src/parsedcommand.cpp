@@ -21,7 +21,6 @@
 #include <map>
 #include <utility>
 
-using namespace std;
 
 namespace BloombergLP {
 namespace recc {
@@ -29,10 +28,10 @@ namespace recc {
 /**
  * A command parser is a function that takes the following arguments:
  *
- * - vector<string> *command
+ * -std::vector<string> *command
  * - const char *workingDirectory
- * - vector<string> *depsCommand
- * - set<string> *outputs
+ * -std::vector<string> *depsCommand
+ * -std::set<string> *outputs
  * - bool *producesSunMakeRules
  *
  * It stores a command to get the dependencies in depsCommand, stores
@@ -42,13 +41,14 @@ namespace recc {
  * If a non-null working directory is passed in, the command will be
  * modified to replace absolute paths with relative ones.
  */
-typedef function<bool(vector<string> *, const char *, vector<string> *,
-                      set<string> *, bool *)>
+typedef std::function<bool(std::vector<std::string> *, const char *,
+                           std::vector<std::string> *, std::set<std::string> *,
+                           bool *)>
     command_parser;
 
 #define COMMAND_PARSER_LAMBDA                                                 \
-    [](vector<string> * command, const char *workingDirectory,                \
-       vector<string> *depsCommand, set<string> *outputs,                     \
+    [](std::vector<std::string> * command, const char *workingDirectory,      \
+       std::vector<std::string> *depsCommand, std::set<std::string> *outputs, \
        bool *producesSunMakeRules) -> bool
 
 // Helper macros for writing command parsers
@@ -68,7 +68,7 @@ typedef function<bool(vector<string> *, const char *, vector<string> *,
     }
 #define IF_EQUALS_OPTION_ARGUMENT(option, action)                             \
     if ((*command)[i] == option) {                                            \
-        string argument;                                                      \
+        std::string argument;                                                 \
         const int argumentLength = 1;                                         \
         action                                                                \
     }                                                                         \
@@ -148,18 +148,19 @@ typedef function<bool(vector<string> *, const char *, vector<string> *,
 /**
  * Parse a comma-separated list and store the results in the given vector.
  */
-void parse_stage_option_list(string option, vector<string> *result)
+void parse_stage_option_list(const std::string &option,
+                             std::vector<std::string> *result)
 {
 
     bool quoted = false;
-    string current;
+    std::string current;
     for (const char &character : option) {
         if (character == '\'') {
             quoted = !quoted;
         }
         else if (character == ',' && !quoted) {
             result->push_back(current);
-            current = string();
+            current = std::string();
         }
         else {
             current += character;
@@ -168,10 +169,11 @@ void parse_stage_option_list(string option, vector<string> *result)
     result->push_back(current);
 }
 
-map<string, command_parser> make_command_parser_map(
-    initializer_list<pair<set<string>, command_parser>> initList)
+std::map<std::string, command_parser> make_command_parser_map(
+    std::initializer_list<std::pair<std::set<std::string>, command_parser>>
+        initList)
 {
-    map<string, command_parser> result;
+    std::map<std::string, command_parser> result;
     for (const auto &initPair : initList) {
         for (const auto &compiler : initPair.first) {
             result[compiler] = initPair.second;
@@ -181,9 +183,9 @@ map<string, command_parser> make_command_parser_map(
 }
 
 // clang-format off
-const map<string, command_parser> commandParsers = make_command_parser_map({
+const std::map<std::string, command_parser> commandParsers = make_command_parser_map({
     {{"gcc", "g++", "c++"}, COMMAND_PARSER_LAMBDA {
-        vector<string> preproOptions;
+            std::vector<std::string> preproOptions;
 
         OPTIONS_START()
         OPTION_INTERFERES_WITH_DEPS("-M")
@@ -219,7 +221,7 @@ const map<string, command_parser> commandParsers = make_command_parser_map({
         OPTIONS_END()
 
         if (preproOptions.size() > 0) {
-            vector<string> preproDepsCommand;
+            std::vector<std::string> preproDepsCommand;
             commandParsers.at("gcc-preprocessor")(&preproOptions,
                                                   workingDirectory,
                                                   &preproDepsCommand,
@@ -309,7 +311,7 @@ const map<string, command_parser> commandParsers = make_command_parser_map({
     }},
     {{"cc", "c89", "c99"}, COMMAND_PARSER_LAMBDA {
 #ifdef RECC_PLATFORM_COMPILER
-        string compiler = command_basename(RECC_PLATFORM_COMPILER);
+        std::string compiler = command_basename(RECC_PLATFORM_COMPILER);
         if (commandParsers.count(compiler) > 0) {
             return commandParsers.at(compiler)(command,
                                                workingDirectory,
@@ -323,7 +325,7 @@ const map<string, command_parser> commandParsers = make_command_parser_map({
 });
 // clang-format on
 
-ParsedCommand::ParsedCommand(vector<string> command,
+ParsedCommand::ParsedCommand(std::vector<std::string> command,
                              const char *workingDirectory)
 {
     d_compilerCommand = false;
@@ -359,7 +361,7 @@ std::string command_basename(const char *path)
     while (is_version_character(basename[length - 1]) && length > 0) {
         --length;
     }
-    return string(basename, length);
+    return std::string(basename, length);
 }
 }
 }
