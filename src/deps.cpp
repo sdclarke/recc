@@ -30,19 +30,19 @@
 #include <system_error>
 #include <unistd.h>
 
-using namespace std;
 
 namespace BloombergLP {
 namespace recc {
 
-set<string> dependencies_from_make_rules(string rules, bool is_sun_format,
-                                         bool include_global_paths)
+std::set<std::string> dependencies_from_make_rules(const std::string &rules,
+                                                   bool is_sun_format,
+                                                   bool include_global_paths)
 {
-    set<string> result;
+    std::set<std::string> result;
     bool saw_colon_on_line = false;
     bool saw_backslash = false;
     bool ignoring_file = false;
-    string current_filename;
+    std::string current_filename;
     for (const char &character : rules) {
         if (saw_backslash) {
             saw_backslash = false;
@@ -99,7 +99,7 @@ CommandFileInfo get_file_info(ParsedCommand parsedCommand)
     auto subprocessResult = execute(parsedCommand.get_dependencies_command(),
                                     true, false, RECC_DEPS_ENV);
     if (subprocessResult.d_exitCode != 0) {
-        string errorMsg = "Failed to execute get dependencies command: ";
+        std::string errorMsg = "Failed to execute get dependencies command: ";
         for (const auto &token : parsedCommand.get_dependencies_command()) {
             errorMsg += (token + " ");
         }
@@ -109,7 +109,7 @@ CommandFileInfo get_file_info(ParsedCommand parsedCommand)
     result.d_dependencies = dependencies_from_make_rules(
         subprocessResult.d_stdOut, parsedCommand.produces_sun_make_rules(),
         false);
-    set<string> products;
+    std::set<std::string> products;
     if (parsedCommand.get_products().size() > 0) {
         products = parsedCommand.get_products();
     }
@@ -123,16 +123,16 @@ CommandFileInfo get_file_info(ParsedCommand parsedCommand)
     return result;
 }
 
-const set<string> DEFAULT_OUTPUT_LOCATIONS = {"a.out"};
-const set<string> DEFAULT_OUTPUT_EXTENSIONS = {".o", ".gch", ".d"};
+const std::set<std::string> DEFAULT_OUTPUT_LOCATIONS = {"a.out"};
+const std::set<std::string> DEFAULT_OUTPUT_EXTENSIONS = {".o", ".gch", ".d"};
 
-set<string> guess_products(set<string> deps)
+std::set<std::string> guess_products(std::set<std::string> deps)
 {
     auto result = DEFAULT_OUTPUT_LOCATIONS;
     for (const auto &dep : deps) {
         auto name = dep.substr(0, dep.rfind('.'));
         auto slash = name.rfind('/');
-        if (slash != string::npos) {
+        if (slash != std::string::npos) {
             name = name.substr(slash + 1);
         }
         for (const auto &suffix : DEFAULT_OUTPUT_EXTENSIONS) {

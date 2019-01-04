@@ -33,10 +33,9 @@
 #include <unistd.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 using namespace testing;
 
-const string emptyString;
+const std::string emptyString;
 
 /*
  * This fixture sets up all of the dependencies for execute_action
@@ -73,8 +72,9 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
         casStub = new proto::MockContentAddressableStorageStub();
         operationsStub = new google::longrunning::MockOperationsStub();
         byteStreamStub = new google::bytestream::MockByteStreamStub;
-        client = new RemoteExecutionClient(
-            executionStub, casStub, operationsStub, byteStreamStub, string());
+        client =
+            new RemoteExecutionClient(executionStub, casStub, operationsStub,
+                                      byteStreamStub, std::string());
 
         // Construct the Digest we're passing in, and the ExecuteRequest we
         // expect the RemoteExecutionClient to send as a result.
@@ -85,7 +85,7 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
         proto::ExecuteResponse executeResponse;
         auto actionResultProto = executeResponse.mutable_result();
         actionResultProto->set_stdout_raw("Raw stdout.");
-        string stdErr("Stderr, which will be sent as a digest.");
+        std::string stdErr("Stderr, which will be sent as a digest.");
         stdErrDigest = make_digest(stdErr);
         *actionResultProto->mutable_stderr_digest() = stdErrDigest;
         actionResultProto->set_exit_code(123);
@@ -268,7 +268,7 @@ TEST_F(RemoteExecutionClientTestFixture, WriteFilesToDisk)
 
     client->write_files_to_disk(testResult, tempDir.name());
 
-    string expectedPath = string(tempDir.name()) + "/test.txt";
+    const std::string expectedPath = std::string(tempDir.name()) + "/test.txt";
     EXPECT_TRUE(is_executable(expectedPath.c_str()));
     EXPECT_EQ(get_file_contents(expectedPath.c_str()), "Test file content!");
 }

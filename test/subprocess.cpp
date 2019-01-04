@@ -17,25 +17,24 @@
 #include <gtest/gtest.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
 TEST(SubprocessTest, True)
 {
-    vector<string> command = {"true"};
+    std::vector<std::string> command = {"true"};
     auto result = execute(command);
     EXPECT_EQ(result.d_exitCode, 0);
 }
 
 TEST(SubprocessTest, False)
 {
-    vector<string> command = {"false"};
+    std::vector<std::string> command = {"false"};
     auto result = execute(command);
     EXPECT_TRUE(result.d_exitCode != 0);
 }
 
 TEST(SubprocessTest, OutputPipes)
 {
-    vector<string> command = {"echo", "hello", "world"};
+    std::vector<std::string> command = {"echo", "hello", "world"};
     auto result = execute(command, true, true);
     EXPECT_EQ(result.d_exitCode, 0);
     EXPECT_EQ(result.d_stdOut, "hello world\n");
@@ -44,18 +43,19 @@ TEST(SubprocessTest, OutputPipes)
 
 TEST(SubprocessTest, Environment)
 {
-    vector<string> command = {"env"};
-    map<string, string> env = {{"RECC_SUBPROCESS_TEST_VAR", "value123456"}};
+    std::vector<std::string> command = {"env"};
+    std::map<std::string, std::string> env = {
+        {"RECC_SUBPROCESS_TEST_VAR", "value123456"}};
     auto result = execute(command, true, true, env);
     EXPECT_TRUE(result.d_stdOut.find("RECC_SUBPROCESS_TEST_VAR=value123456") !=
-                string::npos);
+                std::string::npos);
     EXPECT_EQ(result.d_exitCode, 0);
 }
 
 TEST(SubprocessTest, WorkingDirectory)
 {
-    vector<string> command = {"pwd"};
-    map<string, string> env;
+    std::vector<std::string> command = {"pwd"};
+    std::map<std::string, std::string> env;
     auto result = execute(command, true, false, env, "/usr/");
     EXPECT_EQ(result.d_exitCode, 0);
     EXPECT_EQ(result.d_stdOut, "/usr\n");

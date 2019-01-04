@@ -59,7 +59,8 @@ CommandFileInfo get_file_info(ParsedCommand command);
  * Parse the given Make rules and return a set containing their dependencies.
  */
 std::set<std::string>
-dependencies_from_make_rules(std::string rules, bool is_sun_format = false,
+dependencies_from_make_rules(const std::string &rules,
+                             bool is_sun_format = false,
                              bool include_global_paths = false);
 
 /**

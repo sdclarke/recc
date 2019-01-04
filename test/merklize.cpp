@@ -13,17 +13,14 @@
 // limitations under the License.
 
 #include <merklize.h>
-
 #include <fileutils.h>
-
 #include <gtest/gtest.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
 TEST(DigestTest, EmptyDigest)
 {
-    auto digest = make_digest(string(""));
+    auto digest = make_digest(std::string(""));
     EXPECT_EQ(0, digest.size_bytes());
     EXPECT_EQ(
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -32,7 +29,7 @@ TEST(DigestTest, EmptyDigest)
 
 TEST(DigestTest, TrivialDigest)
 {
-    auto digest = make_digest(string("abc"));
+    auto digest = make_digest(std::string("abc"));
     EXPECT_EQ(3, digest.size_bytes());
     EXPECT_EQ(
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
@@ -66,7 +63,7 @@ TEST(FileTest, ToFilenode)
     file.d_digest.set_size_bytes(123);
     file.d_executable = true;
 
-    auto fileNode = file.to_filenode(string("file.name"));
+    auto fileNode = file.to_filenode(std::string("file.name"));
 
     EXPECT_EQ(fileNode.name(), "file.name");
     EXPECT_EQ(fileNode.digest().hash(), "HASH HERE");
@@ -76,7 +73,7 @@ TEST(FileTest, ToFilenode)
 
 TEST(NestedDirectoryTest, EmptyNestedDirectory)
 {
-    unordered_map<proto::Digest, string> digestMap;
+    std::unordered_map<proto::Digest, std::string> digestMap;
     auto digest = NestedDirectory().to_digest(&digestMap);
     EXPECT_EQ(1, digestMap.size());
     ASSERT_EQ(1, digestMap.count(digest));
@@ -95,7 +92,7 @@ TEST(NestedDirectoryTest, TrivialNestedDirectory)
     NestedDirectory directory;
     directory.add(file, "sample");
 
-    unordered_map<proto::Digest, string> digestMap;
+    std::unordered_map<proto::Digest, std::string> digestMap;
     auto digest = directory.to_digest(&digestMap);
     EXPECT_EQ(1, digestMap.size());
     ASSERT_EQ(1, digestMap.count(digest));
@@ -120,7 +117,7 @@ TEST(NestedDirectoryTest, Subdirectories)
     directory.add(file, "sample");
     directory.add(file2, "subdir/anothersubdir/sample2");
 
-    unordered_map<proto::Digest, string> digestMap;
+    std::unordered_map<proto::Digest, std::string> digestMap;
     auto digest = directory.to_digest(&digestMap);
     EXPECT_EQ(3, digestMap.size());
     ASSERT_EQ(1, digestMap.count(digest));
@@ -165,7 +162,7 @@ TEST(NestedDirectoryTest, SubdirectoriesToTree)
     auto tree = directory.to_tree();
     EXPECT_EQ(2, tree.children_size());
 
-    unordered_map<proto::Digest, proto::Directory> digestMap;
+    std::unordered_map<proto::Digest, proto::Directory> digestMap;
     for (auto &child : tree.children()) {
         digestMap[make_digest(child)] = child;
     }
@@ -194,7 +191,7 @@ TEST(NestedDirectoryTest, SubdirectoriesToTree)
 
 TEST(NestedDirectoryTest, MakeNestedDirectory)
 {
-    unordered_map<proto::Digest, string> fileMap;
+    std::unordered_map<proto::Digest, std::string> fileMap;
     auto nestedDirectory = make_nesteddirectory(".", &fileMap);
 
     EXPECT_EQ(1, nestedDirectory.d_subdirs->size());
@@ -221,20 +218,22 @@ TEST(NestedDirectoryTest, ConsistentDigestRegardlessOfFileOrder)
     // Get us some mock files
     File files[N];
     for (int i = 0; i < N; i++) {
-        files[i].d_digest.set_hash("HASH_" + to_string(i));
+        files[i].d_digest.set_hash("HASH_" + std::to_string(i));
     }
 
     // Create Nested Directory and add everything in-order
     NestedDirectory directory1;
     for (int i = 0; i < N; i++) {
-        string fn = "subdir_" + to_string(i) + "/file_" + to_string(i);
+        std::string fn =
+            "subdir_" + std::to_string(i) + "/file_" + std::to_string(i);
         directory1.add(files[i], fn.c_str());
     }
 
     // Create another Nested Directory and add everything in reverse order
     NestedDirectory directory2;
     for (int i = N - 1; i >= 0; i--) {
-        string fn = "subdir_" + to_string(i) + "/file_" + to_string(i);
+        std::string fn =
+            "subdir_" + std::to_string(i) + "/file_" + std::to_string(i);
         directory2.add(files[i], fn.c_str());
     }
 
@@ -250,14 +249,15 @@ TEST(NestedDirectoryTest, NestedDirectoryDigestsReallyBasedOnFiles)
     File files_dir1[N]; // Files to add in the first directory
     File files_dir2[N]; // Files to add in the second directory
     for (int i = 0; i < N; i++) {
-        files_dir1[i].d_digest.set_hash("HASH_DIR1_" + to_string(i));
-        files_dir2[i].d_digest.set_hash("HASH_DIR2_" + to_string(i));
+        files_dir1[i].d_digest.set_hash("HASH_DIR1_" + std::to_string(i));
+        files_dir2[i].d_digest.set_hash("HASH_DIR2_" + std::to_string(i));
     }
 
     // Create Nested Directories and add everything in-order
     NestedDirectory directory1, directory2;
     for (int i = 0; i < N; i++) {
-        string fn = "subdir_" + to_string(i) + "/file_" + to_string(i);
+        std::string fn =
+            "subdir_" + std::to_string(i) + "/file_" + std::to_string(i);
         directory1.add(files_dir1[i], fn.c_str());
         directory2.add(files_dir2[i], fn.c_str());
     }

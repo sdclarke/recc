@@ -22,7 +22,6 @@
 #include <gtest/gtest.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 using namespace testing;
 
 TEST(ReccCounterGuardTest, NoLimitInitialization)
@@ -34,8 +33,8 @@ TEST(ReccCounterGuardTest, NoLimitInitialization)
 
 TEST(ReccCounterGuardTest, InvalidLimitInitialization)
 {
-    EXPECT_THROW(ReccCounterGuard{0}, invalid_argument);
-    EXPECT_THROW(ReccCounterGuard{-10}, invalid_argument);
+    EXPECT_THROW(ReccCounterGuard{0}, std::invalid_argument);
+    EXPECT_THROW(ReccCounterGuard{-10}, std::invalid_argument);
 }
 
 TEST(ReccCounterGuardTest, Limit1)
@@ -51,7 +50,7 @@ TEST(ReccCounterGuardTest, Limit1)
 
     EXPECT_EQ(0, counterGuard.get_limit());
     EXPECT_FALSE(counterGuard.is_allowed_more());
-    EXPECT_THROW(counterGuard.decrease_limit(), logic_error);
+    EXPECT_THROW(counterGuard.decrease_limit(), std::logic_error);
 }
 
 TEST(ReccCounterGuardTest, Limit2)
@@ -69,7 +68,7 @@ TEST(ReccCounterGuardTest, Limit2)
 
     EXPECT_EQ(0, counterGuard.get_limit());
     EXPECT_FALSE(counterGuard.is_allowed_more());
-    EXPECT_THROW(counterGuard.decrease_limit(), out_of_range);
+    EXPECT_THROW(counterGuard.decrease_limit(), std::out_of_range);
 }
 
 TEST(ReccCounterGuardTest, LimitFromArgs)

@@ -19,22 +19,22 @@
 #include <vector>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
 const int MAX = 120;
 
 // parameter is the environment variable, i.e RECC_REMOTE_ENV
 // parameterStr is name of environment variable, i.e "RECC_REMOTE_ENV"
-void permute_test(const vector<const char *> expectedOrderVec,
-                  const map<string, string> parameter,
-                  const string &parameterStr)
+void permute_test(const std::vector<const char *> expectedOrderVec,
+                  const std::map<std::string, std::string> parameter,
+                  const std::string &parameterStr)
 {
     int counter = 0;
-    vector<const char *> permuteVec = expectedOrderVec;
+    std::vector<const char *> permuteVec = expectedOrderVec;
     do {
         ++counter;
         // parse_config_variables expects nullptr at end
-        // sets environ variable, an array of strings terminated by nullptr
+        // sets environ variable, an array of std::strings terminated by
+        // nullptr
         permuteVec.push_back(nullptr);
 
         parse_config_variables(permuteVec.data());
@@ -45,9 +45,9 @@ void permute_test(const vector<const char *> expectedOrderVec,
 
         // ensure ordering is the same as expected Vector
         for (const auto &platformIter : parameter) {
-            string map_val =
+            std::string map_val =
                 parameterStr + platformIter.first + "=" + platformIter.second;
-            EXPECT_EQ(map_val, string(expectedOrderVec[v_In]));
+            EXPECT_EQ(map_val, std::string(expectedOrderVec[v_In]));
             ++v_In;
         }
     } while (counter < MAX &&
@@ -56,7 +56,7 @@ void permute_test(const vector<const char *> expectedOrderVec,
 
 TEST(EnvTest, PlatformEnvCheckOrder)
 {
-    const vector<const char *> expectedOrderVec = {
+    const std::vector<const char *> expectedOrderVec = {
         "RECC_REMOTE_PLATFORM_arch=x86_64", "RECC_REMOTE_PLATFORM_test=x64_86",
         "RECC_REMOTE_PLATFORM_zed=win10"};
     permute_test(expectedOrderVec, RECC_REMOTE_PLATFORM,
@@ -65,7 +65,7 @@ TEST(EnvTest, PlatformEnvCheckOrder)
 
 TEST(EnvTest, RemoteEnvCheckOrder)
 {
-    const vector<const char *> expectedOrderVec = {
+    const std::vector<const char *> expectedOrderVec = {
         "RECC_REMOTE_ENV_PATH=/usr/bin", "RECC_REMOTE_ENV_PWD=/usr",
         "RECC_REMOTE_ENV_USER=rkennedy76"};
     permute_test(expectedOrderVec, RECC_REMOTE_ENV, "RECC_REMOTE_ENV");
@@ -73,7 +73,7 @@ TEST(EnvTest, RemoteEnvCheckOrder)
 
 TEST(EnvTest, DepsEnvCheckOrder)
 {
-    const vector<const char *> expectedOrderVec = {
+    const std::vector<const char *> expectedOrderVec = {
         "RECC_DEPS_ENV_OSTYPE=linux-gnu", "RECC_DEPS_ENV_SHELL=/bin/bash",
         "RECC_DEPS_ENV_USER=rkennedy76"};
     permute_test(expectedOrderVec, RECC_DEPS_ENV, "RECC_DEPS_ENV");

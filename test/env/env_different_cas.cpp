@@ -17,7 +17,6 @@
 #include <gtest/gtest.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
 TEST(EnvTest, DifferentCASServerTest)
 {
@@ -25,8 +24,8 @@ TEST(EnvTest, DifferentCASServerTest)
                                  "RECC_CAS_SERVER=someotherhost:5678",
                                  nullptr};
 
-    string expectedReccServer = "somehost:1234";
-    string expectedCasServer = "someotherhost:5678";
+    std::string expectedReccServer = "somehost:1234";
+    std::string expectedCasServer = "someotherhost:5678";
 
     parse_config_variables(testEnviron);
 

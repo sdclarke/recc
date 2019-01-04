@@ -25,9 +25,8 @@
 #include <reccdefaults.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
-const string HELP(
+const std::string HELP(
     "USAGE: casupload <paths>\n"
     "Uploads the given files to CAS, then prints the digest hash and size of\n"
     "the corresponding Directory message.\n"
@@ -57,8 +56,8 @@ int main(int argc, char *argv[])
     parse_config_variables();
 
     NestedDirectory nestedDirectory;
-    unordered_map<proto::Digest, string> blobs;
-    unordered_map<proto::Digest, string> filenames;
+    std::unordered_map<proto::Digest, std::string> blobs;
+    std::unordered_map<proto::Digest, std::string> filenames;
 
     for (int i = 1; i < argc; ++i) {
         File file(argv[i]);

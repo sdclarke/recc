@@ -17,12 +17,11 @@
 #include <gtest/gtest.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
 TEST(EnvTest, CasDefaultsToServerTest)
 {
     const char *testEnviron[] = {"RECC_SERVER=somehost:1234", nullptr};
-    string expectedReccServer = "somehost:1234";
+    std::string expectedReccServer = "somehost:1234";
 
     parse_config_variables(testEnviron);
     // need this for testing, since we are calling parse_config_variables

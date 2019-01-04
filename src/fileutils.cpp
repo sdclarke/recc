@@ -29,22 +29,22 @@
 
 #include <unistd.h>
 
-using namespace std;
 
 namespace BloombergLP {
 namespace recc {
 
 TemporaryDirectory::TemporaryDirectory(const char *prefix)
 {
-    d_name = TMPDIR + "/" + string(prefix) + "XXXXXX";
+    d_name = TMPDIR + "/" + std::string(prefix) + "XXXXXX";
     if (mkdtemp(&d_name[0]) == nullptr) {
-        throw system_error(errno, system_category());
+        throw std::system_error(errno, std::system_category());
     }
 }
 
 TemporaryDirectory::~TemporaryDirectory()
 {
-    vector<string> rmCommand = {"rm", "-rf", d_name};
+    const std::vector<std::string> rmCommand = {"rm", "-rf", d_name};
+    // TODO: catch here so as to not throw from destructor
     execute(rmCommand);
 }
 
@@ -59,16 +59,16 @@ void create_directory_recursive(const char *path)
         else if (errno == ENOENT) {
             auto lastSlash = strrchr(path, '/');
             if (lastSlash == nullptr) {
-                throw system_error(errno, system_category());
+                throw std::system_error(errno, std::system_category());
             }
-            string parent(path, lastSlash - path);
+            std::string parent(path, lastSlash - path);
             create_directory_recursive(parent.c_str());
             if (mkdir(path, 0777) != 0) {
-                throw system_error(errno, system_category());
+                throw std::system_error(errno, std::system_category());
             }
         }
         else {
-            throw system_error(errno, system_category());
+            throw std::system_error(errno, std::system_category());
         }
     }
 }
@@ -79,7 +79,7 @@ bool is_executable(const char *path)
     if (stat(path, &statResult) == 0) {
         return statResult.st_mode & S_IXUSR;
     }
-    throw system_error(errno, system_category());
+    throw std::system_error(errno, std::system_category());
 }
 
 void make_executable(const char *path)
@@ -91,17 +91,17 @@ void make_executable(const char *path)
             return;
         }
     }
-    throw system_error(errno, system_category());
+    throw std::system_error(errno, std::system_category());
 }
 
-string get_file_contents(const char *path)
+std::string get_file_contents(const char *path)
 {
-    string contents;
-    ifstream fileStream;
-    fileStream.exceptions(ifstream::failbit | ifstream::badbit);
-    fileStream.open(path, ios::in | ios::binary);
+    std::string contents;
+    std::ifstream fileStream;
+    fileStream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    fileStream.open(path, std::ios::in | std::ios::binary);
     auto start = fileStream.tellg();
-    fileStream.seekg(0, ios::end);
+    fileStream.seekg(0, std::ios::end);
     auto size = fileStream.tellg() - start;
     RECC_LOG_VERBOSE("Reading file at " << path << " - size " << size);
     contents.resize(size);
@@ -114,32 +114,32 @@ string get_file_contents(const char *path)
 
 void write_file(const char *path, std::string contents)
 {
-    ofstream fileStream(path, ios::trunc | ios::binary);
+    std::ofstream fileStream(path, std::ios::trunc | std::ios::binary);
     if (!fileStream) {
         auto slash = strrchr(path, '/');
         if (slash != nullptr) {
-            string slashPath(path, slash - path);
+            std::string slashPath(path, slash - path);
             slashPath = normalize_path(slashPath.c_str());
             create_directory_recursive(slashPath.c_str());
-            fileStream.open(path, ios::trunc | ios::binary);
+            fileStream.open(path, std::ios::trunc | std::ios::binary);
         }
     }
-    fileStream.exceptions(ofstream::failbit | ofstream::badbit);
+    fileStream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
     fileStream << contents;
 }
 
-string normalize_path(const char *path)
+std::string normalize_path(const char *path)
 {
-    vector<string> segments;
+    std::vector<std::string> segments;
     bool global = path[0] == '/';
     while (path[0] != '\0') {
         const char *slash = strchr(path, '/');
-        string segment;
+        std::string segment;
         if (slash == nullptr) {
-            segment = string(path);
+            segment = std::string(path);
         }
         else {
-            segment = string(path, slash - path);
+            segment = std::string(path, slash - path);
         }
         if (segment == ".." && !segments.empty() && segments.back() != "..") {
             segments.pop_back();
@@ -155,7 +155,7 @@ string normalize_path(const char *path)
         }
     }
 
-    string result(global ? "/" : "");
+    std::string result(global ? "/" : "");
     if (segments.size() > 0) {
         for (const auto &segment : segments) {
             result += segment + "/";
@@ -165,14 +165,14 @@ string normalize_path(const char *path)
     return result;
 }
 
-string make_path_relative(string path, const char *workingDirectory)
+std::string make_path_relative(std::string path, const char *workingDirectory)
 {
     if (workingDirectory == nullptr || workingDirectory[0] == 0 ||
         path.length() == 0 || path[0] != '/') {
         return path;
     }
     if (workingDirectory[0] != '/') {
-        throw logic_error(
+        throw std::logic_error(
             "Working directory must be null or an absolute path");
     }
 
@@ -183,10 +183,10 @@ string make_path_relative(string path, const char *workingDirectory)
             // Working directory is prefix of path, so if the last
             // segment matches, we're done.
             if (path.length() == i + 1) {
-                return string(path[i] == '/' ? "./" : ".");
+                return std::string(path[i] == '/' ? "./" : ".");
             }
             else if (path.length() == i + 2 && path[i + 1] == '/') {
-                return string("./");
+                return std::string("./");
             }
             else if (path[i] == '/') {
                 return path.substr(i + 1);
@@ -204,7 +204,7 @@ string make_path_relative(string path, const char *workingDirectory)
     if (i == path.length() && workingDirectory[i] == '/') {
         // Path is prefix of working directory.
         if (workingDirectory[i + 1] == 0) {
-            return string(".");
+            return std::string(".");
         }
         else {
             lastMatchingSegmentEnd = i;
@@ -234,14 +234,14 @@ string make_path_relative(string path, const char *workingDirectory)
     return result;
 }
 
-string get_current_working_directory()
+std::string get_current_working_directory()
 {
     int bufferSize = 1024;
     while (true) {
         char buffer[bufferSize];
         char *cwd = getcwd(buffer, bufferSize);
         if (cwd != nullptr) {
-            return string(cwd);
+            return std::string(cwd);
         }
         else if (errno == ERANGE) {
             bufferSize *= 2;
@@ -249,7 +249,7 @@ string get_current_working_directory()
         else {
             RECC_LOG_PERROR(
                 "Warning: could not get current working directory");
-            return string();
+            return std::string();
         }
     }
 }
@@ -268,7 +268,7 @@ int parent_directory_levels(const char *path)
         }
         else if (segmentLength == 2 && path[0] == '.' && path[1] == '.') {
             currentLevel--;
-            lowestLevel = min(lowestLevel, currentLevel);
+            lowestLevel = std::min(lowestLevel, currentLevel);
         }
         else {
             currentLevel++;
@@ -277,15 +277,15 @@ int parent_directory_levels(const char *path)
     }
     if (strcmp(path, "..") == 0) {
         currentLevel--;
-        lowestLevel = min(lowestLevel, currentLevel);
+        lowestLevel = std::min(lowestLevel, currentLevel);
     }
     return -lowestLevel;
 }
 
-string last_n_segments(const char *path, int n)
+std::string last_n_segments(const char *path, int n)
 {
     if (n == 0)
-        return string();
+        return std::string();
     const int pathLength = strlen(path);
     const char *substringStart = path + pathLength - 1;
     int substringLength = 1;
@@ -297,13 +297,13 @@ string last_n_segments(const char *path, int n)
         if (*(substringStart - 1) == '/') {
             slashesSeen++;
             if (slashesSeen == n) {
-                return string(substringStart, substringLength);
+                return std::string(substringStart, substringLength);
             }
         }
         substringStart--;
         substringLength++;
     }
-    throw logic_error("Not enough segments in path");
+    throw std::logic_error("Not enough segments in path");
 }
 
 } // namespace recc

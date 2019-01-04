@@ -57,7 +57,7 @@ bool is_executable(const char *path);
 void make_executable(const char *path);
 
 /**
- * Given the path to a file, return a string with its contents.
+ * Given the path to a file, return a std::string with its contents.
  *
  * The path must be a path to a file that exists on disk. It can be absolute
  * or relative to the current directory.
@@ -90,7 +90,7 @@ std::string make_path_relative(std::string path, const char *workingDirectory);
  *
  * If the current working directory cannot be determined (if the user does not
  * have permission to read the current directory, for example), return the
- * empty string and log a warning.
+ * empty std::string and log a warning.
  */
 std::string get_current_working_directory();
 
@@ -104,8 +104,8 @@ std::string get_current_working_directory();
 int parent_directory_levels(const char *path);
 
 /**
- * Return a string containing the last N segments of the given path, without a
- * trailing slash.
+ * Return a std::string containing the last N segments of the given path,
+ * without a trailing slash.
  *
  * If the given path doesn't have that many segments, throws an exception.
  */

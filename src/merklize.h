@@ -46,7 +46,7 @@ struct File {
     /**
      * Converts a File to a FileNode with the given name.
      */
-    proto::FileNode to_filenode(std::string name) const;
+    proto::FileNode to_filenode(const std::string &name) const;
 };
 
 /**
@@ -89,7 +89,7 @@ struct NestedDirectory {
 /**
  * Create a Digest message from the given blob.
  */
-proto::Digest make_digest(std::string blob);
+proto::Digest make_digest(const std::string &blob);
 
 /**
  * Create a Digest message from the given proto message.

@@ -20,7 +20,6 @@
 #include <pthread.h>
 #include <signal.h>
 
-using namespace std;
 
 namespace BloombergLP {
 namespace recc {

@@ -25,13 +25,12 @@
 #include <regex>
 
 using namespace BloombergLP::recc;
-using namespace std;
 using namespace testing;
 
-const string abc("abc");
-const string defg("defg");
-const string emptyString;
-const unordered_map<proto::Digest, string> emptyMap;
+const std::string abc("abc");
+const std::string defg("defg");
+const std::string emptyString;
+const std::unordered_map<proto::Digest, std::string> emptyMap;
 
 MATCHER_P(MessageEq, expected, "")
 {
@@ -83,7 +82,7 @@ TEST(CASClientTest, AlreadyUploadedBlob)
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
     CASClient cas(stub, byteStreamStub, emptyString);
 
-    unordered_map<proto::Digest, string> blobs;
+    std::unordered_map<proto::Digest, std::string> blobs;
     blobs[make_digest(abc)] = abc;
     proto::FindMissingBlobsResponse response;
 
@@ -97,14 +96,14 @@ TEST(CASClientTest, AlreadyUploadedBlob)
 TEST(CASClientTest, AlreadyUploadedFile)
 {
     TemporaryDirectory tmpdir;
-    string path = tmpdir.name() + string("/abc.txt");
+    std::string path = tmpdir.name() + std::string("/abc.txt");
     write_file(path.c_str(), "abc");
 
     auto stub = new proto::MockContentAddressableStorageStub();
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
     CASClient cas(stub, byteStreamStub, emptyString);
 
-    unordered_map<proto::Digest, string> filenames;
+    std::unordered_map<proto::Digest, std::string> filenames;
     filenames[make_digest(abc)] = path;
     proto::FindMissingBlobsResponse response;
 
@@ -121,7 +120,7 @@ TEST(CASClientTest, NewBlobUpload)
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
     CASClient cas(stub, byteStreamStub, emptyString);
 
-    unordered_map<proto::Digest, string> blobs;
+    std::unordered_map<proto::Digest, std::string> blobs;
     blobs[make_digest(abc)] = abc;
     blobs[make_digest(defg)] = defg;
     proto::FindMissingBlobsResponse response;
@@ -148,14 +147,14 @@ TEST(CASClientTest, NewBlobUpload)
 TEST(CASClientTest, NewFileUpload)
 {
     TemporaryDirectory tmpdir;
-    string path = tmpdir.name() + string("/abc.txt");
+    std::string path = tmpdir.name() + std::string("/abc.txt");
     write_file(path.c_str(), "abc");
 
     auto stub = new proto::MockContentAddressableStorageStub();
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
     CASClient cas(stub, byteStreamStub, emptyString);
 
-    unordered_map<proto::Digest, string> filenames;
+    std::unordered_map<proto::Digest, std::string> filenames;
     filenames[make_digest(abc)] = path;
     proto::FindMissingBlobsResponse response;
     *response.add_missing_blob_digests() = make_digest(abc);
@@ -197,8 +196,8 @@ TEST(CASClientTest, LargeBlobUpload)
     auto writer = new grpc::testing::MockClientWriter<
         google::bytestream::WriteRequest>();
 
-    unordered_map<proto::Digest, string> blobs;
-    string bigBlob(50000000, 'q');
+    std::unordered_map<proto::Digest, std::string> blobs;
+    std::string bigBlob(50000000, 'q');
     auto bigBlobDigest = make_digest(bigBlob);
     blobs[bigBlobDigest] = bigBlob;
     proto::FindMissingBlobsResponse response;
@@ -213,8 +212,8 @@ TEST(CASClientTest, LargeBlobUpload)
     EXPECT_CALL(*byteStreamStub, WriteRaw(_, _))
         .WillOnce(DoAll(SetArgPointee<1>(writeResponse), Return(writer)));
 
-    string storedBlob;
-    string name;
+    std::string storedBlob;
+    std::string name;
     bool isComplete;
     EXPECT_CALL(*writer, Write(_, _))
         .WillRepeatedly(
@@ -227,13 +226,13 @@ TEST(CASClientTest, LargeBlobUpload)
 
     EXPECT_EQ(storedBlob, bigBlob);
 
-    string uploadNameRegex("uploads\\/"
-                           "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{"
-                           "4}-[0-9a-f]{12}\\/blobs\\/");
+    std::string uploadNameRegex("uploads\\/"
+                                "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{"
+                                "4}-[0-9a-f]{12}\\/blobs\\/");
     uploadNameRegex += bigBlobDigest.hash();
     uploadNameRegex += "\\/";
-    uploadNameRegex += to_string(bigBlobDigest.size_bytes());
-    EXPECT_TRUE(regex_match(name, regex(uploadNameRegex)));
+    uploadNameRegex += std::to_string(bigBlobDigest.size_bytes());
+    EXPECT_TRUE(regex_match(name, std::regex(uploadNameRegex)));
 }
 
 TEST(CASClientTest, FetchBlob)

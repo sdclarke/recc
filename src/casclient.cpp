@@ -23,7 +23,6 @@
 #include <sys/types.h>
 #include <unordered_set>
 
-using namespace std;
 
 namespace BloombergLP {
 namespace recc {
@@ -33,12 +32,12 @@ const char HEX_CHARS[] = "0123456789abcdef";
 /**
  * Generate and return a random version 4 GUID.
  */
-string generate_guid()
+std::string generate_guid()
 {
-    random_device randomDevice;
-    default_random_engine engine(randomDevice());
-    uniform_int_distribution<> hexDist(0, 15);
-    string result(36, '0');
+    std::random_device randomDevice;
+    std::default_random_engine engine(randomDevice());
+    std::uniform_int_distribution<> hexDist(0, 15);
+    std::string result(36, '0');
     for (int i = 0; i < 36; ++i) {
         int num = hexDist(engine);
         switch (i) {
@@ -61,21 +60,21 @@ string generate_guid()
     return result;
 }
 
-const string GUID = generate_guid();
+const std::string GUID = generate_guid();
 const int BYTESTREAM_CHUNK_SIZE = 1 << 20;
 
-void CASClient::upload_blob(proto::Digest digest, string blob)
+void CASClient::upload_blob(proto::Digest digest, std::string blob)
 {
     grpc::ClientContext context;
     google::bytestream::WriteResponse response;
     auto writer = d_byteStreamStub->Write(&context, &response);
     google::bytestream::WriteRequest initialRequest;
-    string resourceName = d_instance;
+    std::string resourceName = d_instance;
     if (d_instance.length() > 0) {
         resourceName += "/";
     }
     resourceName += "uploads/" + GUID + "/blobs/" + digest.hash() + "/" +
-                    to_string(digest.size_bytes());
+                    std::to_string(digest.size_bytes());
     initialRequest.set_resource_name(resourceName);
     initialRequest.set_write_offset(0);
     if (writer->Write(initialRequest)) {
@@ -100,27 +99,27 @@ void CASClient::upload_blob(proto::Digest digest, string blob)
     writer->WritesDone();
     ensure_ok(writer->Finish());
     if (response.committed_size() != blob.length()) {
-        throw runtime_error("ByteStream upload failed.");
+        throw std::runtime_error("ByteStream upload failed.");
     }
 }
 
-string CASClient::fetch_blob(proto::Digest digest)
+std::string CASClient::fetch_blob(proto::Digest digest)
 {
-    string resourceName = d_instance;
+    std::string resourceName = d_instance;
     if (!d_instance.empty()) {
         resourceName += "/";
     }
     resourceName += "blobs/";
     resourceName += digest.hash();
     resourceName += "/";
-    resourceName += to_string(digest.size_bytes());
+    resourceName += std::to_string(digest.size_bytes());
 
     google::bytestream::ReadRequest request;
     request.set_resource_name(resourceName);
 
     grpc::ClientContext context;
     auto reader = d_byteStreamStub->Read(&context, request);
-    string result;
+    std::string result;
     google::bytestream::ReadResponse readResponse;
     while (reader->Read(&readResponse)) {
         result += readResponse.data();
@@ -133,10 +132,10 @@ const int MAX_TOTAL_BATCH_SIZE = 1 << 21;
 const int MAX_MISSING_BLOBS_REQUEST_ITEMS = 1 << 14;
 
 void CASClient::upload_resources(
-    unordered_map<proto::Digest, string> blobs,
-    unordered_map<proto::Digest, string> filenames)
+    std::unordered_map<proto::Digest, std::string> blobs,
+    std::unordered_map<proto::Digest, std::string> filenames)
 {
-    unordered_set<proto::Digest> digestsToUpload;
+    std::unordered_set<proto::Digest> digestsToUpload;
     for (const auto &i : blobs) {
         digestsToUpload.insert(i.first);
     }
@@ -144,7 +143,7 @@ void CASClient::upload_resources(
         digestsToUpload.insert(i.first);
     }
 
-    unordered_set<proto::Digest> missingDigests;
+    std::unordered_set<proto::Digest> missingDigests;
     auto digestIter = digestsToUpload.cbegin();
     while (digestIter != digestsToUpload.cend()) {
         proto::FindMissingBlobsRequest missingBlobsRequest;
@@ -174,7 +173,7 @@ void CASClient::upload_resources(
     batchUpdateRequest.set_instance_name(d_instance);
     int batchSize = 0;
     for (const auto &digest : missingDigests) {
-        string blob;
+        std::string blob;
         if (blobs.count(digest)) {
             blob = blobs[digest];
         }
@@ -182,7 +181,8 @@ void CASClient::upload_resources(
             blob = get_file_contents(filenames[digest].c_str());
         }
         else {
-            throw runtime_error("CAS server requested nonexistent digest");
+            throw std::runtime_error(
+                "CAS server requested nonexistent digest");
         }
 
         if (digest.size_bytes() > MAX_TOTAL_BATCH_SIZE) {
@@ -229,7 +229,7 @@ void CASClient::download_directory(proto::Digest digest, const char *path)
 
     for (auto &file : directory.files()) {
         auto blob = fetch_blob(file.digest());
-        string filePath = string(path) + "/" + file.name();
+        const std::string filePath = std::string(path) + "/" + file.name();
         write_file(filePath.c_str(), blob);
         if (file.is_executable()) {
             make_executable(filePath.c_str());
@@ -237,10 +237,10 @@ void CASClient::download_directory(proto::Digest digest, const char *path)
     }
 
     for (auto &subdirectory : directory.directories()) {
-        auto subdirPath = string(path) + "/" + subdirectory.name();
+        auto subdirPath = std::string(path) + "/" + subdirectory.name();
         if (mkdir(subdirPath.c_str(), 0777) != 0) {
             if (errno != EEXIST) {
-                throw system_error(errno, system_category());
+                throw std::system_error(errno, std::system_category());
             }
         }
         download_directory(subdirectory.digest(), subdirPath.c_str());

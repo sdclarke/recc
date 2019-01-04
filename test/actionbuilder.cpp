@@ -21,17 +21,16 @@
 #include <gtest/gtest.h>
 
 using namespace BloombergLP::recc;
-using namespace std;
 
 class ActionBuilderTestFixture : public ::testing::Test {
   protected:
-    unordered_map<proto::Digest, string> blobs;
-    unordered_map<proto::Digest, string> filenames;
-    string cwd;
+    std::unordered_map<proto::Digest, std::string> blobs;
+    std::unordered_map<proto::Digest, std::string> filenames;
+    std::string cwd;
     ActionBuilderTestFixture() : cwd(get_current_working_directory()) {}
 };
 
-void fail_to_build_action(const vector<string> &recc_args)
+void fail_to_build_action(const std::vector<std::string> &recc_args)
 {
     std::stringstream ss;
     for (const auto &arg : recc_args) {
@@ -46,7 +45,8 @@ void fail_to_build_action(const vector<string> &recc_args)
  */
 TEST_F(ActionBuilderTestFixture, ActionBuilt)
 {
-    vector<string> recc_args = {"gcc", "-c", "hello.cpp", "-o", "hello.o"};
+    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                          "hello.o"};
     ParsedCommand command(recc_args, cwd.c_str());
 
     auto actionPtr =
@@ -79,7 +79,7 @@ TEST_F(ActionBuilderTestFixture, NonCompileCommand)
 {
     bool previousReccForceRemote = RECC_FORCE_REMOTE;
     RECC_FORCE_REMOTE = false;
-    vector<string> recc_args = {"ls"};
+    std::vector<std::string> recc_args = {"ls"};
     ParsedCommand command(recc_args, cwd.c_str());
     auto actionPtr =
         ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
@@ -95,7 +95,7 @@ TEST_F(ActionBuilderTestFixture, NonCompileCommandForceRemote)
 {
     bool previousReccForceRemote = RECC_FORCE_REMOTE;
     RECC_FORCE_REMOTE = true;
-    vector<string> recc_args = {"ls"};
+    std::vector<std::string> recc_args = {"ls"};
     ParsedCommand command(recc_args, cwd.c_str());
     auto actionPtr =
         ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
@@ -128,8 +128,8 @@ TEST_F(ActionBuilderTestFixture, NonCompileCommandForceRemote)
  */
 TEST_F(ActionBuilderTestFixture, UnrelatedOutputDirectory)
 {
-    vector<string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
-                                "/fakedirname/hello.o"};
+    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                          "/fakedirname/hello.o"};
     ParsedCommand command(recc_args, cwd.c_str());
     auto actionPtr =
         ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
