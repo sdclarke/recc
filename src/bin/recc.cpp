@@ -21,6 +21,7 @@
 #include <deps.h>
 #include <env.h>
 #include <fileutils.h>
+#include <grpcchannel.h>
 #include <logging.h>
 #include <merklize.h>
 #include <reccdefaults.h>
@@ -53,6 +54,9 @@ const std::string HELP(
     "RECC_SERVER_AUTH_GOOGLEAPI - use default google authentication when\n"
     "                             communicating over gRPC, instead of\n"
     "                             using an insecure connection\n"
+    "\n"
+    "RECC_SERVER_SSL - use a secure SSL/TLS channel when communicating over\n"
+    "                  grpc\n"
     "\n"
     "RECC_INSTANCE - the instance name to pass to the server\n"
     "\n"
@@ -144,16 +148,10 @@ int main(int argc, char *argv[])
 
     int rc = -1;
     try {
-        std::shared_ptr<grpc::ChannelCredentials> creds;
-        if (RECC_SERVER_AUTH_GOOGLEAPI) {
-            creds = grpc::GoogleDefaultCredentials();
-        }
-        else {
-            creds = grpc::InsecureChannelCredentials();
-        }
-        auto channel = grpc::CreateChannel(RECC_SERVER, creds);
-        auto casChannel = grpc::CreateChannel(RECC_CAS_SERVER, creds);
-        RemoteExecutionClient client(channel, casChannel, RECC_INSTANCE);
+        grpcChannels returnChannels = get_channels_from_config();
+        auto serverChannel = returnChannels.server;
+        auto casChannel = returnChannels.cas;
+        RemoteExecutionClient client(serverChannel, casChannel, RECC_INSTANCE);
         RECC_LOG_VERBOSE("Uploading resources...");
         client.upload_resources(blobs, filenames);
         RECC_LOG_VERBOSE("Executing action...");
@@ -168,7 +166,7 @@ int main(int argc, char *argv[])
             client.write_files_to_disk(result);
         }
     }
-    catch (const std::runtime_error &e) {
+    catch (const std::exception &e) {
         RECC_LOG_ERROR(e.what());
         rc = (rc == 0 ? -1 : rc);
     }

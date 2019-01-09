@@ -104,6 +104,11 @@ extern int RECC_RETRY_LIMIT;
 extern int RECC_RETRY_DELAY;
 
 /**
+ * Use a secure SSL/TLS channel to talk to the execution and CAS servers.
+ */
+extern bool RECC_SERVER_SSL;
+
+/**
  * The maximum number of execution jobs to run concurrently. (Used only by the
  * worker.)
  */
