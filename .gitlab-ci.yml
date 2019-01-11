@@ -57,9 +57,7 @@ test_cover:
 
 check_formatting:
     image: ubuntu:bionic
-    stage: test
-    dependencies:
-        - build_only
+    stage: build
     before_script:
         - apt-get update && apt-get install -y clang-format-6.0 git-core
     script:
