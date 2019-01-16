@@ -12,19 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <algorithm>
 #include <env.h>
+
+#include <logging.h>
+#include <reccdefaults.h>
+
+#include <algorithm>
 #include <cstring>
 #include <ctype.h>
 #include <fstream>
 #include <iostream>
-#include <unistd.h>
-#include <logging.h>
-#include <vector>
 #include <sstream>
 #include <string>
-
-#include <reccdefaults.h>
+#include <unistd.h>
+#include <vector>
 
 namespace BloombergLP {
 namespace recc {
@@ -237,7 +238,7 @@ void handle_special_defaults(Source file)
 
     if (RECC_CAS_SERVER.empty()) {
         RECC_CAS_SERVER = RECC_SERVER;
-        RECC_LOG_WARNING("Warning: no RECC_CAS_SERVER environment variable "
+        RECC_LOG_VERBOSE("No RECC_CAS_SERVER environment variable "
                          "specified."
                          << "Using the same as RECC_SERVER ("
                          << RECC_CAS_SERVER << ")");
