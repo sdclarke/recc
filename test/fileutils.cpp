@@ -14,6 +14,7 @@
 
 #include <fileutils.h>
 
+#include <env.h>
 #include <subprocess.h>
 
 #include <gtest/gtest.h>
@@ -120,7 +121,63 @@ TEST(NormalizePathTest, KeepNeededDotDot)
     EXPECT_EQ("../../dir/hello", normalize_path("subdir/../../../dir/hello"));
 }
 
-TEST(MakePathRelativeTest, ReturnNonAbsolutePathsUnmodified)
+TEST(NormalizePathTest, AlwaysRemoveTrailingSlash)
+{
+    EXPECT_EQ("/usr/bin", normalize_path("/usr/bin"));
+    EXPECT_EQ("/usr/bin", normalize_path("/usr/bin/"));
+}
+
+TEST(HasPathPrefixTest, AbsolutePaths)
+{
+    EXPECT_TRUE(has_path_prefix("/a/b/c/", "/a/b"));
+    EXPECT_TRUE(has_path_prefix("/a/b/c/", "/a/b/"));
+    EXPECT_TRUE(has_path_prefix("/a/b/c", "/a/b"));
+    EXPECT_TRUE(has_path_prefix("/a/b/c", "/a/b/"));
+
+    EXPECT_FALSE(has_path_prefix("/a/c/d", "/a/b/"));
+
+    EXPECT_FALSE(has_path_prefix("/a/boo", "/a/b/"));
+    EXPECT_FALSE(has_path_prefix("/a/boo", "/a/b"));
+    EXPECT_FALSE(has_path_prefix("/a/boo", "/a/b/a/boo"));
+    EXPECT_FALSE(has_path_prefix("/a/boo", "/a/b/a/boo/"));
+
+    EXPECT_TRUE(has_path_prefix("/a/../b/", "/a"));
+    EXPECT_TRUE(has_path_prefix("/a/../b/", "/a/"));
+    EXPECT_TRUE(has_path_prefix("/a/../b", "/a"));
+    EXPECT_TRUE(has_path_prefix("/a/../b", "/a/"));
+}
+
+TEST(HasPathPrefixTest, RelativePaths)
+{
+    EXPECT_TRUE(has_path_prefix("a/b/c/", "a/b"));
+    EXPECT_TRUE(has_path_prefix("a/b/c/", "a/b/"));
+    EXPECT_TRUE(has_path_prefix("a/b/c", "a/b"));
+    EXPECT_TRUE(has_path_prefix("a/b/c", "a/b/"));
+
+    EXPECT_FALSE(has_path_prefix("a/c/d", "a/b/"));
+
+    EXPECT_FALSE(has_path_prefix("a/boo", "a/b/"));
+    EXPECT_FALSE(has_path_prefix("a/boo", "a/b"));
+    EXPECT_FALSE(has_path_prefix("a/boo", "a/b/a/boo"));
+    EXPECT_FALSE(has_path_prefix("a/boo", "a/b/a/boo/"));
+
+    EXPECT_TRUE(has_path_prefix("a/../b/", "a"));
+    EXPECT_TRUE(has_path_prefix("a/../b/", "a/"));
+    EXPECT_TRUE(has_path_prefix("a/../b", "a"));
+    EXPECT_TRUE(has_path_prefix("a/../b", "a/"));
+
+    EXPECT_FALSE(has_path_prefix("/a/b/c/", "a/b/"));
+    EXPECT_FALSE(has_path_prefix("/a/b/c/", "a/b"));
+    EXPECT_FALSE(has_path_prefix("/a/b/c", "a/b/"));
+    EXPECT_FALSE(has_path_prefix("/a/b/c", "a/b"));
+}
+
+class MakePathRelativeTest : public ::testing::Test {
+  protected:
+    void SetUp() override { RECC_PROJECT_ROOT = "/"; }
+};
+
+TEST_F(MakePathRelativeTest, ReturnNonAbsolutePathsUnmodified)
 {
     EXPECT_EQ("",
               make_path_relative(std::string(""), "/some/working/directory"));
@@ -135,7 +192,7 @@ TEST(MakePathRelativeTest, ReturnNonAbsolutePathsUnmodified)
                                               "/some/working/directory"));
 }
 
-TEST(MakePathRelativeTest, DoNothingIfWorkingDirectoryNull)
+TEST_F(MakePathRelativeTest, DoNothingIfWorkingDirectoryNull)
 {
     EXPECT_EQ("/test/directory/",
               make_path_relative(std::string("/test/directory/"), nullptr));
@@ -144,7 +201,7 @@ TEST(MakePathRelativeTest, DoNothingIfWorkingDirectoryNull)
     EXPECT_EQ("/test", make_path_relative(std::string("/test"), ""));
 }
 
-TEST(MakePathRelativeTest, WorkingDirectoryIsPathPrefix)
+TEST_F(MakePathRelativeTest, WorkingDirectoryIsPathPrefix)
 {
     EXPECT_EQ("path", make_path_relative(std::string("/some/test/path"),
                                          "/some/test"));
@@ -156,7 +213,7 @@ TEST(MakePathRelativeTest, WorkingDirectoryIsPathPrefix)
                                           "/some/test/"));
 }
 
-TEST(MakePathRelativeTest, PathEqualsWorkingDirectory)
+TEST_F(MakePathRelativeTest, PathEqualsWorkingDirectory)
 {
     EXPECT_EQ(".", make_path_relative(std::string("/some/test/path"),
                                       "/some/test/path"));
@@ -168,7 +225,7 @@ TEST(MakePathRelativeTest, PathEqualsWorkingDirectory)
                                        "/some/test/path/"));
 }
 
-TEST(MakePathRelativeTest, PathAlmostEqualsWorkingDirectory)
+TEST_F(MakePathRelativeTest, PathAlmostEqualsWorkingDirectory)
 {
     EXPECT_EQ("../tests",
               make_path_relative(std::string("/some/tests"), "/some/test"));
@@ -180,7 +237,7 @@ TEST(MakePathRelativeTest, PathAlmostEqualsWorkingDirectory)
               make_path_relative(std::string("/some/tests/"), "/some/test/"));
 }
 
-TEST(MakePathRelativeTest, PathIsParentOfWorkingDirectory)
+TEST_F(MakePathRelativeTest, PathIsParentOfWorkingDirectory)
 {
     EXPECT_EQ("..", make_path_relative(std::string("/a/b/c"), "/a/b/c/d"));
     EXPECT_EQ("..", make_path_relative(std::string("/a/b/c"), "/a/b/c/d/"));
@@ -194,7 +251,7 @@ TEST(MakePathRelativeTest, PathIsParentOfWorkingDirectory)
               make_path_relative(std::string("/a/"), "/a/b/c/d/"));
 }
 
-TEST(MakePathRelativeTest, PathAdjacentToWorkingDirectory)
+TEST_F(MakePathRelativeTest, PathAdjacentToWorkingDirectory)
 {
     EXPECT_EQ("../e", make_path_relative(std::string("/a/b/c/e"), "/a/b/c/d"));
     EXPECT_EQ("../e",
@@ -223,16 +280,49 @@ TEST(MakePathRelativeTest, PathAdjacentToWorkingDirectory)
               make_path_relative(std::string("/a/b/e/f/g/"), "/a/b/c/d/"));
 }
 
-TEST(MakePathRelativeTest, PathUnrelatedToWorkingDirectory)
+TEST_F(MakePathRelativeTest, PathOutsideProjectRoot)
 {
-    EXPECT_EQ("/e/b/c/d",
-              make_path_relative(std::string("/e/b/c/d"), "/a/b/c/d"));
-    EXPECT_EQ("/e/b/c/d",
-              make_path_relative(std::string("/e/b/c/d"), "/a/b/c/d/"));
-    EXPECT_EQ("/e/b/c/d/",
-              make_path_relative(std::string("/e/b/c/d/"), "/a/b/c/d"));
-    EXPECT_EQ("/e/b/c/d/",
-              make_path_relative(std::string("/e/b/c/d/"), "/a/b/c/d/"));
+    RECC_PROJECT_ROOT = "/home/nobody/test/";
+    EXPECT_EQ("/home/nobody/include/foo.h",
+              make_path_relative(std::string("/home/nobody/include/foo.h"),
+                                 "/home/nobody/test"));
+    EXPECT_EQ("/home/nobody/include/foo.h",
+              make_path_relative(std::string("/home/nobody/include/foo.h"),
+                                 "/home/nobody/test"));
+}
+
+TEST(MakePathAbsoluteTest, NoRewriting)
+{
+    EXPECT_EQ("", make_path_absolute("", "/a/b/c/"));
+    EXPECT_EQ("/a/b/c/", make_path_absolute("/a/b/c/", "/d/"));
+}
+
+TEST(MakePathAbsoluteTest, SimplePaths)
+{
+    EXPECT_EQ("/a/b/c/d", make_path_absolute("d", "/a/b/c/"));
+    EXPECT_EQ("/a/b/c/d/", make_path_absolute("d/", "/a/b/c/"));
+    EXPECT_EQ("/a/b", make_path_absolute("..", "/a/b/c/"));
+    EXPECT_EQ("/a/b/", make_path_absolute("../", "/a/b/c/"));
+    EXPECT_EQ("/a/b", make_path_absolute("..", "/a/b/c"));
+    EXPECT_EQ("/a/b/", make_path_absolute("../", "/a/b/c"));
+
+    EXPECT_EQ("/a/b/c", make_path_absolute(".", "/a/b/c/"));
+    EXPECT_EQ("/a/b/c/", make_path_absolute("./", "/a/b/c/"));
+    EXPECT_EQ("/a/b/c", make_path_absolute(".", "/a/b/c"));
+    EXPECT_EQ("/a/b/c/", make_path_absolute("./", "/a/b/c"));
+}
+
+TEST(MakePathAbsoluteTest, MoreComplexPaths)
+{
+    EXPECT_EQ("/a/b/d", make_path_absolute("../d", "/a/b/c"));
+    EXPECT_EQ("/a/b/d", make_path_absolute("../d", "/a/b/c/"));
+    EXPECT_EQ("/a/b/d/", make_path_absolute("../d/", "/a/b/c"));
+    EXPECT_EQ("/a/b/d/", make_path_absolute("../d/", "/a/b/c/"));
+
+    EXPECT_EQ("/a/b/d", make_path_absolute("./.././d", "/a/b/c"));
+    EXPECT_EQ("/a/b/d", make_path_absolute("./.././d", "/a/b/c/"));
+    EXPECT_EQ("/a/b/d/", make_path_absolute("./.././d/", "/a/b/c"));
+    EXPECT_EQ("/a/b/d/", make_path_absolute("./.././d/", "/a/b/c/"));
 }
 
 TEST(FileUtilsTest, GetCurrentWorkingDirectory)

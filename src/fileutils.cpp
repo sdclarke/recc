@@ -14,6 +14,7 @@
 
 #include <fileutils.h>
 
+#include <env.h>
 #include <logging.h>
 #include <subprocess.h>
 
@@ -28,7 +29,6 @@
 #include <system_error>
 
 #include <unistd.h>
-
 
 namespace BloombergLP {
 namespace recc {
@@ -165,10 +165,29 @@ std::string normalize_path(const char *path)
     return result;
 }
 
+bool has_path_prefix(const std::string &path, std::string prefix)
+{
+    /* A path can never have the empty path as a prefix */
+    if (prefix.empty()) {
+        return false;
+    }
+
+    /*
+     * Make sure prefix ends in a slash.
+     * This is so we don't return true if path = /foo and prefix = /foobar
+     */
+    if (prefix.back() != '/') {
+        prefix.push_back('/');
+    }
+
+    return path.substr(0, prefix.length()) == prefix;
+}
+
 std::string make_path_relative(std::string path, const char *workingDirectory)
 {
     if (workingDirectory == nullptr || workingDirectory[0] == 0 ||
-        path.length() == 0 || path[0] != '/') {
+        path.length() == 0 || path[0] != '/' ||
+        !has_path_prefix(path, RECC_PROJECT_ROOT)) {
         return path;
     }
     if (workingDirectory[0] != '/') {
@@ -212,13 +231,6 @@ std::string make_path_relative(std::string path, const char *workingDirectory)
         }
     }
 
-    if (lastMatchingSegmentEnd == 0) {
-        // The path and the working directory have nothing in common,
-        // so we assume the path is a system folder like /usr/include
-        // and not a build input.
-        return path;
-    }
-
     int dotdotsNeeded = 1;
     while (workingDirectory[i] != 0) {
         if (workingDirectory[i] == '/' && workingDirectory[i + 1] != 0) {
@@ -232,6 +244,21 @@ std::string make_path_relative(std::string path, const char *workingDirectory)
         result[j * 3 + 2] = '/';
     }
     return result;
+}
+
+std::string make_path_absolute(const std::string &path, const std::string &cwd)
+{
+    if (path.empty() || path.front() == '/') {
+        return path;
+    }
+    const std::string fullPath = cwd + '/' + path;
+    std::string normalizedPath = normalize_path(fullPath.c_str());
+
+    /* normalize_path removes trailing slashes, so let's preserve them here */
+    if (path.back() == '/' && normalizedPath.back() != '/') {
+        normalizedPath.push_back('/');
+    }
+    return normalizedPath;
 }
 
 std::string get_current_working_directory()

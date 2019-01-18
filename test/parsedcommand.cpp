@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <env.h>
 #include <parsedcommand.h>
 
 #include <gtest/gtest.h>
@@ -212,6 +213,7 @@ TEST(XlcTest, OutputArguments)
 
 TEST(RewriteAbsolutePathsTest, SimpleCompileCommand)
 {
+    RECC_PROJECT_ROOT = "/home/nobody/test/";
     const std::vector<std::string> command = {
         "gcc", "-c", "/home/nobody/test/hello.c", "-o",
         "/home/nobody/test/hello.o"};
@@ -231,6 +233,7 @@ TEST(RewriteAbsolutePathsTest, SimpleCompileCommand)
 
 TEST(RewriteAbsolutePathsTest, ComplexOptions)
 {
+    RECC_PROJECT_ROOT = "/home/nobody/";
     const std::vector<std::string> command = {
         "gcc",
         "-c",
