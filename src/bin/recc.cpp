@@ -51,6 +51,11 @@ const std::string HELP(
     "RECC_CAS_SERVER - the URI of the CAS server to use (by default, we\n"
     "                  use RECC_SERVER)\n"
     "\n"
+    "RECC_PROJECT_ROOT - the top-level directory of the project source."
+    "                    If the command contains paths inside the root, they"
+    "                    will be rewritten to relative paths (by default, we"
+    "                    use the current working directory)\n"
+    "\n"
     "RECC_SERVER_AUTH_GOOGLEAPI - use default google authentication when\n"
     "                             communicating over gRPC, instead of\n"
     "                             using an insecure connection\n"
@@ -118,7 +123,7 @@ int main(int argc, char *argv[])
     }
 
     set_config_locations();
-    parse_config_variables();
+    parse_config_variables(Source::e_Recc);
     const std::string cwd = get_current_working_directory();
     ParsedCommand command(&argv[1], cwd.c_str());
 

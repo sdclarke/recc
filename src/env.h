@@ -27,7 +27,7 @@ namespace recc {
  * enum class for specifying source binary which calls
  * handle_special_defaults
  */
-enum class Source { e_Baseline, e_Reccworker };
+enum class Source { e_Baseline, e_Recc, e_Reccworker };
 
 /**
  * The URI of the server to use, e.g. localhost:8085
@@ -52,6 +52,13 @@ extern std::string RECC_INSTANCE;
  * If both this and RECC_DEPS_OVERRIDE are set, the directory value is used.
  */
 extern std::string RECC_DEPS_DIRECTORY_OVERRIDE;
+
+/**
+ * The root of the project.
+ *
+ * Only files inside the project root will be rewritten to relative paths.
+ */
+extern std::string RECC_PROJECT_ROOT;
 
 /**
  * The location to store temporary files. (Currently used only by the worker.)

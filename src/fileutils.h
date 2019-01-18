@@ -78,12 +78,28 @@ void write_file(const char *path, std::string contents);
 std::string normalize_path(const char *path);
 
 /**
+ * Returns true if "path" has "prefix" as a prefix.
+ *
+ * Before performing the check, a trailing slash is appended to prefix if it
+ * doesn't have one since it is assumed that prefix is a directory.
+ *
+ * Note that this isn't just "is_subdirectory_of": /a/ is a prefix of /a/../b/.
+ */
+bool has_path_prefix(const std::string &path, std::string prefix);
+
+/**
  * Make the given path relative to the given working directory.
  *
  * If the given working directory is null, or if the given path has nothing to
  * do with the working directory, the path will be returned unmodified.
  */
 std::string make_path_relative(std::string path, const char *workingDirectory);
+
+/**
+ * Make the given path absolute, using the current working directory.
+ */
+std::string make_path_absolute(const std::string &path,
+                               const std::string &cwd);
 
 /**
  * Return the current working directory.

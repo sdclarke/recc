@@ -14,12 +14,14 @@
 
 #include <env.h>
 
+#include <fileutils.h>
 #include <logging.h>
 #include <reccdefaults.h>
 
 #include <algorithm>
 #include <cstring>
 #include <ctype.h>
+#include <env.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -40,6 +42,7 @@ std::string RECC_CAS_SERVER = "";
 std::string RECC_INSTANCE = DEFAULT_RECC_INSTANCE;
 std::string RECC_DEPS_DIRECTORY_OVERRIDE =
     DEFAULT_RECC_DEPS_DIRECTORY_OVERRIDE;
+std::string RECC_PROJECT_ROOT = DEFAULT_RECC_PROJECT_ROOT;
 std::string TMPDIR = DEFAULT_RECC_TMPDIR;
 
 bool RECC_VERBOSE = DEFAULT_RECC_VERBOSE;
@@ -187,6 +190,7 @@ void parse_config_variables(const char *const *environ)
         STRVAR(RECC_CAS_SERVER)
         STRVAR(RECC_INSTANCE)
         STRVAR(RECC_DEPS_DIRECTORY_OVERRIDE)
+        STRVAR(RECC_PROJECT_ROOT)
         STRVAR(TMPDIR)
 
         BOOLVAR(RECC_VERBOSE)
@@ -244,6 +248,25 @@ void handle_special_defaults(Source file)
                          << RECC_CAS_SERVER << ")");
     }
 
+    /* recc-specific defaults */
+    if (file == Source::e_Recc) {
+        if (RECC_PROJECT_ROOT.empty()) {
+            RECC_PROJECT_ROOT = get_current_working_directory();
+            RECC_LOG_VERBOSE("No RECC_PROJECT_ROOT directory specified. "
+                             << "Defaulting to current working directory ("
+                             << RECC_PROJECT_ROOT << ")");
+        }
+        else if (RECC_PROJECT_ROOT.front() != '/') {
+            RECC_PROJECT_ROOT = make_path_absolute(
+                RECC_PROJECT_ROOT, get_current_working_directory());
+            RECC_LOG_WARNING(
+                "Warning: RECC_PROJECT_ROOT was set to a relative "
+                "path. "
+                << "Rewriting to absolute path " << RECC_PROJECT_ROOT);
+        }
+    }
+
+    /* reccworker-specific defaults */
     if (file == Source::e_Reccworker) {
         if (RECC_MAX_CONCURRENT_JOBS <= 0) {
             RECC_LOG_WARNING(
