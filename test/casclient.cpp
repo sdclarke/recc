@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <casclient.h>
+#include <env.h>
 #include <fileutils.h>
 #include <merklize.h>
 
@@ -257,6 +258,52 @@ TEST(CASClientTest, FetchBlob)
         .WillOnce(DoAll(SetArgPointee<0>(response), Return(true)))
         .WillOnce(Return(false));
     EXPECT_CALL(*reader, Finish()).WillOnce(Return(grpc::Status::OK));
+
+    auto blob = cas.fetch_blob(digest);
+    EXPECT_EQ(blob, abc);
+}
+
+TEST(CASClientTest, FetchBlobResumeDownload)
+{
+    RECC_RETRY_LIMIT = 1;
+    auto stub = new proto::MockContentAddressableStorageStub();
+    auto byteStreamStub = new google::bytestream::MockByteStreamStub();
+    CASClient cas(stub, byteStreamStub, emptyString);
+
+    auto digest = make_digest(abc);
+    google::bytestream::ReadRequest firstRequest;
+    firstRequest.set_resource_name("blobs/" + digest.hash() + "/3");
+
+    google::bytestream::ReadRequest secondRequest;
+    secondRequest.set_resource_name("blobs/" + digest.hash() + "/3");
+    secondRequest.set_read_offset(1);
+
+    google::bytestream::ReadResponse responseAB;
+    responseAB.set_data(abc.substr(0, abc.size() / 2));
+    google::bytestream::ReadResponse responseC;
+    responseC.set_data(abc.substr(abc.size() / 2));
+
+    auto brokenReader = new grpc::testing::MockClientReader<
+        google::bytestream::ReadResponse>();
+    EXPECT_CALL(*brokenReader, Read(_))
+        .WillOnce(DoAll(SetArgPointee<0>(responseAB), Return(true)))
+        .WillOnce(Return(false));
+    EXPECT_CALL(*brokenReader, Finish())
+        .WillOnce(Return(
+            grpc::Status(grpc::FAILED_PRECONDITION, "failing for test")));
+
+    auto reader = new grpc::testing::MockClientReader<
+        google::bytestream::ReadResponse>();
+    EXPECT_CALL(*reader, Read(_))
+        .WillOnce(DoAll(SetArgPointee<0>(responseC), Return(true)))
+        .WillOnce(Return(false));
+    EXPECT_CALL(*reader, Finish()).WillOnce(Return(grpc::Status::OK));
+
+    EXPECT_CALL(*byteStreamStub, ReadRaw(_, MessageEq(firstRequest)))
+        .WillOnce(Return(brokenReader));
+
+    EXPECT_CALL(*byteStreamStub, ReadRaw(_, MessageEq(secondRequest)))
+        .WillOnce(Return(reader));
 
     auto blob = cas.fetch_blob(digest);
     EXPECT_EQ(blob, abc);

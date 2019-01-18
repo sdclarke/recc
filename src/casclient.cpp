@@ -15,6 +15,7 @@
 #include <casclient.h>
 
 #include <fileutils.h>
+#include <grpcretry.h>
 #include <logging.h>
 #include <merklize.h>
 
@@ -22,7 +23,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unordered_set>
-
 
 namespace BloombergLP {
 namespace recc {
@@ -65,39 +65,48 @@ const int BYTESTREAM_CHUNK_SIZE = 1 << 20;
 
 void CASClient::upload_blob(proto::Digest digest, std::string blob)
 {
-    grpc::ClientContext context;
     google::bytestream::WriteResponse response;
-    auto writer = d_byteStreamStub->Write(&context, &response);
-    google::bytestream::WriteRequest initialRequest;
+
     std::string resourceName = d_instance;
     if (d_instance.length() > 0) {
         resourceName += "/";
     }
     resourceName += "uploads/" + GUID + "/blobs/" + digest.hash() + "/" +
                     std::to_string(digest.size_bytes());
-    initialRequest.set_resource_name(resourceName);
-    initialRequest.set_write_offset(0);
-    if (writer->Write(initialRequest)) {
-        for (int offset = 0; offset < blob.length();
-             offset += BYTESTREAM_CHUNK_SIZE) {
-            google::bytestream::WriteRequest request;
-            request.set_write_offset(offset);
-            request.set_finish_write((offset + BYTESTREAM_CHUNK_SIZE) >=
-                                     blob.length());
-            if (request.finish_write()) {
-                request.set_data(blob.c_str() + offset,
-                                 blob.length() - offset);
-            }
-            else {
-                request.set_data(blob.c_str() + offset, BYTESTREAM_CHUNK_SIZE);
-            }
-            if (!writer->Write(request)) {
-                break;
+
+    auto write_lambda = [&](grpc::ClientContext &context) {
+        response.Clear();
+        auto writer = d_byteStreamStub->Write(&context, &response);
+        google::bytestream::WriteRequest initialRequest;
+
+        initialRequest.set_resource_name(resourceName);
+        initialRequest.set_write_offset(0);
+        if (writer->Write(initialRequest)) {
+            for (int offset = 0; offset < blob.length();
+                 offset += BYTESTREAM_CHUNK_SIZE) {
+                google::bytestream::WriteRequest request;
+                request.set_write_offset(offset);
+                request.set_finish_write((offset + BYTESTREAM_CHUNK_SIZE) >=
+                                         blob.length());
+                if (request.finish_write()) {
+                    request.set_data(blob.c_str() + offset,
+                                     blob.length() - offset);
+                }
+                else {
+                    request.set_data(blob.c_str() + offset,
+                                     BYTESTREAM_CHUNK_SIZE);
+                }
+                if (!writer->Write(request)) {
+                    break;
+                }
             }
         }
-    }
-    writer->WritesDone();
-    ensure_ok(writer->Finish());
+        writer->WritesDone();
+        return writer->Finish();
+    };
+
+    grpc_retry(write_lambda);
+
     if (response.committed_size() != blob.length()) {
         throw std::runtime_error("ByteStream upload failed.");
     }
@@ -114,17 +123,19 @@ std::string CASClient::fetch_blob(proto::Digest digest)
     resourceName += "/";
     resourceName += std::to_string(digest.size_bytes());
 
-    google::bytestream::ReadRequest request;
-    request.set_resource_name(resourceName);
-
-    grpc::ClientContext context;
-    auto reader = d_byteStreamStub->Read(&context, request);
     std::string result;
-    google::bytestream::ReadResponse readResponse;
-    while (reader->Read(&readResponse)) {
-        result += readResponse.data();
-    }
-    ensure_ok(reader->Finish());
+    auto fetch_lambda = [&](grpc::ClientContext &context) {
+        google::bytestream::ReadRequest request;
+        request.set_resource_name(resourceName);
+        request.set_read_offset(result.size());
+        auto reader = d_byteStreamStub->Read(&context, request);
+        google::bytestream::ReadResponse readResponse;
+        while (reader->Read(&readResponse)) {
+            result += readResponse.data();
+        }
+        return reader->Finish();
+    };
+    grpc_retry(fetch_lambda);
     return result;
 }
 
@@ -156,10 +167,14 @@ void CASClient::upload_resources(
         }
         RECC_LOG_VERBOSE("Sending missing blobs request: "
                          << missingBlobsRequest.ShortDebugString());
-        grpc::ClientContext missingBlobsContext;
         proto::FindMissingBlobsResponse missingBlobsResponse;
-        ensure_ok(d_executionStub->FindMissingBlobs(
-            &missingBlobsContext, missingBlobsRequest, &missingBlobsResponse));
+
+        auto missing_blobs_lambda = [&](grpc::ClientContext &context) {
+            missingBlobsResponse.Clear();
+            return d_executionStub->FindMissingBlobs(
+                &context, missingBlobsRequest, &missingBlobsResponse);
+        };
+        grpc_retry(missing_blobs_lambda);
         RECC_LOG_VERBOSE("Got missing blobs response: "
                          << missingBlobsResponse.ShortDebugString());
         for (int i = 0; i < missingBlobsResponse.missing_blob_digests_size();
@@ -190,11 +205,15 @@ void CASClient::upload_resources(
             continue;
         }
         else if (digest.size_bytes() + batchSize > MAX_TOTAL_BATCH_SIZE) {
-            grpc::ClientContext context;
             proto::BatchUpdateBlobsResponse response;
+            auto batch_update_lambda = [&](grpc::ClientContext &context) {
+                response.Clear();
+                return d_executionStub->BatchUpdateBlobs(
+                    &context, batchUpdateRequest, &response);
+            };
             RECC_LOG_VERBOSE("Sending batch update request");
-            ensure_ok(d_executionStub->BatchUpdateBlobs(
-                &context, batchUpdateRequest, &response));
+            grpc_retry(batch_update_lambda);
+
             for (int j = 0; j < response.responses_size(); ++j) {
                 ensure_ok(response.responses(j).status());
             }
@@ -211,11 +230,14 @@ void CASClient::upload_resources(
         batchSize += digest.hash().length();
     }
     if (batchUpdateRequest.requests_size() > 0) {
-        grpc::ClientContext context;
         proto::BatchUpdateBlobsResponse response;
         RECC_LOG_VERBOSE("Sending final batch update request");
-        ensure_ok(d_executionStub->BatchUpdateBlobs(
-            &context, batchUpdateRequest, &response));
+        auto batch_update_lambda = [&](grpc::ClientContext &context) {
+            response.Clear();
+            return d_executionStub->BatchUpdateBlobs(
+                &context, batchUpdateRequest, &response);
+        };
+        grpc_retry(batch_update_lambda);
         for (int i = 0; i < response.responses_size(); ++i) {
             ensure_ok(response.responses(i).status());
         }

@@ -156,8 +156,7 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
         operation_ptr = std::make_shared<Operation>();
         read_operation(reader_ptr, operation_ptr);
 
-        grpc::Status status = reader_ptr->Finish();
-        return status;
+        return reader_ptr->Finish();
     };
 
     grpc_retry(execute_lambda);
