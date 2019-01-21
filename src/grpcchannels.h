@@ -14,14 +14,27 @@
 
 #include <grpcpp/security/credentials.h>
 
-struct grpcChannels {
-    std::shared_ptr<grpc::Channel> server;
-    std::shared_ptr<grpc::Channel> cas;
-};
+class GrpcChannels {
+  public:
+    typedef std::shared_ptr<grpc::Channel> ChannelPtr;
 
-/**
- * builds appropriate channels from environment
- * variables. Will return a channel for cas, and
- * a channel for the build server.
- */
-grpcChannels get_channels_from_config();
+    GrpcChannels(const ChannelPtr &server, const ChannelPtr &cas)
+        : d_server(server), d_cas(cas)
+    {
+    }
+
+    ChannelPtr server() { return d_server; }
+    ChannelPtr cas() { return d_cas; }
+
+  private:
+    std::shared_ptr<grpc::Channel> d_server;
+    std::shared_ptr<grpc::Channel> d_cas;
+
+  public:
+    /**
+     * builds appropriate channels from environment
+     * variables. Will return a channel for cas, and
+     * a channel for the build server.
+     */
+    static GrpcChannels get_channels_from_config();
+};

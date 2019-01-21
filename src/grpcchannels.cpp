@@ -13,14 +13,14 @@
 // limitations under the License.
 //
 #include <env.h>
-#include <grpcchannel.h>
+#include <grpcchannels.h>
 
 #include <grpcpp/create_channel.h>
 #include <grpcpp/security/credentials.h>
 
 using namespace BloombergLP::recc;
 
-grpcChannels get_channels_from_config()
+GrpcChannels GrpcChannels::get_channels_from_config()
 {
     if (RECC_SERVER_AUTH_GOOGLEAPI && RECC_SERVER_SSL) {
         throw std::invalid_argument("RECC_SERVER_AUTH_GOOGLEAPI & "
@@ -31,14 +31,11 @@ grpcChannels get_channels_from_config()
         creds = grpc::GoogleDefaultCredentials();
     }
     else if (RECC_SERVER_SSL) {
-        grpc::SslCredentialsOptions options;
-        creds = grpc::SslCredentials(options);
+        creds = grpc::SslCredentials(grpc::SslCredentialsOptions());
     }
     else {
         creds = grpc::InsecureChannelCredentials();
     }
-    grpcChannels return_channels;
-    return_channels.server = grpc::CreateChannel(RECC_SERVER, creds);
-    return_channels.cas = grpc::CreateChannel(RECC_CAS_SERVER, creds);
-    return return_channels;
+    return GrpcChannels(grpc::CreateChannel(RECC_SERVER, creds),
+                        grpc::CreateChannel(RECC_CAS_SERVER, creds));
 }
