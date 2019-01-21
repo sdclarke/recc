@@ -124,7 +124,9 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
         create_directory_recursive((pathPrefix + directory).c_str());
     }
 
-    RECC_LOG_VERBOSE("Running command " << commandProto.DebugString());
+    RECC_LOG_VERBOSE("Changing to " << workingDirectory
+                                    << " and running command "
+                                    << commandProto.DebugString());
     const auto subprocessResult =
         execute(command, true, true, env, workingDirectory.c_str());
     RECC_LOG_VERBOSE("Command completed. Creating action result...");
