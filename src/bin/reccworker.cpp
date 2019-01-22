@@ -42,6 +42,7 @@
 
 using namespace BloombergLP::recc;
 
+const unsigned long MAX_PRINT = 25;
 const std::string HELP(
     "USAGE: reccworker [id]\n"
     "\n"
@@ -85,7 +86,15 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
     RECC_LOG_VERBOSE("Starting build in temporary directory "
                      << tmpdir.name());
 
-    casClient.download_directory(action.input_root_digest(), tmpdir.name());
+    std::vector<std::string> missing;
+    casClient.download_directory(action.input_root_digest(), tmpdir.name(),
+                                 &missing);
+
+    // if missing is not empty, that means that some expected
+    // files are missing. We should throw a failed precondition
+    if (!missing.empty()) {
+        throw PreconditionFail(missing);
+    }
 
     const std::string pathPrefix = std::string(tmpdir.name()) + "/";
 
@@ -184,6 +193,8 @@ void worker_thread(proto::BotSession *session,
                    std::string leaseID)
 {
     proto::ActionResult result;
+    bool preconditionFail = false;
+    std::ostringstream missingFiles;
 
     try {
         CASClient casClient(casChannel, RECC_INSTANCE);
@@ -217,6 +228,23 @@ void worker_thread(proto::BotSession *session,
 
         result = execute_action(action, casClient);
     }
+    catch (const PreconditionFail &e) {
+        preconditionFail = true;
+        std::ostringstream errorMessage;
+        errorMessage
+            << "Precondition Failed, unable to find requested blobs in CAS";
+        RECC_LOG_ERROR(errorMessage.str());
+        const std::vector<std::string> &missingFilesVec =
+            e.get_missing_files();
+        for (int i = 0; i < missingFilesVec.size(); i++) {
+            missingFiles << missingFilesVec[i] << ", ";
+            if (i == std::min(MAX_PRINT, missingFilesVec.size() - 1)) {
+                RECC_LOG_VERBOSE("Missing Blobs: " << missingFiles.str());
+            }
+        }
+        result.set_stderr_raw(errorMessage.str() + "\n");
+        result.set_exit_code(1);
+    }
     catch (const std::exception &e) {
         result.set_exit_code(1);
         RECC_LOG_VERBOSE("Caught exception in worker: " << e.what());
@@ -235,6 +263,13 @@ void worker_thread(proto::BotSession *session,
             if (lease.id() == leaseID &&
                 lease.state() == proto::LeaseState::ACTIVE) {
                 lease.set_state(proto::LeaseState::COMPLETED);
+
+                if (preconditionFail) {
+                    auto status = lease.mutable_status();
+                    status->set_message(missingFiles.str());
+                    status->set_code(grpc::FAILED_PRECONDITION);
+                }
+
                 lease.mutable_result()->PackFrom(result);
             }
         }

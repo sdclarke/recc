@@ -20,6 +20,7 @@
 #include <build/bazel/remote/execution/v2/remote_execution_mock.grpc.pb.h>
 #include <gmock/gmock.h>
 #include <google/bytestream/bytestream_mock.grpc.pb.h>
+#include <google/protobuf/text_format.h>
 #include <google/protobuf/util/message_differencer.h>
 #include <grpcpp/test/mock_stream.h>
 #include <gtest/gtest.h>
@@ -307,4 +308,75 @@ TEST(CASClientTest, FetchBlobResumeDownload)
 
     auto blob = cas.fetch_blob(digest);
     EXPECT_EQ(blob, abc);
+}
+
+// Only tests catch block in DownloadDirectory. Verifies that missing string is
+// correctly constructed
+TEST(CASClientTest, DownloadDirectory)
+{
+    RECC_RETRY_LIMIT = 0;
+    const auto directoryDigest = make_digest("fake directory");
+    auto stub = new proto::MockContentAddressableStorageStub();
+    auto byteStreamStub = new google::bytestream::MockByteStreamStub();
+    CASClient cas(stub, byteStreamStub, emptyString);
+
+    // construct proto directory
+    proto::Directory upload_dir;
+    proto::FileNode *upload_file = upload_dir.add_files();
+    proto::Digest *file_digest = upload_file->mutable_digest();
+
+    const int file_size = 135;
+    const std::string file_hash =
+        "73eb9e7f296ec5273ea74ac888dd8d1b45850a7510c0de1e83809901e585b1f5";
+
+    file_digest->set_hash(file_hash);
+    file_digest->set_size_bytes(file_size);
+    upload_file->set_name("hello.cpp");
+    upload_file->set_is_executable(false);
+
+    // convert proto directory to string
+    std::string serialized_dir;
+    upload_dir.SerializeToString(&serialized_dir);
+    std::string serialized_file;
+    upload_file->SerializeToString(&serialized_file);
+
+    // mock objects for fetch blobs
+    auto reader = new grpc::testing::MockClientReader<
+        google::bytestream::ReadResponse>();
+
+    auto file_reader = new grpc::testing::MockClientReader<
+        google::bytestream::ReadResponse>();
+
+    google::bytestream::ReadResponse response;
+    response.set_data(serialized_dir);
+
+    google::bytestream::ReadResponse file_response;
+    file_response.set_data(serialized_file);
+
+    // both fetch blobs calls will hit same stub
+    EXPECT_CALL(*byteStreamStub, ReadRaw(_, _))
+        .WillOnce(Return(reader))
+        .WillOnce(Return(file_reader));
+
+    // return serial proto directory
+    EXPECT_CALL(*reader, Read(_))
+        .WillOnce(DoAll(SetArgPointee<0>(response), Return(true)))
+        .WillOnce(Return(false));
+    EXPECT_CALL(*reader, Finish()).WillOnce(Return(grpc::Status::OK));
+
+    // return serialized file, but set failed status
+    grpc::Status status(grpc::StatusCode::NOT_FOUND, "Blob not found");
+    EXPECT_CALL(*file_reader, Read(_))
+        .WillOnce(DoAll(SetArgPointee<0>(file_response), Return(true)))
+        .WillOnce(Return(false));
+    EXPECT_CALL(*file_reader, Finish()).WillOnce(Return(status));
+
+    std::vector<std::string> missing;
+    cas.download_directory(directoryDigest,
+                           get_current_working_directory().c_str(), &missing);
+
+    const std::string expected_missing =
+        "blobs/" + file_hash + "/" + std::to_string(file_size);
+    EXPECT_EQ(missing.size(), 1);
+    EXPECT_EQ(missing[0], expected_missing);
 }

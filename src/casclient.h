@@ -17,6 +17,7 @@
 
 #include <protos.h>
 
+#include <exception>
 #include <google/bytestream/bytestream.grpc.pb.h>
 #include <grpcpp/channel.h>
 #include <memory>
@@ -28,6 +29,25 @@ namespace BloombergLP {
 namespace recc {
 
 typedef std::shared_ptr<grpc::Channel> channel_ref;
+
+class PreconditionFail : public std::exception {
+  private:
+    std::vector<std::string> d_missingFiles;
+
+  public:
+    PreconditionFail(std::vector<std::string> missingFileList)
+    {
+        this->d_missingFiles = missingFileList;
+    }
+    const char *what() const throw()
+    {
+        return "Precondition Failed: Blobs Not Found";
+    }
+    const std::vector<std::string> &get_missing_files() const
+    {
+        return this->d_missingFiles;
+    }
+};
 
 class CASClient {
   private:
@@ -99,8 +119,17 @@ class CASClient {
      *
      * The digest must correspond to a Directory message, and the path must be
      * a directory that already exists.
+     *
+     * pointer to the string vector 'missing' is passed in. If fetch_blob is
+     * unable to find a file digest declared in the directory digest, it will
+     * add that file's info into missing
+     *
+     * Pass in an empty vector of strings, if the vector is no longer empty
+     * after the function call, it is recommended to throw a failed
+     * precondition error.
      */
-    void download_directory(proto::Digest digest, const char *path);
+    void download_directory(proto::Digest digest, const char *path,
+                            std::vector<std::string> *missing);
 };
 } // namespace recc
 } // namespace BloombergLP
