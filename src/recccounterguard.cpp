@@ -18,7 +18,6 @@
 #include <recccounterguard.h>
 #include <sstream>
 
-
 namespace BloombergLP {
 namespace recc {
 

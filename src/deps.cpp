@@ -30,7 +30,6 @@
 #include <system_error>
 #include <unistd.h>
 
-
 namespace BloombergLP {
 namespace recc {
 
