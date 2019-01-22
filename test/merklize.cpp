@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <merklize.h>
 #include <fileutils.h>
 #include <gtest/gtest.h>
+#include <merklize.h>
 
 using namespace BloombergLP::recc;
 

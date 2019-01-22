@@ -21,7 +21,6 @@
 #include <map>
 #include <utility>
 
-
 namespace BloombergLP {
 namespace recc {
 
