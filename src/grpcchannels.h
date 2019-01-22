@@ -18,23 +18,26 @@ class GrpcChannels {
   public:
     typedef std::shared_ptr<grpc::Channel> ChannelPtr;
 
-    GrpcChannels(const ChannelPtr &server, const ChannelPtr &cas)
-        : d_server(server), d_cas(cas)
-    {
-    }
-
-    ChannelPtr server() { return d_server; }
-    ChannelPtr cas() { return d_cas; }
-
-  private:
-    std::shared_ptr<grpc::Channel> d_server;
-    std::shared_ptr<grpc::Channel> d_cas;
-
-  public:
     /**
      * builds appropriate channels from environment
      * variables. Will return a channel for cas, and
      * a channel for the build server.
      */
     static GrpcChannels get_channels_from_config();
+
+    ChannelPtr server() { return d_server; }
+    ChannelPtr cas() { return d_cas; }
+
+  private:
+    /*
+     * Left private as this object should be constructed using
+     * 'get_channels_from_config'.
+     */
+    GrpcChannels(const ChannelPtr &server, const ChannelPtr &cas)
+        : d_server(server), d_cas(cas)
+    {
+    }
+
+    ChannelPtr d_server;
+    ChannelPtr d_cas;
 };
