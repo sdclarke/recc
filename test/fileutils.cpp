@@ -355,6 +355,21 @@ TEST(FileUtilsTest, ParentDirectoryLevels)
 
 TEST(FileUtilsTest, LastNSegments)
 {
+    EXPECT_EQ(last_n_segments("abc", 0), "");
+    EXPECT_EQ(last_n_segments("abc", 1), "abc");
+    EXPECT_ANY_THROW(last_n_segments("abc", 2));
+    EXPECT_ANY_THROW(last_n_segments("abc", 3));
+
+    EXPECT_EQ(last_n_segments("/abc", 0), "");
+    EXPECT_EQ(last_n_segments("/abc", 1), "abc");
+    EXPECT_ANY_THROW(last_n_segments("/abc", 2));
+    EXPECT_ANY_THROW(last_n_segments("/abc", 3));
+
+    EXPECT_EQ(last_n_segments("/a/bc", 0), "");
+    EXPECT_EQ(last_n_segments("/a/bc", 1), "bc");
+    EXPECT_EQ(last_n_segments("/a/bc", 2), "a/bc");
+    EXPECT_ANY_THROW(last_n_segments("/a/bc", 3));
+
     EXPECT_EQ(last_n_segments("/a/bb/c/dd/e", 0), "");
     EXPECT_EQ(last_n_segments("/a/bb/c/dd/e", 1), "e");
     EXPECT_EQ(last_n_segments("/a/bb/c/dd/e", 2), "dd/e");

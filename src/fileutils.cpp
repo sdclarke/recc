@@ -330,6 +330,10 @@ std::string last_n_segments(const char *path, int n)
         substringStart--;
         substringLength++;
     }
+    // The path might only be one segment (no slashes)
+    if (slashesSeen == 0 && n == 1) {
+        return std::string(path, pathLength);
+    }
     throw std::logic_error("Not enough segments in path");
 }
 
