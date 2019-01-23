@@ -69,7 +69,7 @@ SubprocessResult execute(std::vector<std::string> command, bool pipeStdOut,
         }
         if (cwd != nullptr) {
             if (chdir(cwd) == -1) {
-                RECC_LOG_PERROR(nullptr);
+                RECC_LOG_PERROR(cwd);
                 _Exit(1);
             }
         }
