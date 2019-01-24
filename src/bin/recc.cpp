@@ -21,7 +21,7 @@
 #include <deps.h>
 #include <env.h>
 #include <fileutils.h>
-#include <grpcchannel.h>
+#include <grpcchannels.h>
 #include <logging.h>
 #include <merklize.h>
 #include <reccdefaults.h>
@@ -153,10 +153,9 @@ int main(int argc, char *argv[])
 
     int rc = -1;
     try {
-        grpcChannels returnChannels = get_channels_from_config();
-        auto serverChannel = returnChannels.server;
-        auto casChannel = returnChannels.cas;
-        RemoteExecutionClient client(serverChannel, casChannel, RECC_INSTANCE);
+        GrpcChannels returnChannels = GrpcChannels::get_channels_from_config();
+        RemoteExecutionClient client(returnChannels.server(),
+                                     returnChannels.cas(), RECC_INSTANCE);
         RECC_LOG_VERBOSE("Uploading resources...");
         client.upload_resources(blobs, filenames);
         RECC_LOG_VERBOSE("Executing action...");
