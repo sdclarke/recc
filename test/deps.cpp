@@ -50,6 +50,18 @@ TEST(DepsTest, SimpleInclude)
     EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
 }
 
+TEST(DepsTest, SimpleIncludeGlobal)
+{
+    RECC_DEPS_GLOBAL_PATHS = 1;
+    parse_config_variables();
+    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
+                             "includes_empty.c"};
+    std::set<std::string> expected = {"/usr/include/stdc-predef.h",
+                                      "includes_empty.c", "empty.h"};
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
+    RECC_DEPS_GLOBAL_PATHS = 0;
+}
+
 TEST(DepsTest, RecursiveDependency)
 {
     parse_config_variables();
@@ -115,6 +127,17 @@ TEST(DepsTest, Subdirectory)
     parse_config_variables();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "-Isubdirectory", "includes_from_subdirectory.c"};
+    std::set<std::string> expected = {"includes_from_subdirectory.c",
+                                      "subdirectory/header.h"};
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
+}
+
+TEST(DepsTest, SystemSubdirectory)
+{
+    parse_config_variables();
+    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
+                             "-isystemsubdirectory",
+                             "includes_from_subdirectory.c"};
     std::set<std::string> expected = {"includes_from_subdirectory.c",
                                       "subdirectory/header.h"};
     EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));

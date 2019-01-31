@@ -61,6 +61,12 @@ extern std::string RECC_DEPS_DIRECTORY_OVERRIDE;
 extern std::string RECC_PROJECT_ROOT;
 
 /**
+ * If set, recc will report all entries returned by the dependency command
+ * even if they are absolute paths.
+ */
+extern bool RECC_DEPS_GLOBAL_PATHS;
+
+/**
  * The location to store temporary files. (Currently used only by the worker.)
  */
 extern std::string TMPDIR;

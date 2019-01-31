@@ -107,7 +107,7 @@ CommandFileInfo get_file_info(ParsedCommand parsedCommand)
     }
     result.d_dependencies = dependencies_from_make_rules(
         subprocessResult.d_stdOut, parsedCommand.produces_sun_make_rules(),
-        false);
+        RECC_DEPS_GLOBAL_PATHS);
     std::set<std::string> products;
     if (parsedCommand.get_products().size() > 0) {
         products = parsedCommand.get_products();
