@@ -104,7 +104,7 @@ TEST(GccTest, SimpleCommand)
     ParsedCommand command = {"gcc", "-c", "hello.c"};
     std::vector<std::string> expectedCommand = {"gcc", "-c", "hello.c"};
     std::vector<std::string> expectedDepsCommand = {"gcc", "-c", "hello.c",
-                                                    "-MM"};
+                                                    "-M"};
     std::set<std::string> expectedProducts = {};
 
     ASSERT_TRUE(command.is_compiler_command());
@@ -120,7 +120,7 @@ TEST(GccTest, OutputArgument)
     std::vector<std::string> expectedCommand = {"gcc", "-c", "hello.c", "-o",
                                                 "hello.o"};
     std::vector<std::string> expectedDepsCommand = {"gcc", "-c", "hello.c",
-                                                    "-MM"};
+                                                    "-M"};
     std::set<std::string> expectedProducts = {"hello.o"};
 
     ASSERT_TRUE(command.is_compiler_command());
@@ -136,7 +136,7 @@ TEST(GccTest, OutputArgumentNoSpace)
     std::vector<std::string> expectedCommand = {"gcc", "-c", "-ohello.o",
                                                 "hello.c"};
     std::vector<std::string> expectedDepsCommand = {"gcc", "-c", "hello.c",
-                                                    "-MM"};
+                                                    "-M"};
     std::set<std::string> expectedProducts = {"hello.o"};
 
     ASSERT_TRUE(command.is_compiler_command());
@@ -152,7 +152,7 @@ TEST(GccTest, PreprocessorArguments)
                              "-MMD",     "hello.c", "-Wp,hello.d,-MV,-valid",
                              "-ohello.o"};
     std::vector<std::string> expectedDepsCommand = {
-        "gcc", "-c", "hello.c", "-Xpreprocessor", "-valid", "-MM"};
+        "gcc", "-c", "hello.c", "-Xpreprocessor", "-valid", "-M"};
     std::set<std::string> expectedProducts = {"hello.o", "hello.d"};
 
     ASSERT_TRUE(command.is_compiler_command());
@@ -178,7 +178,7 @@ TEST(SolarisCCTest, OutputArgument)
     std::vector<std::string> expectedCommand = {"CC", "-c", "hello.c", "-o",
                                                 "hello.o"};
     std::vector<std::string> expectedDepsCommand = {"CC", "-c", "hello.c",
-                                                    "-xM1"};
+                                                    "-xM"};
     std::set<std::string> expectedProducts = {"hello.o"};
 
     ASSERT_TRUE(command.is_compiler_command());
@@ -222,7 +222,7 @@ TEST(RewriteAbsolutePathsTest, SimpleCompileCommand)
     const std::vector<std::string> expectedCommand = {"gcc", "-c", "hello.c",
                                                       "-o", "hello.o"};
     const std::vector<std::string> expectedDepsCommand = {"gcc", "-c",
-                                                          "hello.c", "-MM"};
+                                                          "hello.c", "-M"};
     const std::set<std::string> expectedProducts = {"hello.o"};
 
     ASSERT_TRUE(parsedCommand.is_compiler_command());
@@ -282,7 +282,7 @@ TEST(RewriteAbsolutePathsTest, ComplexOptions)
         "-I",
         "-Xpreprocessor",
         "/usr/include/something",
-        "-MM"};
+        "-M"};
     const std::set<std::string> expectedProducts = {"hello.o"};
 
     ASSERT_TRUE(parsedCommand.is_compiler_command());

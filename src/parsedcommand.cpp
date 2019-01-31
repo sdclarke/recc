@@ -236,7 +236,7 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
             }
         }
 
-        depsCommand->push_back("-MM");
+        depsCommand->push_back("-M");
         return isCompileCommand;
     }},
     {{"gcc-preprocessor"}, COMMAND_PARSER_LAMBDA {
@@ -280,7 +280,7 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
         EQUALS_OPTION_UNSUPPORTED("-xprofile")
         OPTION_UNSUPPORTED("-###")
         OPTIONS_END()
-        depsCommand->push_back("-xM1");
+        depsCommand->push_back("-xM");
         *producesSunMakeRules = true;
         return isCompileCommand;
     }},
