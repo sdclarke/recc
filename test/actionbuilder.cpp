@@ -30,6 +30,14 @@ class ActionBuilderTestFixture : public ::testing::Test {
     ActionBuilderTestFixture() : cwd(get_current_working_directory()) {}
 };
 
+// This is a representation of a flat merkle tree, where things are stored in
+// the required order of traversal.
+typedef std::vector<std::unordered_map<std::string, std::vector<std::string>>>
+    MerkleTree;
+typedef std::vector<
+    std::unordered_map<std::string, std::vector<std::string>>>::iterator
+    MerkleTreeItr;
+
 void fail_to_build_action(const std::vector<std::string> &recc_args)
 {
     std::stringstream ss;
@@ -37,6 +45,47 @@ void fail_to_build_action(const std::vector<std::string> &recc_args)
         ss << arg << " ";
     }
     FAIL() << "Test was unable to build action for '" << ss.str() << "'";
+}
+
+// Recursively verify that a merkle tree matches an expected input layout.
+// This doesn't look at the hashes, just that the declared layout matches
+void verify_merkle_tree(proto::Digest digest, MerkleTreeItr expected,
+                        MerkleTreeItr end,
+                        std::unordered_map<proto::Digest, std::string> blobs)
+{
+    ASSERT_NE(expected, end) << "Reached end of expected output early";
+    proto::Directory directory;
+    auto current_blob = blobs.find(digest);
+    ASSERT_NE(current_blob, blobs.end())
+        << "No blob found for digest " << digest.hash();
+
+    directory.ParseFromString(current_blob->second);
+
+    // Exit early if there are more/less files or dirs in the given tree than
+    // expected
+    ASSERT_EQ(directory.files().size(), (*expected)["files"].size())
+        << "Wrong number of files at current level";
+    ASSERT_EQ(directory.directories().size(),
+              (*expected)["directories"].size())
+        << "Wrong number of directories at current level";
+
+    int f_index = 0;
+    for (auto &file : directory.files()) {
+        ASSERT_EQ(file.name(), (*expected)["files"][f_index])
+            << "Wrong file found";
+        f_index++;
+    }
+    int d_index = 0;
+    for (auto &subdirectory : directory.directories()) {
+        ASSERT_EQ(subdirectory.name(), (*expected)["directories"][d_index])
+            << "Wrong directory found";
+        d_index++;
+    }
+    // All the files/directories at this level are correct, now check all the
+    // subdirectories
+    for (auto &subdirectory : directory.directories()) {
+        verify_merkle_tree(subdirectory.digest(), ++expected, end, blobs);
+    }
 }
 
 /**
@@ -120,6 +169,73 @@ TEST_F(ActionBuilderTestFixture, NonCompileCommandForceRemote)
         digest.hash());
 
     RECC_FORCE_REMOTE = previousReccForceRemote;
+}
+
+/**
+ * Make sure an absolute file dependencies are represented properly. Do this by
+ * using RECC_DEPS_OVERRIDE to return a deterministic set of dependencies.
+ * Otherwise things are platform dependant
+ */
+TEST_F(ActionBuilderTestFixture, AbsolutePathActionBuilt)
+{
+    auto prev_deps_override = RECC_DEPS_OVERRIDE;
+    auto prev_deps_global = RECC_DEPS_GLOBAL_PATHS;
+    RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "hello.cpp"};
+    RECC_DEPS_GLOBAL_PATHS = 1;
+    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                          "hello.o"};
+    ParsedCommand command(recc_args, cwd.c_str());
+    auto actionPtr =
+        ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
+
+    // Since this test unfortunately relies on the hash of a system installed
+    // file, it can't compare the input root digest. Instead go through the
+    // merkle tree and verify each level has the correct layout.
+
+    auto current_digest = actionPtr->input_root_digest();
+    MerkleTree expected_tree = {
+        {{"files", {"hello.cpp"}}, {"directories", {"usr"}}},
+        {{"directories", {"include"}}},
+        {{"files", {"ctype.h"}}}};
+    verify_merkle_tree(current_digest, expected_tree.begin(),
+                       expected_tree.end(), blobs);
+
+    RECC_DEPS_OVERRIDE = prev_deps_override;
+    RECC_DEPS_GLOBAL_PATHS = prev_deps_global;
+}
+
+/**
+ * Test to make sure that paths with .. are properly resolved using
+ * information from the current directory, and that it doesn't cause
+ * issues with absolute paths
+ */
+TEST_F(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
+{
+    auto prev_deps_override = RECC_DEPS_OVERRIDE;
+    auto prev_deps_global = RECC_DEPS_GLOBAL_PATHS;
+
+    cwd = get_current_working_directory();
+    RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
+                          "hello.cpp"};
+    RECC_DEPS_GLOBAL_PATHS = 1;
+    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                          "hello.o"};
+    ParsedCommand command(recc_args, cwd.c_str());
+    auto actionPtr =
+        ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
+
+    auto current_digest = actionPtr->input_root_digest();
+    MerkleTree expected_tree = {
+        {{"directories", {"actionbuilder", "deps", "usr"}}},
+        {{"files", {"hello.cpp"}}},
+        {{"files", {"empty.c"}}},
+        {{"directories", {"include"}}},
+        {{"files", {"ctype.h"}}}};
+    verify_merkle_tree(current_digest, expected_tree.begin(),
+                       expected_tree.end(), blobs);
+
+    RECC_DEPS_OVERRIDE = prev_deps_override;
+    RECC_DEPS_GLOBAL_PATHS = prev_deps_global;
 }
 
 /**
