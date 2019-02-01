@@ -27,10 +27,12 @@
 #include <google/longrunning/operations.pb.h>
 #include <google/rpc/code.pb.h>
 #include <google/rpc/status.pb.h>
+#include <reccauth/auth.pb.h>
 
 namespace BloombergLP {
 namespace recc {
 namespace proto {
+using namespace reccauth;
 using namespace build::bazel::remote::execution::v2;
 using namespace google::longrunning;
 using namespace google::devtools::remoteworkers::v1test2;

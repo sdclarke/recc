@@ -1,5 +1,6 @@
 set(PROTO_GEN_PATH ${CMAKE_CURRENT_BINARY_DIR}/gens)
-set(PROTO_PATH ${CMAKE_CURRENT_SOURCE_DIR}/third_party/googleapis)
+set(PROTO_PATH_THIRD_PARTY ${CMAKE_CURRENT_SOURCE_DIR}/protos/third_party/googleapis)
+set(PROTO_PATH_INTERNAL ${CMAKE_CURRENT_SOURCE_DIR}/protos)
 set(protos google/api/http google/api/annotations
            google/rpc/code google/rpc/status
            google/longrunning/operations google/bytestream/bytestream
@@ -20,8 +21,12 @@ foreach(proto ${protos})
     list(APPEND grpc_srcs "${PROTO_GEN_PATH}/${proto}.grpc.pb.cc")
     list(APPEND grpc_headers "${PROTO_GEN_PATH}/${proto}.grpc.pb.h")
     list(APPEND grpc_mock_headers "${PROTO_GEN_PATH}/${proto}_mock.grpc.pb.h")
-    list(APPEND proto_files "${PROTO_PATH}/${proto}.proto")
+    list(APPEND proto_files "${PROTO_PATH_THIRD_PARTY}/${proto}.proto")
 endforeach(proto)
+
+set(proto_auth_src "${PROTO_GEN_PATH}/reccauth/auth.pb.cc")
+set(proto_auth_header "${PROTO_GEN_PATH}/reccauth/auth.pb.h")
+set(proto_auth_file "${PROTO_PATH_INTERNAL}/reccauth/auth.proto")
 
 file(MAKE_DIRECTORY ${PROTO_GEN_PATH})
 add_custom_command(
@@ -29,14 +34,22 @@ add_custom_command(
     COMMAND ${Protobuf_PROTOC_EXECUTABLE}
     ARGS "--grpc_out=generate_mock_code=true:${PROTO_GEN_PATH}"
          --cpp_out "${PROTO_GEN_PATH}"
-         -I "${PROTO_PATH}"
+         -I "${PROTO_PATH_THIRD_PARTY}"
          -I "${PROTOBUF_INCLUDE_DIR}"
          --plugin=protoc-gen-grpc="${GRPC_CPP_PLUGIN}"
          ${proto_files}
     DEPENDS ${proto_files})
- 
 
-add_library(reccproto ${grpc_srcs} ${proto_srcs})
+add_custom_command(
+    OUTPUT ${proto_auth_src} ${proto_auth_header}
+    COMMAND ${Protobuf_PROTOC_EXECUTABLE}
+    ARGS --cpp_out "${PROTO_GEN_PATH}"
+         -I "${PROTO_PATH_INTERNAL}"
+         -I "${PROTOBUF_INCLUDE_DIR}"
+         ${proto_auth_file}
+    DEPENDS ${proto_auth_file})
+
+add_library(reccproto ${grpc_srcs} ${proto_srcs} ${proto_auth_src})
 target_include_directories(reccproto PUBLIC ${PROTO_GEN_PATH})
 target_link_libraries(reccproto ${GRPC_TARGET} ${Protobuf_LIBRARIES})
 

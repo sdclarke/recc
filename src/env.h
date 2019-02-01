@@ -116,6 +116,16 @@ extern int RECC_RETRY_DELAY;
 extern bool RECC_SERVER_SSL;
 
 /**
+ * Use a secure SSL/TLS channel along with JWT authorization
+ */
+extern bool RECC_SERVER_JWT;
+
+/**
+ * File path to JSON file containing JWT access token
+ */
+extern std::string RECC_JWT_JSON_FILE_PATH;
+
+/**
  * The maximum number of execution jobs to run concurrently. (Used only by the
  * worker.)
  */

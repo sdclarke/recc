@@ -12,7 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef INCLUDED_GRPCCHANNELS
+#define INCLUDED_GRPCCHANNELS
+
 #include <grpcpp/security/credentials.h>
+
+namespace BloombergLP {
+namespace recc {
 
 class GrpcChannels {
   public:
@@ -24,6 +30,24 @@ class GrpcChannels {
      * a channel for the build server.
      */
     static GrpcChannels get_channels_from_config();
+
+    /**
+     * Reads JSON object from file path
+     * set by RECC_JWT_JSON_FILE_PATH.
+     * Returns acess_token from the jwt json object
+     */
+    static grpc::string get_jwt_token(const std::string &json_path);
+
+    /**
+     * Different json error cases
+     */
+    enum jwtError { NotExist, BadFormat, MissingAccessTokenField };
+
+    /**
+     * Returns the appropriate error string for a given json error case
+     */
+    static std::string jwt_error(const std::string &json_path,
+                                 const jwtError &type);
 
     ChannelPtr server() { return d_server; }
     ChannelPtr cas() { return d_cas; }
@@ -41,3 +65,8 @@ class GrpcChannels {
     ChannelPtr d_server;
     ChannelPtr d_cas;
 };
+
+} // namespace recc
+} // namespace BloombergLP
+
+#endif
