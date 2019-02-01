@@ -19,6 +19,7 @@
 #include <casclient.h>
 #include <env.h>
 #include <fileutils.h>
+#include <grpcchannels.h>
 #include <logging.h>
 #include <merklize.h>
 #include <protos.h>
@@ -61,6 +62,17 @@ const std::string HELP(
     "RECC_SERVER_AUTH_GOOGLEAPI - use default google authentication when\n"
     "                             communicating over gRPC, instead of\n"
     "                             using an insecure connection\n"
+    "\n"
+    "RECC_SERVER_SSL - use a secure SSL/TLS channel when communicating over\n"
+    "                  grpc\n"
+    "\n"
+    "RECC_SERVER_JWT - use a secure SSL/TLS channel, and authenticate with "
+    "JWT\n"
+    "                  when communicating with the execution and cas servers\n"
+    "\n"
+    "RECC_JWT_JSON_FILE_PATH - path specifying location of JWT access token.\n"
+    "                          defaults to " DEFAULT_RECC_JWT_JSON_FILE_PATH
+    " (JSON format expected)\n"
     "\n"
     "RECC_MAX_CONCURRENT_JOBS - number of jobs to run simultaneously\n"
     "\n"
@@ -327,18 +339,8 @@ int main(int argc, char *argv[])
     }
 
     RECC_LOG_VERBOSE("Starting build worker with bot_id=[" + bot_id + "]");
-
-    std::shared_ptr<grpc::ChannelCredentials> creds;
-    if (RECC_SERVER_AUTH_GOOGLEAPI) {
-        creds = grpc::GoogleDefaultCredentials();
-    }
-    else {
-        creds = grpc::InsecureChannelCredentials();
-    }
-
-    auto channel = grpc::CreateChannel(RECC_SERVER, creds);
-    auto casChannel = grpc::CreateChannel(RECC_CAS_SERVER, creds);
-    auto stub = proto::Bots::NewStub(channel);
+    GrpcChannels returnChannels = GrpcChannels::get_channels_from_config();
+    auto stub = proto::Bots::NewStub(returnChannels.server());
 
     proto::BotSession session;
     session.set_bot_id(bot_id);
@@ -426,7 +428,7 @@ int main(int argc, char *argv[])
                 if (activeJobs.count(lease.id()) == 0) {
                     auto thread = std::thread(
                         worker_thread, &session, &activeJobs, &sessionMutex,
-                        &sessionCondition, casChannel, lease.id());
+                        &sessionCondition, returnChannels.cas(), lease.id());
                     thread.detach();
                     // (the thread will remove its job from activeJobs when
                     // it's done)

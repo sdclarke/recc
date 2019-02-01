@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdlib>
 #include <exception>
 #include <sys/stat.h>
 
@@ -385,4 +386,47 @@ TEST(FileUtilsTest, LastNSegments)
     EXPECT_EQ(last_n_segments("/a/bb/c/dd/e/", 4), "bb/c/dd/e");
     EXPECT_EQ(last_n_segments("/a/bb/c/dd/e/", 5), "a/bb/c/dd/e");
     EXPECT_ANY_THROW(last_n_segments("/a/bb/c/dd/e/", 6));
+}
+
+TEST(FileUtilsTest, JoinNormalizePath)
+{
+    const std::string base = "base/";
+    const std::string extension = "/extension";
+    const std::string proper = "base/extension";
+    const int bLast = base.size() - 1;
+
+    // Both base & extension have slashes
+    EXPECT_EQ(join_normalize_path(base, extension), proper);
+    // neither have slashes
+    EXPECT_EQ(join_normalize_path(base.substr(0, bLast), extension.substr(1)),
+              proper);
+    // only base has slash
+    EXPECT_EQ(join_normalize_path(base, extension.substr(1)), proper);
+    // only extension has slash
+    EXPECT_EQ(join_normalize_path(base.substr(0, bLast), extension), proper);
+    // extension empty, should just normalize base
+    EXPECT_EQ(join_normalize_path(base, ""), base.substr(0, bLast));
+    // base empty, should just normalize extension
+    EXPECT_EQ(join_normalize_path("", extension), extension);
+    // both empty, should return empty string
+    EXPECT_EQ(join_normalize_path("", ""), "");
+}
+
+TEST(FileUtilsTest, ExpandPath)
+{
+    const std::string home = getenv("HOME");
+    const std::string newHome = "tmp";
+    setenv("HOME", newHome.c_str(), true);
+
+    EXPECT_EQ(expand_path("~/"), newHome);
+    EXPECT_EQ(expand_path("~/fake_file"), newHome + "/fake_file");
+    EXPECT_EQ(expand_path("fake_dir/fake_file"), "fake_dir/fake_file");
+
+    setenv("HOME", "", true);
+    ASSERT_THROW(expand_path("~/"), std::runtime_error);
+    EXPECT_EQ(expand_path("fake_dir/fake_file"), "fake_dir/fake_file");
+    EXPECT_EQ(expand_path(""), "");
+    // make sure $HOME is reset so other tests don't break
+    setenv("HOME", home.c_str(), true);
+    EXPECT_EQ(getenv("HOME"), home);
 }

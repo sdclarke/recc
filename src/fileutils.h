@@ -102,6 +102,25 @@ std::string make_path_absolute(const std::string &path,
                                const std::string &cwd);
 
 /**
+ * Joins two paths, and removes an extraneous slash or adds one if needed
+ * Calls normalize_path on concatenated path, removing trailing slashes
+ *
+ * base can be an absolute or relative path. Extension should be a path
+ * ending s.t path+base make a proper path. This function only properly
+ * concatenates two paths and normalizes the result. It does not check if the
+ * resulting path exists.
+ */
+std::string join_normalize_path(const std::string &base,
+                                const std::string &extension);
+
+/**
+ * Expand the ~ to home directory and normalizes If the path begins with ~.
+ * Throws an error if path[0] == ~ and $HOME not set. Just Normalizes path
+ * if it doesn't begin with ~.
+ */
+std::string expand_path(const std::string &path);
+
+/**
  * Return the current working directory.
  *
  * If the current working directory cannot be determined (if the user does not

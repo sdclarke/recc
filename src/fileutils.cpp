@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <sstream>
 #include <stdexcept>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -259,6 +260,49 @@ std::string make_path_absolute(const std::string &path, const std::string &cwd)
         normalizedPath.push_back('/');
     }
     return normalizedPath;
+}
+
+std::string join_normalize_path(const std::string &base,
+                                const std::string &extension)
+{
+    std::ostringstream catPath;
+    catPath << base;
+    const char SLASH = '/';
+    const bool extStartSlash = (extension.front() == SLASH);
+    const bool baseEndSlash = (base.back() == SLASH);
+
+    // "/a/" + "b" -> nothing
+    // "/a" + "b" -> << add "/"
+    // "/a/" + "/b"-> << remove "/"
+    // "/a" + "/b" ->  nothing
+    size_t index = 0;
+    // add slash if neither base nor extension have slash
+    if (!base.empty() && !baseEndSlash && !extStartSlash)
+        catPath << SLASH;
+    // remove slash if both base and extension have slash
+    else if (!extension.empty() && baseEndSlash && extStartSlash)
+        index = 1;
+
+    catPath << extension.substr(index);
+    std::string catPathStr = catPath.str();
+    return normalize_path(catPathStr.c_str());
+}
+
+std::string expand_path(const std::string &path)
+{
+    std::string home = "";
+    std::string newPath = path;
+    if (!path.empty() && path[0] == '~') {
+        home = getenv("HOME");
+        if (home.c_str() == nullptr or home[0] == '\0') {
+            std::ostringstream errorMsg;
+            errorMsg << "Could not expand path: " << path << " $HOME not set";
+            throw std::runtime_error(errorMsg.str());
+        }
+        newPath = path.substr(1);
+    }
+    std::string expandPath = join_normalize_path(home, newPath);
+    return expandPath;
 }
 
 std::string get_current_working_directory()
