@@ -72,7 +72,15 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
         }
         commandWorkingDirectory = last_n_segments(cwd.c_str(), parentsNeeded);
         for (const auto &dep : deps) {
-            std::string merklePath = commandWorkingDirectory + "/" + dep;
+            // If the dependency is an absolute path, leave
+            // the merkePath untouched
+            std::string merklePath;
+            if (dep[0] == '/') {
+                merklePath = dep;
+            }
+            else {
+                merklePath = commandWorkingDirectory + "/" + dep;
+            }
             merklePath = normalize_path(merklePath.c_str());
             File file(dep.c_str());
             nestedDirectory.add(file, merklePath.c_str());

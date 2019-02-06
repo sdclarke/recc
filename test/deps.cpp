@@ -120,6 +120,20 @@ TEST(DepsTest, Subdirectory)
     EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
 }
 
+TEST(DepsTest, SystemSubdirectory)
+{
+    if (command_basename(RECC_PLATFORM_COMPILER) == "gcc") {
+        parse_config_variables();
+        ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
+                                 "-isystemsubdirectory",
+                                 "includes_from_subdirectory.c"};
+        std::set<std::string> expected = {"includes_from_subdirectory.c",
+                                          "subdirectory/header.h"};
+        EXPECT_EQ(expected,
+                  normalize_all(get_file_info(command).d_dependencies));
+    }
+}
+
 TEST(DepsTest, InputInSubdirectory)
 {
     parse_config_variables();
@@ -137,6 +151,16 @@ TEST(DepsTest, SubprocessFailure)
     EXPECT_THROW(get_file_info(command), subprocess_failed_error);
 }
 
+TEST(DepsTest, GlobalPathsAllowed)
+{
+    parse_config_variables();
+    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "ctype_include.c"};
+    std::set<std::string> expected = {"ctype_include.c"};
+    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
+
+    RECC_DEPS_GLOBAL_PATHS = 1;
+    EXPECT_NE(expected, normalize_all(get_file_info(command).d_dependencies));
+}
 TEST(ProductsTest, OutputArgument)
 {
     parse_config_variables();
