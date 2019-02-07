@@ -3,6 +3,7 @@ include_directories(.)
 set(SRCS
     actionbuilder.cpp
     casclient.cpp
+    commandlineutils.cpp
     deps.cpp
     env.cpp
     fileutils.cpp
