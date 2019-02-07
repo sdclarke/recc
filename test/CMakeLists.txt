@@ -91,3 +91,9 @@ target_link_libraries(grpcchannels_tests ${GTEST_TARGET} remoteexecution)
 add_test(NAME grpcchannels_tests
          COMMAND grpcchannels_tests
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/grpcchannels)
+
+add_executable(commandlineutils_tests commandlineutils.cpp main.cpp)
+target_link_libraries(commandlineutils_tests ${GMOCK_TARGET} ${GTEST_TARGET} remoteexecution)
+add_test(NAME commandlineutils_tests COMMAND commandlineutils_tests)
+
+

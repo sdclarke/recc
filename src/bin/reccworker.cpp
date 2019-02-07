@@ -17,6 +17,7 @@
 // Runs a build worker.
 
 #include <casclient.h>
+#include <commandlineutils.h>
 #include <env.h>
 #include <fileutils.h>
 #include <grpcchannels.h>
@@ -113,10 +114,13 @@ proto::ActionResult execute_action(proto::Action action, CASClient &casClient)
     // Fetch command from CAS and read it
     const auto commandProto =
         casClient.fetch_message<proto::Command>(action.command_digest());
-    std::vector<std::string> command;
-    for (auto &arg : commandProto.arguments()) {
-        command.push_back(arg);
-    }
+
+    std::vector<std::string> command(commandProto.arguments().begin(),
+                                     commandProto.arguments().end());
+
+    command = CommandLineUtils::prepend_absolute_paths_in_compile_command(
+        command, pathPrefix);
+
     std::map<std::string, std::string> env;
     for (auto &envVar : commandProto.environment_variables()) {
         env[envVar.name()] = envVar.value();
