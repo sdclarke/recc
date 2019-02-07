@@ -55,6 +55,12 @@ test_cover:
     paths:
       - public # name GitLab uses for Pages feature
 
+# Check C++ code formatting using clang-format
+# Since the GitLab CI API doesn't currently provide an MR Commit SHA so that we can
+# run all the files modified in the current MR (Single Commit is doable) we just
+# run clang-format on all the C++ files and if any have been modified we know
+# that there must have been a formatting error.
+# NOTE: This only runs for files under ./src and ./test with c,cc,cpp,cxx,h extensions
 check_formatting:
     image: ubuntu:bionic
     stage: build
@@ -64,9 +70,16 @@ check_formatting:
         - echo `which clang-format-6.0`
         - ln -s `which clang-format-6.0` /usr/bin/clang-format
         - cd "$CI_PROJECT_DIR"
-        - linter_errors=$(git-clang-format-6.0 --commit "HEAD~1" -q --diff --style file | grep -v --color=never "no modified files to format" || true)
-        - echo "$linter_errors"
-        - if [ ! -z "$linter_errors" ]; then echo "Detected formatting issues; please fix"; exit 1; else echo "Formatting is correct"; exit 0; fi
+        - find ./src ./test -type f -regex ".*\.\(c\|cc\|cpp\|cxx\|h\)" -exec clang-format -i "{}" \;
+        - modifiedFiles=$(git ls-files -m)
+        - modifiedFilesWC=$(wc -w <<< "$modifiedFiles")
+        - if [ "$modifiedFilesWC" == "0" ]; then echo "Formatting is correct"; exit 0; fi
+        - echo "Detected formatting issues in the following files"
+        - echo "$modifiedFiles"
+        - echo "diff after running clang-format"
+        - git diff
+        - echo "Please fix them!"
+        - exit 1
 
 e2e:
     stage: test
