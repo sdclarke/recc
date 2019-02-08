@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.6)
 project(recc CXX)
 
 set(CMAKE_CXX_STANDARD 11)
-set(BUILD_SHARED_LIBS off)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # gcc on AIX can't deal with -isystem that contains C++ .h files
@@ -24,17 +23,15 @@ find_package(OpenSSL REQUIRED)
 find_package(Protobuf REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIRS})
 
-find_package(PkgConfig)
-if(PKG_CONFIG_FOUND)
-    pkg_check_modules(gRPC REQUIRED IMPORTED_TARGET grpc++)
-endif()
+find_package(gRPC)
 if(gRPC_FOUND)
-    set(GRPC_TARGET PkgConfig::gRPC)
-    find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
-else()
-    find_package(gRPC REQUIRED)
     set(GRPC_TARGET gRPC::grpc++)
     set(GRPC_CPP_PLUGIN $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
+else()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(gRPC REQUIRED IMPORTED_TARGET grpc++)
+    set(GRPC_TARGET PkgConfig::gRPC)
+    find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
 endif()
 
 # define CMAKE_INSTALL_DIR

@@ -17,12 +17,8 @@ set(SRCS
     subprocess.cpp
 )
 
-add_library(remoteexecution ${SRCS})
-target_link_libraries(remoteexecution reccproto ${Protobuf_LIBRARIES} ${GRPC_TARGET} OpenSSL::Crypto ${CMAKE_DL_LIBS})
-
-if (PKG_CONFIG_FOUND)
-    target_link_libraries(remoteexecution ${gRPC_STATIC_LDFLAGS})
-endif()
+add_library(remoteexecution STATIC ${SRCS})
+target_link_libraries(remoteexecution reccproto ${Protobuf_LIBRARIES} ${GRPC_TARGET} OpenSSL::Crypto)
 
 if (CMAKE_SYSTEM_NAME MATCHES "SunOS")
     target_link_libraries(remoteexecution socket nsl)
