@@ -172,6 +172,9 @@ bool has_path_prefix(const std::string &path, std::string prefix)
     if (prefix.empty()) {
         return false;
     }
+    if (path == prefix) {
+        return true;
+    }
 
     /*
      * Make sure prefix ends in a slash.
