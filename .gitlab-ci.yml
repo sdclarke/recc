@@ -70,7 +70,7 @@ check_formatting:
         - if [ ! -z "$linter_errors" ]; then echo "Detected formatting issues; please fix"; exit 1; else echo "Formatting is correct"; exit 0; fi
 
 e2e:
-    image: registry.gitlab.com/buildgrid/buildbox/buildbox-e2e:cartr-initial-implementation
+    image: registry.gitlab.com/buildgrid/buildbox/buildbox-e2e:latest
     stage: test
     dependencies: []
     script:
