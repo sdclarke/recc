@@ -50,12 +50,24 @@ proto::ActionResult get_actionresult(Operation operation)
     else if (!operation.response().Is<proto::ExecuteResponse>()) {
         throw std::runtime_error("Server returned invalid Operation result");
     }
+
     proto::ExecuteResponse executeResponse;
     if (!operation.response().UnpackTo(&executeResponse)) {
         throw std::runtime_error("Operation response unpacking failed");
     }
+
     ensure_ok(executeResponse.status());
-    return executeResponse.result();
+
+    const proto::ActionResult actionResult = executeResponse.result();
+    if (actionResult.exit_code() == 0) {
+        RECC_LOG_VERBOSE("Execute response message: " +
+                         executeResponse.message());
+    }
+    else if (!executeResponse.message().empty()) {
+        RECC_LOG("Remote execution message: " + executeResponse.message());
+    }
+
+    return actionResult;
 }
 
 /**
