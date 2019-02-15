@@ -61,6 +61,9 @@ int RECC_RETRY_DELAY = DEFAULT_RECC_RETRY_DELAY;
 int RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
 int RECC_JOBS_COUNT = DEFAULT_RECC_JOBS_COUNT;
 
+// Hidden variables (not displayed in the help string)
+std::string RECC_AUTH_UNCONFIGURED_MSG = DEFAULT_RECC_AUTH_UNCONFIGURED_MSG;
+
 #ifdef CMAKE_INSTALL_DIR
 std::string RECC_INSTALL_DIR = std::string(CMAKE_INSTALL_DIR);
 #else
@@ -196,6 +199,7 @@ void parse_config_variables(const char *const *environ)
         STRVAR(RECC_PROJECT_ROOT)
         STRVAR(TMPDIR)
         STRVAR(RECC_JWT_JSON_FILE_PATH)
+        STRVAR(RECC_AUTH_UNCONFIGURED_MSG)
 
         BOOLVAR(RECC_VERBOSE)
         BOOLVAR(RECC_FORCE_REMOTE)
@@ -252,6 +256,12 @@ void handle_special_defaults(Source file)
                          "specified."
                          << "Using the same as RECC_SERVER ("
                          << RECC_CAS_SERVER << ")");
+    }
+
+    if (!(RECC_SERVER_AUTH_GOOGLEAPI || RECC_SERVER_SSL || RECC_SERVER_JWT)) {
+        if (!RECC_AUTH_UNCONFIGURED_MSG.empty()) {
+            RECC_LOG_WARNING(RECC_AUTH_UNCONFIGURED_MSG);
+        }
     }
 
     /* recc-specific defaults */
