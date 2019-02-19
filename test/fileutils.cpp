@@ -154,6 +154,7 @@ TEST(HasPathPrefixTest, RelativePaths)
     EXPECT_TRUE(has_path_prefix("a/b/c/", "a/b/"));
     EXPECT_TRUE(has_path_prefix("a/b/c", "a/b"));
     EXPECT_TRUE(has_path_prefix("a/b/c", "a/b/"));
+    EXPECT_TRUE(has_path_prefix("/a/b/c", "/a/b/c"));
 
     EXPECT_FALSE(has_path_prefix("a/c/d", "a/b/"));
 
