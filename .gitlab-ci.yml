@@ -56,6 +56,14 @@ test_cover:
     paths:
       - public # name GitLab uses for Pages feature
 
+# Check C++ code formatting using clang-format
+# Since the GitLab CI API doesn't currently provide an MR Commit SHA so that we can
+# run all the files modified in the current MR (Single Commit is doable) we just
+# run clang-format for the diff between "empty tree magic SHA" and the current commit
+# on all the C++ files (by extension: c,cc,cpp,cxx,h)
+# Discussion on the "empty tree magic SHA": https://stackoverflow.com/questions/9765453/
+# NOTE: git-clang-format runs only for files in the directories specified below
+#       due to not having the option to exclude directories like "third_praty".
 check_formatting:
     image: ubuntu:bionic
     stage: build
@@ -65,9 +73,13 @@ check_formatting:
         - echo `which clang-format-6.0`
         - ln -s `which clang-format-6.0` /usr/bin/clang-format
         - cd "$CI_PROJECT_DIR"
-        - linter_errors=$(git-clang-format-6.0 --commit "HEAD~1" -q --diff --style file | grep -v --color=never "no modified files to format" || true)
+        # The directories to check
+        - export CLANG_FORMAT_DIRS="src/ test/"
+        - export CLANG_FORMAT_SINCE_COMMIT="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+        # No quotes around CLANG_FORMAT DIRS to explicitly split
+        - linter_errors=$(git-clang-format-6.0 --commit "$CLANG_FORMAT_SINCE_COMMIT" -q --diff --style file --extensions c,cc,cpp,cxx,h  $CLANG_FORMAT_DIRS| grep -v --color=never "no modified files to format" || true)
         - echo "$linter_errors"
-        - if [ ! -z "$linter_errors" ]; then echo "Detected formatting issues; please fix"; exit 1; else echo "Formatting is correct"; exit 0; fi
+        - if [[ ! -z "$linter_errors" ]]; then echo "Detected formatting issues; please fix"; exit 1; else echo "Formatting is correct"; exit 0; fi
 
 e2e:
     image: registry.gitlab.com/buildgrid/buildbox/buildbox-e2e:latest
