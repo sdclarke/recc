@@ -188,6 +188,8 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
 
         OPTIONS_START()
         OPTION_INTERFERES_WITH_DEPS("-M")
+        OPTION_INTERFERES_WITH_DEPS("-MD")
+        OPTION_INTERFERES_WITH_DEPS("-MMD")
         OPTION_INTERFERES_WITH_DEPS("-MM")
         OPTION_INTERFERES_WITH_DEPS("-MG")
         OPTION_INTERFERES_WITH_DEPS("-MP")
@@ -196,8 +198,6 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
         GCC_OPTION_REDIRECTS_OUTPUT("-MF")
         GCC_OPTION_REDIRECTS_OUTPUT("-MT")
         GCC_OPTION_REDIRECTS_OUTPUT("-MQ")
-        GCC_OPTION_REDIRECTS_OUTPUT("-MD")
-        GCC_OPTION_REDIRECTS_OUTPUT("-MMD")
         GCC_OPTION_IS_INPUT_PATH("-include")
         GCC_OPTION_IS_INPUT_PATH("-imacros")
         GCC_OPTION_IS_INPUT_PATH("-I")
