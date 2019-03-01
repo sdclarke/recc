@@ -13,4 +13,13 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /recc
 COPY . .
-RUN mkdir build && cd build && cmake .. -DGTEST_SOURCE_ROOT=/usr/src/googletest && make -j$(nproc) && make test
+
+# Make sure we are not carrying over the local "build" directory
+RUN rm -fr build || true
+
+RUN mkdir build && cd build && \
+    cmake .. -DGTEST_SOURCE_ROOT=/usr/src/googletest && \
+    make -j$(nproc) && make test
+
+# Extend PATH to include the recc binaries
+ENV PATH "/recc/build/bin:$PATH"
