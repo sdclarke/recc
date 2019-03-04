@@ -36,6 +36,7 @@ namespace recc {
 // specified
 std::string RECC_SERVER = "";
 std::string RECC_CAS_SERVER = "";
+std::string RECC_ACTION_CACHE_SERVER = "";
 
 // Include default values for the following, no need to print warnings if not
 // specified
@@ -195,6 +196,7 @@ void parse_config_variables(const char *const *environ)
         VARS_START()
         STRVAR(RECC_SERVER)
         STRVAR(RECC_CAS_SERVER)
+        STRVAR(RECC_ACTION_CACHE_SERVER)
         STRVAR(RECC_INSTANCE)
         STRVAR(RECC_DEPS_DIRECTORY_OVERRIDE)
         STRVAR(RECC_PROJECT_ROOT)
@@ -258,6 +260,26 @@ void handle_special_defaults(Source file)
                          "specified."
                          << "Using the same as RECC_SERVER ("
                          << RECC_CAS_SERVER << ")");
+
+        if (RECC_ACTION_CACHE_SERVER.empty()) {
+            RECC_ACTION_CACHE_SERVER = RECC_SERVER;
+            /* This is how Bazel defaults */
+            RECC_LOG_VERBOSE(
+                "No RECC_ACTION_CACHE_SERVER environment variable "
+                "specified."
+                << "Using the same as RECC_SERVER (" << RECC_CAS_SERVER
+                << ")");
+        }
+    }
+    else {
+        if (RECC_ACTION_CACHE_SERVER.empty()) {
+            RECC_ACTION_CACHE_SERVER = RECC_CAS_SERVER;
+            RECC_LOG_VERBOSE(
+                "No RECC_ACTION_CACHE_SERVER environment variable "
+                "specified."
+                << "Using the same as RECC_CAS_SERVER (" << RECC_CAS_SERVER
+                << ")");
+        }
     }
 
     if (!(RECC_SERVER_AUTH_GOOGLEAPI || RECC_SERVER_SSL || RECC_SERVER_JWT)) {

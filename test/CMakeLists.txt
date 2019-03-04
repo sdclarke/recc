@@ -43,6 +43,10 @@ add_executable(env_default_cas_test env/env_default_cas.cpp main.cpp)
 target_link_libraries(env_default_cas_test ${GTEST_TARGET} remoteexecution)
 add_test(NAME env_default_cas_test COMMAND env_default_cas_test)
 
+add_executable(env_default_action_cache_test env/env_default_action_cache.cpp main.cpp)
+target_link_libraries(env_default_action_cache_test ${GTEST_TARGET} remoteexecution)
+add_test(NAME env_default_action_cache_test COMMAND env_default_action_cache_test)
+
 add_executable(env_different_cas_test env/env_different_cas.cpp main.cpp)
 target_link_libraries(env_different_cas_test ${GTEST_TARGET} remoteexecution)
 add_test(NAME env_different_cas_test COMMAND env_different_cas_test)
