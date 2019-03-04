@@ -52,7 +52,8 @@ GrpcChannels GrpcChannels::get_channels_from_config()
         creds = grpc::InsecureChannelCredentials();
     }
     return GrpcChannels(grpc::CreateChannel(RECC_SERVER, creds),
-                        grpc::CreateChannel(RECC_CAS_SERVER, creds));
+                        grpc::CreateChannel(RECC_CAS_SERVER, creds),
+                        grpc::CreateChannel(RECC_ACTION_CACHE_SERVER, creds));
 }
 
 } // namespace recc
