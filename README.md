@@ -71,6 +71,16 @@ To run tests, first compile the project (see above), then run:
 $ make test
 ```
 
+#### Running tests on macOS Mojave(10.14)
+
+`/usr/include/`'s has been deprecated on Mojave, for certain tests to work, you must install Apple command line tools.
+
+```sh
+$ xcode-select --install
+$ sudo installer -pkg /Library/Developer/CommandLine
+Tools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
+```
+
 ## Running `recc`
 
 `recc` is a command-line utility that runs compile commands on a Remote
