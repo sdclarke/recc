@@ -51,6 +51,10 @@ add_executable(env_different_cas_test env/env_different_cas.cpp main.cpp)
 target_link_libraries(env_different_cas_test ${GTEST_TARGET} remoteexecution)
 add_test(NAME env_different_cas_test COMMAND env_different_cas_test)
 
+add_executable(env_different_action_cache_test env/env_different_action_cache.cpp main.cpp)
+target_link_libraries(env_different_action_cache_test ${GTEST_TARGET} remoteexecution)
+add_test(NAME env_different_action_cache_test COMMAND env_different_action_cache_test)
+
 add_executable(env_from_file_override_test env/env_from_file_override.cpp main.cpp)
 target_link_libraries(env_from_file_override_test ${GTEST_TARGET} remoteexecution)
 add_test(NAME env_from_file_override_test

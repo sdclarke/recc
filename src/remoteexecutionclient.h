@@ -66,6 +66,7 @@ class RemoteExecutionClient : public CASClient {
   private:
     std::unique_ptr<proto::Execution::StubInterface> d_executionStub;
     std::unique_ptr<proto::Operations::StubInterface> d_operationsStub;
+    std::unique_ptr<proto::ActionCache::StubInterface> d_actionCacheStub;
     static std::atomic_bool s_sigint_received;
     GrpcContext *d_grpcContext;
 
@@ -77,25 +78,34 @@ class RemoteExecutionClient : public CASClient {
      */
     void cancel_operation(const std::string &operationName);
 
+    /**
+     * Constructs an `ActionResult` representation from its proto counterpart
+     */
+    ActionResult from_proto(const proto::ActionResult &proto);
+
   public:
     RemoteExecutionClient(
         proto::Execution::StubInterface *executionStub,
         proto::ContentAddressableStorage::StubInterface *casStub,
+        proto::ActionCache::StubInterface *actionCacheStub,
         proto::Operations::StubInterface *operationsStub,
         google::bytestream::ByteStream::StubInterface *byteStreamStub,
         std::string instance, GrpcContext *grpcContext)
         : CASClient(casStub, byteStreamStub, instance, grpcContext),
           d_executionStub(executionStub), d_operationsStub(operationsStub),
+          d_actionCacheStub(actionCacheStub),
           d_grpcContext(grpcContext)
     {
     }
 
     RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel,
                           std::shared_ptr<grpc::Channel> casChannel,
+                          std::shared_ptr<grpc::Channel> actionCacheChannel,
                           std::string instance, GrpcContext *grpcContext)
         : CASClient(casChannel, instance, grpcContext),
           d_executionStub(proto::Execution::NewStub(channel)),
           d_operationsStub(proto::Operations::NewStub(channel)),
+          d_actionCacheStub(proto::ActionCache::NewStub(actionCacheChannel)),
           d_grpcContext(grpcContext)
     {
     }
@@ -117,6 +127,17 @@ class RemoteExecutionClient : public CASClient {
           d_grpcContext(grpcContext)
     {
     }
+
+    /**
+     * Attemps to fetch the ActionResult with the given digest from the action
+     * cache and store it in the `result` parameter. The return value
+     * indicates whether the ActionResult was found in the action cache.
+     * If it wasn't, `result` is not modified.
+     *
+     */
+    bool fetch_from_action_cache(proto::Digest actionDigest,
+                                 const std::string &instanceName,
+                                 ActionResult &result);
 
     /**
      * Run the action with the given digest on the given server, waiting
