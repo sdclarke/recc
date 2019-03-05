@@ -12,40 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef INCLUDED_GRPCCHANNELS
-#define INCLUDED_GRPCCHANNELS
+#ifndef INCLUDED_GRPCCONTEXT
+#define INCLUDED_GRPCCONTEXT
+
+#include <authsession.h>
 
 #include <grpcpp/security/credentials.h>
 
 namespace BloombergLP {
 namespace recc {
 
-class GrpcChannels {
+class GrpcContext {
   public:
-    typedef std::shared_ptr<grpc::Channel> ChannelPtr;
+    typedef std::unique_ptr<grpc::ClientContext> GrpcClientContextPtr;
+
+    GrpcContext(AuthBase *authSession) : d_authSession(authSession) {}
+
+    GrpcContext() : d_authSession(NULL) {}
 
     /**
-     * builds appropriate channels from environment
-     * variables. Will return a channel for cas, and
-     * a channel for the build server.
+     * Build a new ClientContext object for rpc calls.
+     * If an authSession is set, it will set the context's
+     * authentication credentials.
      */
-    static GrpcChannels get_channels_from_config();
+    GrpcClientContextPtr new_client_context();
 
-    ChannelPtr server() { return d_server; }
-    ChannelPtr cas() { return d_cas; }
+    /**
+     * Refresh AuthSession. If AuthSession not set, this will
+     * throw a runtime error.
+     */
+    void auth_refresh();
+
+    /**
+     * Set a new AuthSession
+     */
+    void set_auth(AuthBase *authSession);
 
   private:
-    /*
-     * Left private as this object should be constructed using
-     * 'get_channels_from_config'.
-     */
-    GrpcChannels(const ChannelPtr &server, const ChannelPtr &cas)
-        : d_server(server), d_cas(cas)
-    {
-    }
-
-    ChannelPtr d_server;
-    ChannelPtr d_cas;
+    AuthBase *d_authSession;
 };
 
 } // namespace recc

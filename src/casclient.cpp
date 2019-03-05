@@ -106,7 +106,7 @@ void CASClient::upload_blob(proto::Digest digest, std::string blob)
         return writer->Finish();
     };
 
-    grpc_retry(write_lambda);
+    grpc_retry(write_lambda, d_grpcContext);
 
     if (response.committed_size() != blob.length()) {
         throw std::runtime_error("ByteStream upload failed.");
@@ -136,7 +136,7 @@ std::string CASClient::fetch_blob(proto::Digest digest)
         }
         return reader->Finish();
     };
-    grpc_retry(fetch_lambda);
+    grpc_retry(fetch_lambda, d_grpcContext);
     return result;
 }
 
@@ -175,7 +175,7 @@ void CASClient::upload_resources(
             return d_executionStub->FindMissingBlobs(
                 &context, missingBlobsRequest, &missingBlobsResponse);
         };
-        grpc_retry(missing_blobs_lambda);
+        grpc_retry(missing_blobs_lambda, d_grpcContext);
         RECC_LOG_VERBOSE("Got missing blobs response: "
                          << missingBlobsResponse.ShortDebugString());
         for (int i = 0; i < missingBlobsResponse.missing_blob_digests_size();
@@ -213,7 +213,7 @@ void CASClient::upload_resources(
                     &context, batchUpdateRequest, &response);
             };
             RECC_LOG_VERBOSE("Sending batch update request");
-            grpc_retry(batch_update_lambda);
+            grpc_retry(batch_update_lambda, d_grpcContext);
 
             for (int j = 0; j < response.responses_size(); ++j) {
                 ensure_ok(response.responses(j).status());
@@ -238,7 +238,7 @@ void CASClient::upload_resources(
             return d_executionStub->BatchUpdateBlobs(
                 &context, batchUpdateRequest, &response);
         };
-        grpc_retry(batch_update_lambda);
+        grpc_retry(batch_update_lambda, d_grpcContext);
         for (int i = 0; i < response.responses_size(); ++i) {
             ensure_ok(response.responses(i).status());
         }

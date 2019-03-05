@@ -2,13 +2,17 @@ include_directories(.)
 
 set(SRCS
     actionbuilder.cpp
+    authsession.cpp
     casclient.cpp
     commandlineutils.cpp
     deps.cpp
     env.cpp
     fileutils.cpp
+    formpost.cpp
     grpcretry.cpp
     grpcchannels.cpp
+    grpccontext.cpp
+    jsonfilemanager.cpp
     merklize.cpp
     parsedcommand.cpp
     recccounterguard.cpp
@@ -18,7 +22,7 @@ set(SRCS
 )
 
 add_library(remoteexecution STATIC ${SRCS})
-target_link_libraries(remoteexecution reccproto ${Protobuf_LIBRARIES} ${GRPC_TARGET} OpenSSL::Crypto)
+target_link_libraries(remoteexecution reccproto ${CURL_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_TARGET} OpenSSL::Crypto)
 
 if (CMAKE_SYSTEM_NAME MATCHES "SunOS")
     target_link_libraries(remoteexecution socket nsl)

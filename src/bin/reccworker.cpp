@@ -20,7 +20,9 @@
 #include <commandlineutils.h>
 #include <env.h>
 #include <fileutils.h>
+#include <formpost.h>
 #include <grpcchannels.h>
+#include <grpccontext.h>
 #include <logging.h>
 #include <merklize.h>
 #include <protos.h>
@@ -208,14 +210,14 @@ void worker_thread(proto::BotSession *session,
                    std::set<std::string> *activeJobs, std::mutex *sessionMutex,
                    std::condition_variable *sessionCondition,
                    std::shared_ptr<grpc::Channel> casChannel,
-                   std::string leaseID)
+                   std::string leaseID, GrpcContext *grpcContext)
 {
     proto::ActionResult result;
     bool preconditionFail = false;
     std::ostringstream missingFiles;
 
     try {
-        CASClient casClient(casChannel, RECC_INSTANCE);
+        CASClient casClient(casChannel, RECC_INSTANCE, grpcContext);
         proto::Action action;
         {
             // Get the Action to execute from the session.
@@ -344,6 +346,13 @@ int main(int argc, char *argv[])
 
     RECC_LOG_VERBOSE("Starting build worker with bot_id=[" + bot_id + "]");
     GrpcChannels returnChannels = GrpcChannels::get_channels_from_config();
+    GrpcContext grpcContext;
+    std::unique_ptr<AuthSession> reccAuthSession;
+    FormPost formPostFactory;
+    if (RECC_SERVER_JWT) {
+        reccAuthSession.reset(new AuthSession(&formPostFactory));
+        grpcContext.set_auth(reccAuthSession.get());
+    }
     auto stub = proto::Bots::NewStub(returnChannels.server());
 
     proto::BotSession session;
@@ -367,13 +376,15 @@ int main(int argc, char *argv[])
 
     {
         // Send the initial request to create the bot session.
-        grpc::ClientContext context;
+        std::unique_ptr<grpc::ClientContext> context =
+            grpcContext.new_client_context();
         proto::CreateBotSessionRequest createRequest;
         RECC_LOG_VERBOSE("Setting parent");
         createRequest.set_parent(RECC_INSTANCE);
         *createRequest.mutable_bot_session() = session;
         RECC_LOG_VERBOSE("Setting session");
-        ensure_ok(stub->CreateBotSession(&context, createRequest, &session));
+        ensure_ok(
+            stub->CreateBotSession(context.get(), createRequest, &session));
     }
 
     RECC_LOG_VERBOSE("Bot Session created. Now waiting for jobs.");
@@ -432,7 +443,8 @@ int main(int argc, char *argv[])
                 if (activeJobs.count(lease.id()) == 0) {
                     auto thread = std::thread(
                         worker_thread, &session, &activeJobs, &sessionMutex,
-                        &sessionCondition, returnChannels.cas(), lease.id());
+                        &sessionCondition, returnChannels.cas(), lease.id(),
+                        &grpcContext);
                     thread.detach();
                     // (the thread will remove its job from activeJobs when
                     // it's done)
@@ -447,12 +459,13 @@ int main(int argc, char *argv[])
         {
             // Update the bot session (send our state to the server, then
             // replace our state with the server's response)
-            grpc::ClientContext context;
+            std::unique_ptr<grpc::ClientContext> context =
+                grpcContext.new_client_context();
             proto::UpdateBotSessionRequest updateRequest;
             updateRequest.set_name(session.name());
             *updateRequest.mutable_bot_session() = session;
-            ensure_ok(
-                stub->UpdateBotSession(&context, updateRequest, &session));
+            ensure_ok(stub->UpdateBotSession(context.get(), updateRequest,
+                                             &session));
         }
     }
     if (!counterGuard.is_allowed_more()) {

@@ -18,10 +18,13 @@
 // it's actually run locally.
 
 #include <actionbuilder.h>
+#include <authsession.h>
 #include <deps.h>
 #include <env.h>
 #include <fileutils.h>
+#include <formpost.h>
 #include <grpcchannels.h>
+#include <grpccontext.h>
 #include <logging.h>
 #include <merklize.h>
 #include <reccdefaults.h>
@@ -71,6 +74,17 @@ const std::string HELP(
     "                          defaults to " DEFAULT_RECC_JWT_JSON_FILE_PATH
     " (JSON format expected)\n"
     "\n"
+    "RECC_AUTH_REFRESH_URL - url specifying location to refresh access "
+    "tokens.\n"
+    "                        If empty string, will try to refresh token in "
+    "memory, using token on disk/file. \n"
+    "                        Defaults to empty string. Expects server to "
+    "return access "
+    "and refresh\n"
+    "                        tokens (in serialized JSON) when provided a "
+    "refresh\n"
+    "                        token (in serialized JSON)\n"
+    "\n"
     "RECC_INSTANCE - the instance name to pass to the server\n"
     "\n"
     "RECC_VERBOSE - enable verbose output\n"
@@ -115,7 +129,12 @@ const std::string HELP(
     "                             which the build server uses to select\n"
     "                             the build worker\n"
     "\n"
-    "RECC_RETRY_LIMIT - number of times to retry failed requests (default 0)\n"
+    "RECC_RETRY_LIMIT - number of times to retry failed requests (default "
+    "0).\n"
+    "			Recc will try to refresh once on unauthenticated "
+    "errors\n"
+    "			if RECC_AUTH_REFRESH_URL is set. This will not count\n"
+    "			towards the limit\n"
     "\n"
     "RECC_RETRY_DELAY - base delay (in ms) between retries\n"
     "                   grows exponentially (default 100ms)");
@@ -165,8 +184,16 @@ int main(int argc, char *argv[])
     int rc = -1;
     try {
         GrpcChannels returnChannels = GrpcChannels::get_channels_from_config();
+        GrpcContext grpcContext;
+        std::unique_ptr<AuthSession> reccAuthSession;
+        FormPost formPostFactory;
+        if (RECC_SERVER_JWT) {
+            reccAuthSession.reset(new AuthSession(&formPostFactory));
+            grpcContext.set_auth(reccAuthSession.get());
+        }
         RemoteExecutionClient client(returnChannels.server(),
-                                     returnChannels.cas(), RECC_INSTANCE);
+                                     returnChannels.cas(), RECC_INSTANCE,
+                                     &grpcContext);
         RECC_LOG_VERBOSE("Uploading resources...");
         client.upload_resources(blobs, filenames);
         RECC_LOG_VERBOSE("Executing action...");

@@ -171,7 +171,7 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
         return reader_ptr->Finish();
     };
 
-    grpc_retry(execute_lambda);
+    grpc_retry(execute_lambda, d_grpcContext);
 
     Operation operation = *operation_ptr;
     if (!operation.done()) {
@@ -215,11 +215,12 @@ void RemoteExecutionClient::cancel_operation(const std::string &operationName)
     cancelRequest.set_name(operationName);
 
     /* Can't use the same context for simultaneous async RPCs */
-    grpc::ClientContext cancelContext;
+    std::unique_ptr<grpc::ClientContext> cancelContext =
+        d_grpcContext->new_client_context();
 
     /* Send the cancellation request and report any errors */
     google::protobuf::Empty empty;
-    grpc::Status s = d_operationsStub->CancelOperation(&cancelContext,
+    grpc::Status s = d_operationsStub->CancelOperation(cancelContext.get(),
                                                        cancelRequest, &empty);
     if (!s.ok()) {
         RECC_LOG_ERROR("Failed to cancel job " << operationName << ": "

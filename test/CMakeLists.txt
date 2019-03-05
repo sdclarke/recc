@@ -1,6 +1,15 @@
 set(CMAKE_CXX_STANDARD 11)
 
 include_directories(../src)
+include_directories(fixtures/)
+
+set(FIXT
+    fixtures/authsession_fixture.cpp
+)
+
+add_library(fixtures ${FIXT})
+target_include_directories(fixtures PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/fixtures)
+target_link_libraries(fixtures remoteexecution ${GTEST_TARGET})
 
 add_executable(subprocess_tests subprocess.cpp main.cpp)
 target_link_libraries(subprocess_tests ${GTEST_TARGET} remoteexecution)
@@ -83,17 +92,33 @@ add_test(NAME actionbuilder_tests
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/actionbuilder)
 
 add_executable(grpcretry_tests grpcretry.cpp main.cpp)
-target_link_libraries(grpcretry_tests ${GTEST_TARGET} remoteexecution)
-add_test(NAME grpcretry_tests COMMAND grpcretry_tests)
+target_link_libraries(grpcretry_tests ${GTEST_TARGET} remoteexecution fixtures)
+add_test(NAME grpcretry_tests 
+	 COMMAND grpcretry_tests
+	 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/authsession_fixture)
 
-add_executable(grpcchannels_tests grpcchannels.cpp main.cpp)
-target_link_libraries(grpcchannels_tests ${GTEST_TARGET} remoteexecution)
-add_test(NAME grpcchannels_tests
-         COMMAND grpcchannels_tests
-         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/grpcchannels)
+add_executable(grpccontext_tests grpccontext.cpp main.cpp)
+target_link_libraries(grpccontext_tests ${GMOCK_TARGET} ${GTEST_TARGET} remoteexecution fixtures)
+add_test(NAME grpccontext_tests 
+	 COMMAND grpccontext_tests
+	 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/authsession_fixture)
+
+add_executable(authsession_tests authsession.cpp main.cpp)
+target_link_libraries(authsession_tests ${GMOCK_TARGET} ${GTEST_TARGET} remoteexecution fixtures)
+add_test(NAME authsession_tests
+         COMMAND authsession_tests
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/authsession_fixture)
+
+add_executable(jsonfilemanager_tests jsonfilemanager.cpp main.cpp)
+target_link_libraries(jsonfilemanager_tests ${GTEST_TARGET} remoteexecution)
+add_test(NAME jsonfilemanager_tests
+         COMMAND jsonfilemanager_tests
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/authsession_fixture)
 
 add_executable(commandlineutils_tests commandlineutils.cpp main.cpp)
 target_link_libraries(commandlineutils_tests ${GMOCK_TARGET} ${GTEST_TARGET} remoteexecution)
 add_test(NAME commandlineutils_tests COMMAND commandlineutils_tests)
 
-
+add_executable(formpost_test formpost.cpp main.cpp)
+target_link_libraries(formpost_test ${GTEST_TARGET} remoteexecution)
+add_test(NAME formpost_test COMMAND formpost_test)

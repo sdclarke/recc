@@ -14,15 +14,16 @@ Currently recc relies on:
 * [CMake][]
 * [GoogleTest][]
 * [pkg-config][]
+* [libcurl][]
 
 Some package managers (apt) include all these dependencies while others (brew) require manual installation of some. Please follow the relevant guides for your OS.  
 
 ### Installing on macOS
 
-Install [gRPC][], [Protobuf][], [OpenSSL][], [CMake][], [pkg-config][] through brew:
+Install [gRPC][], [Protobuf][], [OpenSSL][], [CMake][], [pkg-config][], [libcurl][] through brew:
 
 ```sh
-$ brew install grpc protobuf openssl cmake pkg-config
+$ brew install grpc protobuf openssl cmake pkg-config curl
 ```
 
 [GoogleTest][] is not available in Homebrew, so instead, you should download a copy of [its source code][googletest source], unzip it somewhere, and use `-DGTEST_SOURCE_ROOT` to tell CMake where to find it. (See below.)
@@ -40,6 +41,7 @@ You can now compile `recc`.
 [googletest]: https://github.com/google/googletest
 [googletest source]: https://github.com/google/googletest/archive/release-1.8.1.zip
 [pkg-config]: https://www.freedesktop.org/wiki/Software/pkg-config/
+[libcurl]: https://curl.haxx.se/libcurl/
 
 ## Compiling
 Once you've [installed the dependencies](#dependencies), you can compile `recc` using the following commands:
