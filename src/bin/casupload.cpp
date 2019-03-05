@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <authsession.h>
 #include <casclient.h>
 #include <env.h>
+#include <grpcchannels.h>
+#include <grpccontext.h>
 #include <logging.h>
 #include <merklize.h>
 
@@ -67,15 +70,16 @@ int main(int argc, char *argv[])
 
     auto directoryDigest = nestedDirectory.to_digest(&blobs);
 
-    std::shared_ptr<grpc::ChannelCredentials> creds;
-    if (RECC_SERVER_AUTH_GOOGLEAPI) {
-        creds = grpc::GoogleDefaultCredentials();
+    GrpcChannels returnChannels = GrpcChannels::get_channels_from_config();
+    GrpcContext grpcContext;
+    std::unique_ptr<AuthSession> reccAuthSession;
+    FormPost formPostFactory;
+    if (RECC_SERVER_JWT) {
+        reccAuthSession.reset(new AuthSession(&formPostFactory));
+        grpcContext.set_auth(reccAuthSession.get());
     }
-    else {
-        creds = grpc::InsecureChannelCredentials();
-    }
-    auto channel = grpc::CreateChannel(RECC_CAS_SERVER, creds);
-    CASClient(channel, RECC_INSTANCE).upload_resources(blobs, filenames);
+    CASClient(returnChannels.cas(), RECC_INSTANCE, &grpcContext)
+        .upload_resources(blobs, filenames);
 
     RECC_LOG(directoryDigest.hash());
     RECC_LOG(directoryDigest.size_bytes());

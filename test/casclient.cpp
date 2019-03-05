@@ -15,6 +15,7 @@
 #include <casclient.h>
 #include <env.h>
 #include <fileutils.h>
+#include <grpccontext.h>
 #include <merklize.h>
 
 #include <build/bazel/remote/execution/v2/remote_execution_mock.grpc.pb.h>
@@ -66,7 +67,8 @@ TEST(CASClientTest, EmptyUpload)
 {
     auto stub = new proto::MockContentAddressableStorageStub();
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    CASClient cas(stub, byteStreamStub, emptyString);
+    GrpcContext grpcContext;
+    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
     proto::FindMissingBlobsResponse response;
 
@@ -82,7 +84,8 @@ TEST(CASClientTest, AlreadyUploadedBlob)
 {
     auto stub = new proto::MockContentAddressableStorageStub();
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    CASClient cas(stub, byteStreamStub, emptyString);
+    GrpcContext grpcContext;
+    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
     std::unordered_map<proto::Digest, std::string> blobs;
     blobs[make_digest(abc)] = abc;
@@ -103,7 +106,8 @@ TEST(CASClientTest, AlreadyUploadedFile)
 
     auto stub = new proto::MockContentAddressableStorageStub();
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    CASClient cas(stub, byteStreamStub, emptyString);
+    GrpcContext grpcContext;
+    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
     std::unordered_map<proto::Digest, std::string> filenames;
     filenames[make_digest(abc)] = path;
@@ -120,7 +124,8 @@ TEST(CASClientTest, NewBlobUpload)
 {
     auto stub = new proto::MockContentAddressableStorageStub();
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    CASClient cas(stub, byteStreamStub, emptyString);
+    GrpcContext grpcContext;
+    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
     std::unordered_map<proto::Digest, std::string> blobs;
     blobs[make_digest(abc)] = abc;
@@ -154,7 +159,8 @@ TEST(CASClientTest, NewFileUpload)
 
     auto stub = new proto::MockContentAddressableStorageStub();
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    CASClient cas(stub, byteStreamStub, emptyString);
+    GrpcContext grpcContext;
+    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
     std::unordered_map<proto::Digest, std::string> filenames;
     filenames[make_digest(abc)] = path;
@@ -193,7 +199,8 @@ TEST(CASClientTest, LargeBlobUpload)
 {
     auto stub = new proto::MockContentAddressableStorageStub();
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    CASClient cas(stub, byteStreamStub, emptyString);
+    GrpcContext grpcContext;
+    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
     auto writer = new grpc::testing::MockClientWriter<
         google::bytestream::WriteRequest>();
@@ -241,7 +248,8 @@ TEST(CASClientTest, FetchBlob)
 {
     auto stub = new proto::MockContentAddressableStorageStub();
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    CASClient cas(stub, byteStreamStub, emptyString);
+    GrpcContext grpcContext;
+    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
     auto digest = make_digest(abc);
     google::bytestream::ReadRequest expectedRequest;
@@ -269,7 +277,8 @@ TEST(CASClientTest, FetchBlobResumeDownload)
     RECC_RETRY_LIMIT = 1;
     auto stub = new proto::MockContentAddressableStorageStub();
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    CASClient cas(stub, byteStreamStub, emptyString);
+    GrpcContext grpcContext;
+    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
     auto digest = make_digest(abc);
     google::bytestream::ReadRequest firstRequest;
@@ -318,7 +327,8 @@ TEST(CASClientTest, DownloadDirectory)
     const auto directoryDigest = make_digest("fake directory");
     auto stub = new proto::MockContentAddressableStorageStub();
     auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    CASClient cas(stub, byteStreamStub, emptyString);
+    GrpcContext grpcContext;
+    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
     // construct proto directory
     proto::Directory upload_dir;

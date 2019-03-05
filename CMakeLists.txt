@@ -18,6 +18,9 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
     add_definitions(-DRECC_PLATFORM_COMPILER="gcc")
 endif()
 
+find_package(CURL REQUIRED)
+include_directories(${CURL_INCLUDE_DIR})
+
 find_package(OpenSSL REQUIRED)
 
 find_package(Protobuf REQUIRED)

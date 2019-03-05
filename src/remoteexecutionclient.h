@@ -16,6 +16,7 @@
 #define INCLUDED_REMOTEEXECUTIONCLIENT
 
 #include <casclient.h>
+#include <grpccontext.h>
 #include <merklize.h>
 #include <protos.h>
 
@@ -66,6 +67,7 @@ class RemoteExecutionClient : public CASClient {
     std::unique_ptr<proto::Execution::StubInterface> d_executionStub;
     std::unique_ptr<proto::Operations::StubInterface> d_operationsStub;
     static std::atomic_bool s_sigint_received;
+    GrpcContext *d_grpcContext;
 
     void read_operation(ReaderPointer &reader,
                         OperationPointer &operation_ptr);
@@ -81,33 +83,38 @@ class RemoteExecutionClient : public CASClient {
         proto::ContentAddressableStorage::StubInterface *casStub,
         proto::Operations::StubInterface *operationsStub,
         google::bytestream::ByteStream::StubInterface *byteStreamStub,
-        std::string instance)
-        : CASClient(casStub, byteStreamStub, instance),
-          d_executionStub(executionStub), d_operationsStub(operationsStub)
+        std::string instance, GrpcContext *grpcContext)
+        : CASClient(casStub, byteStreamStub, instance, grpcContext),
+          d_executionStub(executionStub), d_operationsStub(operationsStub),
+          d_grpcContext(grpcContext)
     {
     }
 
     RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel,
                           std::shared_ptr<grpc::Channel> casChannel,
-                          std::string instance)
-        : CASClient(casChannel, instance),
+                          std::string instance, GrpcContext *grpcContext)
+        : CASClient(casChannel, instance, grpcContext),
           d_executionStub(proto::Execution::NewStub(channel)),
-          d_operationsStub(proto::Operations::NewStub(channel))
+          d_operationsStub(proto::Operations::NewStub(channel)),
+          d_grpcContext(grpcContext)
     {
     }
 
     RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel,
-                          std::string instance)
-        : CASClient(channel, instance),
+                          std::string instance, GrpcContext *grpcContext)
+        : CASClient(channel, instance, grpcContext),
           d_executionStub(proto::Execution::NewStub(channel)),
-          d_operationsStub(proto::Operations::NewStub(channel))
+          d_operationsStub(proto::Operations::NewStub(channel)),
+          d_grpcContext(grpcContext)
     {
     }
 
-    RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel)
-        : CASClient(channel),
+    RemoteExecutionClient(std::shared_ptr<grpc::Channel> channel,
+                          GrpcContext *grpcContext)
+        : CASClient(channel, grpcContext),
           d_executionStub(proto::Execution::NewStub(channel)),
-          d_operationsStub(proto::Operations::NewStub(channel))
+          d_operationsStub(proto::Operations::NewStub(channel)),
+          d_grpcContext(grpcContext)
     {
     }
 

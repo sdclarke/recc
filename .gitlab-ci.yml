@@ -9,7 +9,7 @@ stages:
 build_only:
   stage: build
   before_script:
-    - apt-get update && apt-get install -y make cmake build-essential pkg-config libssl-dev
+    - apt-get update && apt-get install -y make cmake build-essential pkg-config libssl-dev libcurl4-openssl-dev
   script:
     - mkdir build
     - cd build
@@ -26,7 +26,7 @@ test_cover:
   coverage: '/^TOTAL.*\ (\d+\.*\d+\%)$/'
   dependencies: []
   before_script:
-    - apt-get update && apt-get install -y make cmake build-essential pkg-config libssl-dev googletest
+    - apt-get update && apt-get install -y make cmake build-essential pkg-config libssl-dev googletest libcurl4-openssl-dev
     - apt-get install -y python3 python3-pip wget
     - pip3 install gcovr pycobertura
   script:

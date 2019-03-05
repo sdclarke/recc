@@ -15,6 +15,8 @@
 #include <grpcretry.h>
 
 #include <env.h>
+#include <grpcchannels.h>
+#include <grpccontext.h>
 #include <logging.h>
 
 #include <math.h>
@@ -24,38 +26,45 @@ namespace BloombergLP {
 namespace recc {
 
 void grpc_retry(
-    const std::function<grpc::Status(grpc::ClientContext &)> &grpc_invocation)
+    const std::function<grpc::Status(grpc::ClientContext &)> &grpc_invocation,
+    GrpcContext *grpcContext)
 {
     int n_attempts = 0;
+    bool refreshed = false;
+    int NO_AUTH = int(grpc::StatusCode::UNAUTHENTICATED);
     grpc::Status status;
     do {
-        grpc::ClientContext context;
-        status = grpc_invocation(context);
+        auto context = grpcContext->new_client_context();
+        status = grpc_invocation(*context);
         if (status.ok()) {
             return;
         }
-
-        /* The call failed. */
-        if (n_attempts < RECC_RETRY_LIMIT) {
-            /* Delay the next call based on the number of attempts made */
-            int time_delay =
-                RECC_RETRY_DELAY * pow(static_cast<double>(2), n_attempts);
-
-            std::string error_msg =
-                "Attempt " + std::to_string(n_attempts + 1) + "/" +
-                std::to_string(RECC_RETRY_LIMIT + 1) +
-                " failed with gRPC error " +
-                std::to_string(status.error_code()) + ": " +
-                status.error_message() + ". Retrying in " +
-                std::to_string(time_delay) + " ms...";
-
-            RECC_LOG_ERROR(error_msg);
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(time_delay));
+        if (status.error_code() == NO_AUTH && !refreshed) {
+            grpcContext->auth_refresh();
+            refreshed = true;
         }
+        else {
+            /* The call failed. */
+            if (n_attempts < RECC_RETRY_LIMIT) {
+                /* Delay the next call based on the number of attempts made */
+                int time_delay =
+                    RECC_RETRY_DELAY * pow(static_cast<double>(2), n_attempts);
 
-        n_attempts++;
+                std::string error_msg =
+                    "Attempt " + std::to_string(n_attempts + 1) + "/" +
+                    std::to_string(RECC_RETRY_LIMIT + 1) +
+                    " failed with gRPC error " +
+                    std::to_string(status.error_code()) + ": " +
+                    status.error_message() + ". Retrying in " +
+                    std::to_string(time_delay) + " ms...";
 
+                RECC_LOG_ERROR(error_msg);
+
+                std::this_thread::sleep_for(
+                    std::chrono::milliseconds(time_delay));
+            }
+            n_attempts++;
+        }
     } while (n_attempts < RECC_RETRY_LIMIT + 1);
 
     throw std::runtime_error("Retry limit exceeded. Last gRPC error was " +

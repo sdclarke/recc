@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <fileutils.h>
+#include <grpccontext.h>
 #include <logging.h>
 #include <merklize.h>
 #include <remoteexecutionclient.h>
@@ -49,6 +50,7 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
     google::longrunning::MockOperationsStub *operationsStub;
     google::bytestream::MockByteStreamStub *byteStreamStub;
     RemoteExecutionClient *client;
+    GrpcContext *grpcContext;
 
     proto::Digest actionDigest;
     proto::ExecuteRequest expectedExecuteRequest;
@@ -72,9 +74,10 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
         casStub = new proto::MockContentAddressableStorageStub();
         operationsStub = new google::longrunning::MockOperationsStub();
         byteStreamStub = new google::bytestream::MockByteStreamStub;
-        client =
-            new RemoteExecutionClient(executionStub, casStub, operationsStub,
-                                      byteStreamStub, std::string());
+        grpcContext = new GrpcContext();
+        client = new RemoteExecutionClient(executionStub, casStub,
+                                           operationsStub, byteStreamStub,
+                                           std::string(), grpcContext);
 
         // Construct the Digest we're passing in, and the ExecuteRequest we
         // expect the RemoteExecutionClient to send as a result.

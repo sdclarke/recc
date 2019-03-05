@@ -15,6 +15,7 @@
 #ifndef INCLUDED_CASCLIENT
 #define INCLUDED_CASCLIENT
 
+#include <grpccontext.h>
 #include <protos.h>
 
 #include <exception>
@@ -58,26 +59,28 @@ class CASClient {
 
   public:
     std::string d_instance;
+    GrpcContext *d_grpcContext;
 
     CASClient(proto::ContentAddressableStorage::StubInterface *executionStub,
               google::bytestream::ByteStream::StubInterface *byteStreamStub,
-              std::string instance)
+              std::string instance, GrpcContext *grpcContext)
         : d_executionStub(executionStub), d_byteStreamStub(byteStreamStub),
-          d_instance(instance)
+          d_instance(instance), d_grpcContext(grpcContext)
     {
     }
 
-    CASClient(std::shared_ptr<grpc::Channel> channel, std::string instance)
+    CASClient(std::shared_ptr<grpc::Channel> channel, std::string instance,
+              GrpcContext *grpcContext)
         : d_executionStub(proto::ContentAddressableStorage::NewStub(channel)),
           d_byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
-          d_instance(instance)
+          d_instance(instance), d_grpcContext(grpcContext)
     {
     }
 
-    CASClient(std::shared_ptr<grpc::Channel> channel)
+    CASClient(std::shared_ptr<grpc::Channel> channel, GrpcContext *grpcContext)
         : d_executionStub(proto::ContentAddressableStorage::NewStub(channel)),
           d_byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
-          d_instance()
+          d_instance(), d_grpcContext(grpcContext)
     {
     }
 

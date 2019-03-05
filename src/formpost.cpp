@@ -11,25 +11,19 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
-#include <functional>
-#include <grpccontext.h>
-#include <protos.h>
+#include <formpost.h>
+
+#include <string>
 
 namespace BloombergLP {
 namespace recc {
 
-/**
- * Call a GRPC method. On failure, retry up to RECC_RETRY_LIMIT times,
- * using binary exponential backoff to delay between calls.
- *
- * As input, takes a function that takes a grpc::ClientContext and returns a
- * grpc::Status.
- *
- */
-void grpc_retry(
-    const std::function<grpc::Status(grpc::ClientContext &)> &grpc_invocation,
-    GrpcContext *grpcContext);
+std::string FormPost::generate_post(std::string refresh_token)
+{
+    return "refresh_token=" + refresh_token;
+}
 
 } // namespace recc
 } // namespace BloombergLP
