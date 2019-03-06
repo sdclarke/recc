@@ -48,3 +48,17 @@ set_target_properties(recc PROPERTIES COMPILER_FLAGS "-Wall -Werror")
 set_target_properties(reccworker PROPERTIES COMPILER_FLAGS "-Wall -Werror")
 set_target_properties(casupload PROPERTIES COMPILER_FLAGS "-Wall -Werror")
 set_target_properties(deps PROPERTIES COMPILER_FLAGS "-Wall -Werror")
+
+if(NOT RECC_VERSION)
+    find_program(GIT git
+                 PATHS ${DISTRIBUTION_REFROOT})
+
+    execute_process(COMMAND ${GIT} rev-parse --verify HEAD
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                    OUTPUT_VARIABLE RECC_VERSION
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    message(STATUS "git commit: ${RECC_VERSION}")
+endif()
+
+add_definitions(-DRECC_VERSION=\"${RECC_VERSION}\")
