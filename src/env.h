@@ -215,6 +215,12 @@ extern std::map<std::string, std::string> RECC_REMOTE_PLATFORM;
 extern std::deque<std::string> RECC_CONFIG_LOCATIONS;
 
 /**
+ * Value sent as part of the optional RequestMetadata header values attached
+ * to requests.
+ */
+extern std::string RECC_CORRELATED_INVOCATIONS_ID;
+
+/**
  * Parse the given environment and store it in the corresponding global
  * variables.
  *

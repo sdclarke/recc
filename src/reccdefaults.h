@@ -16,6 +16,7 @@
 #define INCLUDED_RECCDEFAULTS
 
 #include <chrono>
+#include <limits.h>
 #include <recccounterguard.h>
 
 // clang-format off
@@ -38,6 +39,7 @@
 #define DEFAULT_RECC_PROJECT_ROOT ""
 #define DEFAULT_RECC_DEPS_GLOBAL_PATHS 0
 #define DEFAULT_RECC_AUTH_UNCONFIGURED_MSG ""
+#define DEFAULT_RECC_CORRELATED_INVOCATIONS_ID ""
 
 #define DEFAULT_RECC_VERBOSE 0
 #define DEFAULT_RECC_FORCE_REMOTE 0
@@ -55,5 +57,11 @@
 #define DEFAULT_RECC_DEPS_ENV {}
 #define DEFAULT_RECC_REMOTE_ENV {}
 #define DEFAULT_RECC_REMOTE_PLATFORM {}
+
+#ifdef HOST_NAME_MAX
+    #define DEFAULT_RECC_HOSTNAME_MAX_LENGTH HOST_NAME_MAX
+#else
+    #define DEFAULT_RECC_HOSTNAME_MAX_LENGTH 255
+#endif
 
 #endif

@@ -29,6 +29,7 @@
 #include <merklize.h>
 #include <reccdefaults.h>
 #include <remoteexecutionclient.h>
+#include <requestmetadata.h>
 
 #include <cstdio>
 #include <cstring>
@@ -150,6 +151,13 @@ int main(int argc, char *argv[])
              (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)) {
         RECC_LOG_WARNING(HELP);
         return 0;
+    } else if (argc == 2 &&
+            (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0)) {
+        const std::string version =
+                RequestMetadataGenerator::RECC_METADATA_TOOL_VERSION;
+        const std::string versionMessage = "recc version: " + version;
+        RECC_LOG_WARNING(versionMessage);
+        return 0;
     }
 
     set_config_locations();
@@ -185,6 +193,8 @@ int main(int argc, char *argv[])
     try {
         GrpcChannels returnChannels = GrpcChannels::get_channels_from_config();
         GrpcContext grpcContext;
+        grpcContext.set_action_id(actionDigest.hash());
+
         std::unique_ptr<AuthSession> reccAuthSession;
         FormPost formPostFactory;
         if (RECC_SERVER_JWT) {

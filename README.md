@@ -58,6 +58,11 @@ Note that on macOS, you'll need to manually specify the locations of OpenSSL and
 $ cmake -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl -DGTEST_SOURCE_ROOT=/wherever/you/unzipped/googletest/to .. && make
 ```
 
+The optional flag `-DRECC_VERSION` allows setting the version string that recc
+will attach as metadata to its request headers. If none is set, CMake will try
+to determine the current git commit and use the short SHA as a version value.
+(If that fails, the version will be set to "unknown".)
+
 ### Debugging options
 
 You can define `RECC_DEBUG` while running `cmake` to include additional debugging info in the final binaries.

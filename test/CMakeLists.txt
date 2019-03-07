@@ -122,3 +122,7 @@ add_test(NAME commandlineutils_tests COMMAND commandlineutils_tests)
 add_executable(formpost_test formpost.cpp main.cpp)
 target_link_libraries(formpost_test ${GTEST_TARGET} remoteexecution)
 add_test(NAME formpost_test COMMAND formpost_test)
+
+add_executable(requestmetadata_tests requestmetadata.cpp main.cpp)
+target_link_libraries(requestmetadata_tests ${GTEST_TARGET} remoteexecution)
+add_test(NAME requestmetadata_tests COMMAND requestmetadata_tests)
