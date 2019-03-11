@@ -205,27 +205,20 @@ TEST_F(AuthSessionFiles, RefreshNoURL)
 {
     RECC_AUTH_REFRESH_URL = "";
     RECC_JWT_JSON_FILE_PATH = s_clientFilePath;
-    FormPost formPostFactory;
-    AuthSession testSession(&formPostFactory);
+    const std::string updateToken = "{\"access_token\": \"update_fake\", "
+                                    "\"refresh_token\": \"update_fake\"}";
+    MockPost mockPostFactory;
+    // Should not generate a post request if no URL is set
+    EXPECT_CALL(mockPostFactory, generate_post("old_fake")).Times(0);
+    AuthSession testSession(&mockPostFactory);
 
-    const std::string oldContents = s_clientFile->read();
-    struct stat resultStart;
-    int startTime = 0;
-    int endTime = 0;
-    if (stat(s_clientFilePath.c_str(), &resultStart) == 0) {
-        startTime = resultStart.st_atime;
-    }
-    // sleep for 1 second so access time is different
-    usleep(1000000);
+    s_clientFile->write(updateToken);
+    const std::string oldTokenInMemory = testSession.get_access_token();
     ASSERT_NO_THROW(testSession.refresh_current_token());
+    const std::string newTokenInMemory = testSession.get_access_token();
 
-    const std::string newContents = s_clientFile->read();
-    struct stat resultEnd;
-    if (stat(s_clientFilePath.c_str(), &resultEnd) == 0) {
-        endTime = resultEnd.st_atime;
-    }
-    // Make sure file was read
-    EXPECT_GT(endTime, startTime);
-    // Make sure file wasn't updated
-    EXPECT_EQ(newContents, oldContents);
+    // Make sure file was updated
+    EXPECT_EQ(newTokenInMemory, "update_fake");
+    // Make sure that we are actually testing a change
+    EXPECT_NE(newTokenInMemory, oldTokenInMemory);
 }
