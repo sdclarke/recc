@@ -26,26 +26,30 @@ class GrpcChannels {
 
     /**
      * builds appropriate channels from environment
-     * variables. Will return a channel for cas, and
-     * a channel for the build server.
+     * variables. Will return a channel for cas, a
+     * channel for the build server and one for
+     * the action cache.
      */
     static GrpcChannels get_channels_from_config();
 
     ChannelPtr server() { return d_server; }
     ChannelPtr cas() { return d_cas; }
+    ChannelPtr action_cache() { return d_action_cache; }
 
   private:
     /*
      * Left private as this object should be constructed using
      * 'get_channels_from_config'.
      */
-    GrpcChannels(const ChannelPtr &server, const ChannelPtr &cas)
-        : d_server(server), d_cas(cas)
+    GrpcChannels(const ChannelPtr &server, const ChannelPtr &cas,
+                 const ChannelPtr &action_cache)
+        : d_server(server), d_cas(cas), d_action_cache(action_cache)
     {
     }
 
     ChannelPtr d_server;
     ChannelPtr d_cas;
+    ChannelPtr d_action_cache;
 };
 
 } // namespace recc

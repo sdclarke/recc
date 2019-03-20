@@ -145,6 +145,34 @@ void RemoteExecutionClient::read_operation(ReaderPointer &reader_ptr,
     } while (status != std::future_status::ready);
 }
 
+bool RemoteExecutionClient::fetch_from_action_cache(
+    proto::Digest actionDigest, const std::string &instanceName,
+    ActionResult &result)
+{
+
+    grpc::ClientContext context;
+
+    proto::GetActionResultRequest actionRequest;
+    actionRequest.set_instance_name(instanceName);
+    *actionRequest.mutable_action_digest() = actionDigest;
+
+    proto::ActionResult actionResult;
+    grpc::Status status = d_actionCacheStub->GetActionResult(
+        &context, actionRequest, &actionResult);
+
+    if (!status.ok()) {
+        if (status.error_code() == grpc::StatusCode::NOT_FOUND)
+            return false;
+
+        throw std::runtime_error("Action cache returned error " +
+                                 status.error_message());
+    }
+
+    result = from_proto(actionResult);
+
+    return true;
+}
+
 ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
                                                    bool skipCache)
 {
@@ -179,34 +207,8 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
             "Server closed stream before Operation finished");
     }
 
-    auto resultProto = get_actionresult(operation);
-
-    ActionResult result;
-    result.d_exitCode = resultProto.exit_code();
-    result.d_stdOut =
-        OutputBlob(resultProto.stdout_raw(), resultProto.stdout_digest());
-    result.d_stdErr =
-        OutputBlob(resultProto.stderr_raw(), resultProto.stderr_digest());
-
-    for (int i = 0; i < resultProto.output_files_size(); ++i) {
-        auto fileProto = resultProto.output_files(i);
-        File file(fileProto.digest(), fileProto.is_executable());
-        result.d_outputFiles[fileProto.path()] = file;
-    }
-
-    for (int i = 0; i < resultProto.output_directories_size(); ++i) {
-        auto outputDirectoryProto = resultProto.output_directories(i);
-        auto tree =
-            fetch_message<proto::Tree>(outputDirectoryProto.tree_digest());
-        std::unordered_map<proto::Digest, proto::Directory> digestMap;
-        for (int j = 0; j < tree.children_size(); ++j) {
-            digestMap[make_digest(tree.children(j))] = tree.children(j);
-        }
-        add_from_directory(&result.d_outputFiles, tree.root(),
-                           outputDirectoryProto.path() + "/", digestMap);
-    }
-
-    return result;
+    proto::ActionResult resultProto = get_actionresult(operation);
+    return from_proto(resultProto);
 }
 
 void RemoteExecutionClient::cancel_operation(const std::string &operationName)
@@ -243,5 +245,36 @@ void RemoteExecutionClient::write_files_to_disk(ActionResult result,
         }
     }
 }
+
+ActionResult
+RemoteExecutionClient::from_proto(const proto::ActionResult &proto)
+{
+    ActionResult result;
+
+    result.d_exitCode = proto.exit_code();
+    result.d_stdOut = OutputBlob(proto.stdout_raw(), proto.stdout_digest());
+    result.d_stdErr = OutputBlob(proto.stderr_raw(), proto.stderr_digest());
+
+    for (int i = 0; i < proto.output_files_size(); ++i) {
+        auto fileProto = proto.output_files(i);
+        File file(fileProto.digest(), fileProto.is_executable());
+        result.d_outputFiles[fileProto.path()] = file;
+    }
+
+    for (int i = 0; i < proto.output_directories_size(); ++i) {
+        auto outputDirectoryProto = proto.output_directories(i);
+        auto tree =
+            fetch_message<proto::Tree>(outputDirectoryProto.tree_digest());
+        std::unordered_map<proto::Digest, proto::Directory> digestMap;
+        for (int j = 0; j < tree.children_size(); ++j) {
+            digestMap[make_digest(tree.children(j))] = tree.children(j);
+        }
+        add_from_directory(&result.d_outputFiles, tree.root(),
+                           outputDirectoryProto.path() + "/", digestMap);
+    }
+
+    return result;
+}
+
 } // namespace recc
 } // namespace BloombergLP

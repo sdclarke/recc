@@ -47,6 +47,7 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
   protected:
     proto::MockExecutionStub *executionStub;
     proto::MockContentAddressableStorageStub *casStub;
+    proto::MockActionCacheStub *actionCacheStub;
     google::longrunning::MockOperationsStub *operationsStub;
     google::bytestream::MockByteStreamStub *byteStreamStub;
     RemoteExecutionClient *client;
@@ -72,12 +73,15 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
         // Construct the mock stubs
         executionStub = new proto::MockExecutionStub();
         casStub = new proto::MockContentAddressableStorageStub();
+        actionCacheStub = new proto::MockActionCacheStub();
         operationsStub = new google::longrunning::MockOperationsStub();
         byteStreamStub = new google::bytestream::MockByteStreamStub;
+
         grpcContext = new GrpcContext();
         client = new RemoteExecutionClient(executionStub, casStub,
-                                           operationsStub, byteStreamStub,
-                                           std::string(), grpcContext);
+                                           actionCacheStub, operationsStub,
+                                           byteStreamStub, std::string(),
+                                           grpcContext);
 
         // Construct the Digest we're passing in, and the ExecuteRequest we
         // expect the RemoteExecutionClient to send as a result.
@@ -381,4 +385,53 @@ TEST_F(RemoteExecutionClientTestFixture, CancelOperation)
             ::testing::ExitedWithCode(130), ".*");
     }
     waitpid(pid, NULL, 0);
+}
+
+TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestMiss)
+{
+    EXPECT_CALL(*actionCacheStub, GetActionResult(_, _, _))
+        .WillOnce(Return(grpc::Status(grpc::NOT_FOUND, "not found")));
+    // `NOT_FOUND` => return false and do not write the ActionResult parameter.
+
+    ActionResult actionResult;
+    actionResult.d_exitCode = 123;
+
+    ActionResult actionResultOut = actionResult;
+
+    bool in_cache = client->fetch_from_action_cache(
+        actionDigest, std::string(), actionResultOut);
+
+    EXPECT_FALSE(in_cache);
+    EXPECT_EQ(actionResultOut.d_exitCode, actionResult.d_exitCode);
+}
+
+TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestHit)
+{
+    EXPECT_CALL(*actionCacheStub, GetActionResult(_, _, _))
+        .WillOnce(Return(grpc::Status::OK));
+    // Return true and write the ActionResult parameter with the fetched one.
+
+    ActionResult actionResult;
+    actionResult.d_exitCode = 123;
+
+    ActionResult actionResultOut = actionResult;
+
+    bool in_cache = client->fetch_from_action_cache(
+        actionDigest, std::string(), actionResultOut);
+
+    EXPECT_TRUE(in_cache);
+    EXPECT_EQ(actionResultOut.d_exitCode, 0);
+}
+
+TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestServerError)
+{
+    EXPECT_CALL(*actionCacheStub, GetActionResult(_, _, _))
+        .WillOnce(Return(grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
+                                      "permission denied")));
+    // All other server errors other than `NOT_FOUND` are thrown.
+
+    ActionResult actionResultOut;
+    ASSERT_THROW(client->fetch_from_action_cache(actionDigest, std::string(),
+                                                 actionResultOut),
+                 std::runtime_error);
 }

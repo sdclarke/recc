@@ -180,11 +180,10 @@ int main(int argc, char *argv[])
     RECC_LOG_VERBOSE("Action: " << action.ShortDebugString());
     auto actionDigest = make_digest(action);
 
-    blobs[actionDigest] = action.SerializeAsString();
-
     int rc = -1;
     try {
         GrpcChannels returnChannels = GrpcChannels::get_channels_from_config();
+
         GrpcContext grpcContext;
         std::unique_ptr<AuthSession> reccAuthSession;
         FormPost formPostFactory;
@@ -193,12 +192,37 @@ int main(int argc, char *argv[])
             grpcContext.set_auth(reccAuthSession.get());
         }
         RemoteExecutionClient client(returnChannels.server(),
-                                     returnChannels.cas(), RECC_INSTANCE,
+                                     returnChannels.cas(),
+                                     returnChannels.action_cache(),
+                                     RECC_INSTANCE,
                                      &grpcContext);
-        RECC_LOG_VERBOSE("Uploading resources...");
-        client.upload_resources(blobs, filenames);
-        RECC_LOG_VERBOSE("Executing action...");
-        auto result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
+
+        ActionResult result;
+
+        /* If allowed, we look in the action cache first */
+        bool action_in_cache = false;
+        if (!RECC_SKIP_CACHE) {
+            try {
+                action_in_cache = client.fetch_from_action_cache(
+                    actionDigest, RECC_INSTANCE, result);
+                if (action_in_cache) {
+                    RECC_LOG_VERBOSE("Action cache hit for "
+                                     << actionDigest.hash());
+                }
+            }
+            catch (const std::runtime_error &e) {
+                RECC_LOG_VERBOSE(e.what());
+            }
+        }
+
+        if (!action_in_cache) {
+            blobs[actionDigest] = action.SerializeAsString();
+            RECC_LOG_VERBOSE("Uploading resources...");
+            client.upload_resources(blobs, filenames);
+            RECC_LOG_VERBOSE("Executing action...");
+            result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
+        }
+
         rc = result.d_exitCode;
 
         /* These don't use logging macros because they are compiler output */

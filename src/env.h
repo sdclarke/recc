@@ -40,6 +40,12 @@ extern std::string RECC_SERVER;
 extern std::string RECC_CAS_SERVER;
 
 /**
+ * The URI of the action cache server to use. By default, uses RECC_CAS_SERVER
+ * if set or RECC_SERVER if not.
+ */
+extern std::string RECC_ACTION_CACHE_SERVER;
+
+/**
  * The instance name to pass to the server. The default is the empty
  * std::string.
  */
