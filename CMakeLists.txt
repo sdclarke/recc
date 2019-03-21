@@ -18,6 +18,26 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
     add_definitions(-DRECC_PLATFORM_COMPILER="gcc")
 endif()
 
+# Determine recc's version if none was provided
+if(NOT RECC_VERSION)
+    find_program(GIT git)
+
+    if(GIT STREQUAL "GIT-NOTFOUND")
+        set(GIT_SHA "unknown")
+        message("Could not find git, setting version to 'unknown'")
+    else()
+        execute_process(COMMAND ${GIT} rev-parse --verify HEAD --short
+                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                        OUTPUT_VARIABLE GIT_SHA
+                        OUTPUT_STRIP_TRAILING_WHITESPACE)
+        message(STATUS "Using git commit as version: ${GIT_SHA}")
+    endif()
+
+    set(RECC_VERSION ${GIT_SHA})
+endif()
+
+add_definitions(-DRECC_VERSION="${RECC_VERSION}")
+
 find_package(CURL REQUIRED)
 include_directories(${CURL_INCLUDE_DIR})
 

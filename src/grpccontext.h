@@ -48,8 +48,15 @@ class GrpcContext {
      */
     void set_auth(AuthBase *authSession);
 
+    /**
+     * Set `RequestMetadata.action_id` value to attach to request headers.
+     */
+    void set_action_id(const std::string &action_id);
+
   private:
     AuthBase *d_authSession;
+
+    std::string d_action_id;
 };
 
 } // namespace recc

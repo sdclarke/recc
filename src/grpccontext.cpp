@@ -15,6 +15,7 @@
 
 #include <authsession.h>
 #include <grpccontext.h>
+#include <requestmetadata.h>
 
 #include <grpcpp/security/credentials.h>
 
@@ -30,7 +31,14 @@ GrpcContext::GrpcClientContextPtr GrpcContext::new_client_context()
             grpc::AccessTokenCredentials(access_token);
         context->set_credentials(call_creds);
     }
+
+    RequestMetadataGenerator::attach_request_metadata(*context, d_action_id);
     return context;
+}
+
+void GrpcContext::set_action_id(const std::string &action_id)
+{
+    d_action_id = action_id;
 }
 
 void GrpcContext::auth_refresh()
