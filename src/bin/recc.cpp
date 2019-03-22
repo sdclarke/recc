@@ -185,8 +185,8 @@ int main(int argc, char *argv[])
         exit(1);
     }
     auto action = *actionPtr;
-    RECC_LOG_VERBOSE("Action: " << action.ShortDebugString());
     auto actionDigest = make_digest(action);
+    RECC_LOG_VERBOSE("Action Digest: " << actionDigest.ShortDebugString() << " Action Contents: " << action.ShortDebugString());
 
     int rc = -1;
     try {
