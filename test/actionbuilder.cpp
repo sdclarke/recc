@@ -239,6 +239,33 @@ TEST_F(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
 }
 
 /**
+ * Make sure that the working directory of the action exists in the
+ * input root, regardless if there are any files in it.
+ */
+TEST_F(ActionBuilderTestFixture, EmptyWorkingDirInputRoot)
+{
+    auto prev_deps_override = RECC_DEPS_OVERRIDE;
+
+    cwd = get_current_working_directory();
+    RECC_DEPS_OVERRIDE = {"../deps/empty.c" };
+    std::vector<std::string> recc_args = {"gcc", "-c", "../deps/empty.c", "-o",
+                                          "empty.o"};
+    ParsedCommand command(recc_args, cwd.c_str());
+    auto actionPtr =
+        ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
+
+    auto current_digest = actionPtr->input_root_digest();
+    MerkleTree expected_tree = {
+        {{"directories", {"actionbuilder", "deps"}}},
+        {{"files", {}}},
+        {{"files", {"empty.c"}}}};
+    verify_merkle_tree(current_digest, expected_tree.begin(),
+                       expected_tree.end(), blobs);
+
+    RECC_DEPS_OVERRIDE = prev_deps_override;
+}
+
+/**
  * Trying to output to an unrelated directory returns a nullptr, forcing a
  * local execution.
  */

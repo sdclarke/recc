@@ -87,6 +87,9 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
             (*filenames)[file.d_digest] = dep;
         }
     }
+    if(!commandWorkingDirectory.empty()) {
+        nestedDirectory.addDirectory(commandWorkingDirectory.c_str());
+    }
     for (const auto &product : products) {
         if (!product.empty() && product[0] == '/') {
             RECC_LOG_VERBOSE("Command produces file in a location unrelated "

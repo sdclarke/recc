@@ -65,6 +65,24 @@ void NestedDirectory::add(File file, const char *relativePath)
     }
 }
 
+void NestedDirectory::addDirectory(const char *directory) {
+    const char *slash = strchr(directory, '/');
+    if (slash) {
+        const std::string subdirKey(directory, slash - directory);
+        if (subdirKey.empty()) {
+            this->addDirectory(slash + 1);
+        }
+        else {
+            (*d_subdirs)[subdirKey].addDirectory(slash + 1);
+        }
+    }
+    else {
+        if((*d_subdirs).count(directory) == 0) {
+            (*d_subdirs)[directory] = NestedDirectory();
+        }
+    }
+}
+
 proto::Digest NestedDirectory::to_digest(
     std::unordered_map<proto::Digest, std::string> *digestMap) const
 {
