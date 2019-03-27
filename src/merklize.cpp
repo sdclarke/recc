@@ -66,6 +66,10 @@ void NestedDirectory::add(File file, const char *relativePath)
 }
 
 void NestedDirectory::addDirectory(const char *directory) {
+    // A forward slash by itself is not a valid input directory
+    if (strcmp(directory, "/") == 0) {
+        return;
+    }
     const char *slash = strchr(directory, '/');
     if (slash) {
         const std::string subdirKey(directory, slash - directory);
