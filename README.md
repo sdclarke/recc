@@ -88,6 +88,14 @@ $ sudo installer -pkg /Library/Developer/CommandLine
 Tools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
 ```
 
+### Compiling statically
+You can compile recc statically with the `-DBUILD_STATIC` option; however, doing this is not recommended as it is complicated and potentially insecure.
+
+All of recc's dependencies must be available as static libraries (`.a`files) and visible in `${CMAKE_MODULE_PATH}`.
+
+In addition, [libcurl and its external dependencies](https://curl.haxx.se/docs/libs.html) must be available on the system as static libraries and visible in `${CMAKE_LIBRARY_PATH}`.
+However, this is slightly complicated because Kerberos isn't generally available as a static library in many package management systems. You will likely need to build and install it yourself. See the [MIT Kerberos page](https://web.mit.edu/kerberos/) for the source and instructions.
+
 ## Running `recc`
 
 `recc` is a command-line utility that runs compile commands on a Remote

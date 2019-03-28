@@ -10,12 +10,25 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU"
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED ON)
 endif()
 
+option(BUILD_STATIC "Build statically" OFF)
+
+# Platform-specific settings
 if(CMAKE_SYSTEM_NAME MATCHES "SunOS")
     add_definitions(-DRECC_PLATFORM_COMPILER="CC")
+    if(BUILD_STATIC)
+        set(_EXTRA_LDD_FLAGS "-static-libgcc -static-libstdc++ -Wl,-z,relax=comdat")
+        set(OS_LIBS "-lresolv -lsocket -lnsl")
+    endif()
 elseif(CMAKE_SYSTEM_NAME MATCHES "AIX")
     add_definitions(-DRECC_PLATFORM_COMPILER="xlc")
+    if(BUILD_STATIC)
+        set(_EXTRA_LDD_FLAGS "-static-libgcc -static-libstdc++ -Wl,-bbigtoc")
+    endif()
 elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
     add_definitions(-DRECC_PLATFORM_COMPILER="gcc")
+    if(BUILD_STATIC)
+        set(OS_LIBS "-lresolv -ldl")
+    endif()
 endif()
 
 # Determine recc's version if none was provided
@@ -38,24 +51,7 @@ endif()
 
 add_definitions(-DRECC_VERSION="${RECC_VERSION}")
 
-find_package(CURL REQUIRED)
-include_directories(${CURL_INCLUDE_DIR})
-
-find_package(OpenSSL REQUIRED)
-
-find_package(Protobuf REQUIRED)
-include_directories(${Protobuf_INCLUDE_DIRS})
-
-find_package(gRPC)
-if(gRPC_FOUND)
-    set(GRPC_TARGET gRPC::grpc++)
-    set(GRPC_CPP_PLUGIN $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
-else()
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(gRPC REQUIRED IMPORTED_TARGET grpc++)
-    set(GRPC_TARGET PkgConfig::gRPC)
-    find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
-endif()
+include(cmake/deps.cmake)
 
 # define CMAKE_INSTALL_DIR
 add_definitions(-DCMAKE_INSTALL_DIR="${CMAKE_INSTALL_PREFIX}")
