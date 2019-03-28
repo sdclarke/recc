@@ -176,6 +176,21 @@ TEST(NestedDirectoryTest, AddSlashDirectory)
     ASSERT_EQ(0, message.directories_size());
 }
 
+TEST(NestedDirectoryTest, AddAbsoluteDirectory)
+{
+    NestedDirectory directory;
+    directory.addDirectory("/root");
+
+    std::unordered_map<proto::Digest, std::string> digestMap;
+    auto digest = directory.to_digest(&digestMap);
+
+    proto::Directory message;
+    message.ParseFromString(digestMap[digest]);
+    EXPECT_EQ(0, message.files_size());
+    ASSERT_EQ(1, message.directories_size());
+    EXPECT_EQ("root", message.directories(0).name());
+}
+
 TEST(NestedDirectoryTest, EmptySubdirectories)
 {
 
