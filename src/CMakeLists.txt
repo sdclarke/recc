@@ -23,7 +23,11 @@ set(SRCS
 )
 
 add_library(remoteexecution STATIC ${SRCS})
-target_link_libraries(remoteexecution reccproto ${CURL_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_TARGET} OpenSSL::Crypto)
+target_link_libraries(remoteexecution reccproto ${_EXTRA_LDD_FLAGS} ${CURL_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_TARGET} ${OPENSSL_TARGET})
+
+if(BUILD_STATIC)
+    target_link_libraries(remoteexecution ${ZLIB_LIBRARIES} ${OS_LIBS})
+endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "SunOS")
     target_link_libraries(remoteexecution socket nsl)
