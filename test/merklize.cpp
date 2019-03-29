@@ -147,6 +147,106 @@ TEST(NestedDirectoryTest, Subdirectories)
     EXPECT_EQ("HASH2", subdir2.files(0).digest().hash());
 }
 
+TEST(NestedDirectoryTest, AddSingleDirectory)
+{
+    NestedDirectory directory;
+    directory.addDirectory("foo");
+
+    std::unordered_map<proto::Digest, std::string> digestMap;
+    auto digest = directory.to_digest(&digestMap);
+
+    proto::Directory message;
+    message.ParseFromString(digestMap[digest]);
+    EXPECT_EQ(0, message.files_size());
+    ASSERT_EQ(1, message.directories_size());
+    EXPECT_EQ("foo", message.directories(0).name());
+}
+
+TEST(NestedDirectoryTest, AddSlashDirectory)
+{
+    NestedDirectory directory;
+    directory.addDirectory("/");
+
+    std::unordered_map<proto::Digest, std::string> digestMap;
+    auto digest = directory.to_digest(&digestMap);
+
+    proto::Directory message;
+    message.ParseFromString(digestMap[digest]);
+    EXPECT_EQ(0, message.files_size());
+    ASSERT_EQ(0, message.directories_size());
+}
+
+TEST(NestedDirectoryTest, AddAbsoluteDirectory)
+{
+    NestedDirectory directory;
+    directory.addDirectory("/root");
+
+    std::unordered_map<proto::Digest, std::string> digestMap;
+    auto digest = directory.to_digest(&digestMap);
+
+    proto::Directory message;
+    message.ParseFromString(digestMap[digest]);
+    EXPECT_EQ(0, message.files_size());
+    ASSERT_EQ(1, message.directories_size());
+    EXPECT_EQ("root", message.directories(0).name());
+}
+
+TEST(NestedDirectoryTest, EmptySubdirectories)
+{
+
+    NestedDirectory directory;
+    directory.addDirectory("foo/bar/baz");
+
+    std::unordered_map<proto::Digest, std::string> digestMap;
+    auto digest = directory.to_digest(&digestMap);
+
+    proto::Directory message;
+    message.ParseFromString(digestMap[digest]);
+    EXPECT_EQ(0, message.files_size());
+    ASSERT_EQ(1, message.directories_size());
+    EXPECT_EQ("foo", message.directories(0).name());
+
+    proto::Directory subdir;
+    subdir.ParseFromString(digestMap[message.directories(0).digest()]);
+    EXPECT_EQ(0, message.files_size());
+    EXPECT_EQ(1, subdir.directories_size());
+    EXPECT_EQ("bar", subdir.directories(0).name());
+
+    proto::Directory subdir2;
+    subdir.ParseFromString(digestMap[subdir.directories(0).digest()]);
+    EXPECT_EQ(0, message.files_size());
+    EXPECT_EQ(1, subdir.directories_size());
+    EXPECT_EQ("baz", subdir.directories(0).name());
+}
+
+TEST(NestedDirectoryTest, AddDirsToExistingNestedDirectory)
+{
+    File file;
+    file.d_digest.set_hash("DIGESTHERE");
+
+    NestedDirectory directory;
+    directory.add(file, "directory/file");
+    directory.addDirectory("directory/foo");
+    directory.addDirectory("otherdir");
+
+    std::unordered_map<proto::Digest, std::string> digestMap;
+    auto digest = directory.to_digest(&digestMap);
+
+    proto::Directory message;
+    message.ParseFromString(digestMap[digest]);
+    EXPECT_EQ(0, message.files_size());
+    ASSERT_EQ(2, message.directories_size());
+    EXPECT_EQ("directory", message.directories(0).name());
+    EXPECT_EQ("otherdir", message.directories(1).name());
+
+    proto::Directory subdir;
+    subdir.ParseFromString(digestMap[message.directories(0).digest()]);
+    EXPECT_EQ(1, subdir.files_size());
+    EXPECT_EQ(1, subdir.directories_size());
+    EXPECT_EQ("file", subdir.files(0).name());
+    EXPECT_EQ("foo", subdir.directories(0).name());
+}
+
 TEST(NestedDirectoryTest, SubdirectoriesToTree)
 {
     File file;

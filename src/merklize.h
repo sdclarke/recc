@@ -69,6 +69,12 @@ struct NestedDirectory {
     void add(File, const char *relativePath);
 
     /**
+     * Add the given Directory to this NestedDirectory at a given relative path.
+     * If the directory has contents, the add method should be used instead
+     */
+    void addDirectory(const char* directory);
+
+    /**
      * Convert this NestedDirectory to a Directory message and return its
      * Digest.
      *
