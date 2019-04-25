@@ -33,13 +33,12 @@ namespace BloombergLP {
 namespace recc {
 
 class RequestMetadataGenerator {
-public:
-
+  public:
     /* Helper function for attaching the optional `RequestMetadata` header
      * values to a context.
      */
     static void attach_request_metadata(grpc::ClientContext &context,
-                                 const std::string &action_id);
+                                        const std::string &action_id);
 
     static proto::ToolDetails recc_tool_details();
 

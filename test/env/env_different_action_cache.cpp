@@ -20,10 +20,9 @@ using namespace BloombergLP::recc;
 
 TEST(EnvTest, DifferentActionCacheServerTest)
 {
-    const char *testEnviron[] = {"RECC_SERVER=somehost:1234",
-                                 "RECC_CAS_SERVER=someotherhost:5678",
-                                 "RECC_ACTION_CACHE_SERVER=actioncachehost:9999",
-                                 nullptr};
+    const char *testEnviron[] = {
+        "RECC_SERVER=somehost:1234", "RECC_CAS_SERVER=someotherhost:5678",
+        "RECC_ACTION_CACHE_SERVER=actioncachehost:9999", nullptr};
     std::string expectedActionCacheServer = "actioncachehost:9999";
 
     parse_config_variables(testEnviron);

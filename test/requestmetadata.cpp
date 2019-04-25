@@ -35,7 +35,8 @@ TEST(RequestMetadataTest, ToolDetails)
 TEST(RequestMetadataTest, ToolInvocationID)
 {
     RequestMetadataGenerator metadataGenerator;
-    const std::string toolInvocationId = metadataGenerator.tool_invocation_id();
+    const std::string toolInvocationId =
+        metadataGenerator.tool_invocation_id();
 
     std::size_t separator = toolInvocationId.find(':');
     ASSERT_NE(separator, std::string::npos);

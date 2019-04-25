@@ -27,11 +27,11 @@ const std::string RequestMetadataGenerator::RECC_METADATA_TOOL_NAME = "recc";
 #error "RECC_VERSION is not defined"
 #else
 const std::string RequestMetadataGenerator::RECC_METADATA_TOOL_VERSION =
-        RECC_VERSION; // set by CMake
+    RECC_VERSION; // set by CMake
 #endif
 
 const std::string RequestMetadataGenerator::RECC_METADATA_HEADER_NAME =
-        "requestmetadata-bin";
+    "requestmetadata-bin";
 
 proto::ToolDetails RequestMetadataGenerator::recc_tool_details()
 {
@@ -50,8 +50,7 @@ std::string RequestMetadataGenerator::tool_invocation_id()
 }
 
 void RequestMetadataGenerator::attach_request_metadata(
-        grpc::ClientContext &context,
-        const std::string &action_id)
+    grpc::ClientContext &context, const std::string &action_id)
 {
     proto::RequestMetadata requestMetadata;
     *requestMetadata.mutable_tool_details() = recc_tool_details();
