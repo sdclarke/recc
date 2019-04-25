@@ -6,17 +6,17 @@ For information regarding contributing to this project, please read the [Contrib
 # Installation
 
 ## Dependencies
-Currently recc relies on: 
+Currently recc relies on:
 
 * [gRPC][]
-* [Protobuf][] 
+* [Protobuf][]
 * [OpenSSL][]
 * [CMake][]
 * [GoogleTest][]
 * [pkg-config][]
 * [libcurl][]
 
-Some package managers (apt) include all these dependencies while others (brew) require manual installation of some. Please follow the relevant guides for your OS.  
+Some package managers (apt) include all these dependencies while others (brew) require manual installation of some. Please follow the relevant guides for your OS.
 
 ### Installing on macOS
 
@@ -84,8 +84,7 @@ $ make test
 
 ```sh
 $ xcode-select --install
-$ sudo installer -pkg /Library/Developer/CommandLine
-Tools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
+$ sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
 ```
 
 ### Compiling statically
@@ -147,7 +146,7 @@ At minimum, you'll need to set `RECC_SERVER` to the URI of your Remote:
 For a full list of the environment/configuration variables `recc` accepts and what they do, run
 `recc --help`.
 
-If variables are specified in the configuration file, the prefix **RECC_** should not be included. 
+If variables are specified in the configuration file, the prefix **RECC_** should not be included.
 
 #### Environment Variables
 
@@ -191,7 +190,7 @@ for instructions on how to do that.
 ### Calling `recc` with a compile command
 
 Once you've started the server and set the environment variables, you're ready
-to call `recc` with a compile command: 
+to call `recc` with a compile command:
 
 ```sh
 $ recc gcc -c hello.c -o hello.o
