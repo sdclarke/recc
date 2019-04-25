@@ -78,10 +78,9 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
         byteStreamStub = new google::bytestream::MockByteStreamStub;
 
         grpcContext = new GrpcContext();
-        client = new RemoteExecutionClient(executionStub, casStub,
-                                           actionCacheStub, operationsStub,
-                                           byteStreamStub, std::string(),
-                                           grpcContext);
+        client = new RemoteExecutionClient(
+            executionStub, casStub, actionCacheStub, operationsStub,
+            byteStreamStub, std::string(), grpcContext);
 
         // Construct the Digest we're passing in, and the ExecuteRequest we
         // expect the RemoteExecutionClient to send as a result.

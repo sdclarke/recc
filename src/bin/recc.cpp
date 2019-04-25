@@ -152,10 +152,11 @@ int main(int argc, char *argv[])
              (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)) {
         RECC_LOG_WARNING(HELP);
         return 0;
-    } else if (argc == 2 &&
-            (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0)) {
+    }
+    else if (argc == 2 && (strcmp(argv[1], "--version") == 0 ||
+                           strcmp(argv[1], "-v") == 0)) {
         const std::string version =
-                RequestMetadataGenerator::RECC_METADATA_TOOL_VERSION;
+            RequestMetadataGenerator::RECC_METADATA_TOOL_VERSION;
         const std::string versionMessage = "recc version: " + version;
         RECC_LOG_WARNING(versionMessage);
         return 0;
@@ -186,7 +187,9 @@ int main(int argc, char *argv[])
     }
     auto action = *actionPtr;
     auto actionDigest = make_digest(action);
-    RECC_LOG_VERBOSE("Action Digest: " << actionDigest.ShortDebugString() << " Action Contents: " << action.ShortDebugString());
+    RECC_LOG_VERBOSE("Action Digest: " << actionDigest.ShortDebugString()
+                                       << " Action Contents: "
+                                       << action.ShortDebugString());
 
     int rc = -1;
     try {
@@ -201,11 +204,9 @@ int main(int argc, char *argv[])
             reccAuthSession.reset(new AuthSession(&formPostFactory));
             grpcContext.set_auth(reccAuthSession.get());
         }
-        RemoteExecutionClient client(returnChannels.server(),
-                                     returnChannels.cas(),
-                                     returnChannels.action_cache(),
-                                     RECC_INSTANCE,
-                                     &grpcContext);
+        RemoteExecutionClient client(
+            returnChannels.server(), returnChannels.cas(),
+            returnChannels.action_cache(), RECC_INSTANCE, &grpcContext);
 
         ActionResult result;
 

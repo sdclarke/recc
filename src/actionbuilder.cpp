@@ -87,7 +87,7 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
             (*filenames)[file.d_digest] = dep;
         }
     }
-    if(!commandWorkingDirectory.empty()) {
+    if (!commandWorkingDirectory.empty()) {
         nestedDirectory.addDirectory(commandWorkingDirectory.c_str());
     }
     for (const auto &product : products) {

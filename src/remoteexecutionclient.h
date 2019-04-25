@@ -93,8 +93,7 @@ class RemoteExecutionClient : public CASClient {
         std::string instance, GrpcContext *grpcContext)
         : CASClient(casStub, byteStreamStub, instance, grpcContext),
           d_executionStub(executionStub), d_operationsStub(operationsStub),
-          d_actionCacheStub(actionCacheStub),
-          d_grpcContext(grpcContext)
+          d_actionCacheStub(actionCacheStub), d_grpcContext(grpcContext)
     {
     }
 

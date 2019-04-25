@@ -65,7 +65,8 @@ void NestedDirectory::add(File file, const char *relativePath)
     }
 }
 
-void NestedDirectory::addDirectory(const char *directory) {
+void NestedDirectory::addDirectory(const char *directory)
+{
     // A forward slash by itself is not a valid input directory
     if (strcmp(directory, "/") == 0) {
         return;
@@ -81,7 +82,7 @@ void NestedDirectory::addDirectory(const char *directory) {
         }
     }
     else {
-        if((*d_subdirs).count(directory) == 0) {
+        if ((*d_subdirs).count(directory) == 0) {
             (*d_subdirs)[directory] = NestedDirectory();
         }
     }
