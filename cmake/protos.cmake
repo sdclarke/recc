@@ -4,8 +4,6 @@ set(PROTO_PATH_INTERNAL ${CMAKE_CURRENT_SOURCE_DIR}/protos)
 set(protos google/api/http google/api/annotations
            google/rpc/code google/rpc/status
            google/longrunning/operations google/bytestream/bytestream
-           google/devtools/remoteworkers/v1test2/bots
-           google/devtools/remoteworkers/v1test2/worker
            build/bazel/semver/semver
            build/bazel/remote/execution/v2/remote_execution)
 

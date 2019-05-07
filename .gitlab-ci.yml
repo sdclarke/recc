@@ -18,7 +18,6 @@ build_only:
   artifacts:
     paths:
       - build/bin/recc
-      - build/bin/reccworker
       - test/data/hello.cpp
 
 test_cover:

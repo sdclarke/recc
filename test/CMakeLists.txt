@@ -85,10 +85,6 @@ add_executable(remoteexecutionclient_tests remoteexecutionclient.cpp main.cpp)
 target_link_libraries(remoteexecutionclient_tests ${GMOCK_TARGET} ${GTEST_TARGET} remoteexecution)
 add_test(NAME remoteexecutionclient_tests COMMAND remoteexecutionclient_tests)
 
-add_executable(recccounterguard_tests recccounterguard.cpp main.cpp)
-target_link_libraries(recccounterguard_tests ${GMOCK_TARGET} ${GTEST_TARGET} remoteexecution)
-add_test(NAME recccounterguard_tests COMMAND recccounterguard_tests)
-
 add_executable(fileutils_tests fileutils.cpp main.cpp)
 target_link_libraries(fileutils_tests ${GTEST_TARGET} remoteexecution)
 add_test(NAME fileutils_tests COMMAND fileutils_tests)
@@ -101,13 +97,13 @@ add_test(NAME actionbuilder_tests
 
 add_executable(grpcretry_tests grpcretry.cpp main.cpp)
 target_link_libraries(grpcretry_tests ${GTEST_TARGET} remoteexecution fixtures)
-add_test(NAME grpcretry_tests 
+add_test(NAME grpcretry_tests
 	 COMMAND grpcretry_tests
 	 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/authsession_fixture)
 
 add_executable(grpccontext_tests grpccontext.cpp main.cpp)
 target_link_libraries(grpccontext_tests ${GMOCK_TARGET} ${GTEST_TARGET} remoteexecution fixtures)
-add_test(NAME grpccontext_tests 
+add_test(NAME grpccontext_tests
 	 COMMAND grpccontext_tests
 	 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/authsession_fixture)
 

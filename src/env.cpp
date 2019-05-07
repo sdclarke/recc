@@ -62,8 +62,6 @@ bool RECC_DEPS_GLOBAL_PATHS = DEFAULT_RECC_DEPS_GLOBAL_PATHS;
 
 int RECC_RETRY_LIMIT = DEFAULT_RECC_RETRY_LIMIT;
 int RECC_RETRY_DELAY = DEFAULT_RECC_RETRY_DELAY;
-int RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
-int RECC_JOBS_COUNT = DEFAULT_RECC_JOBS_COUNT;
 
 // Hidden variables (not displayed in the help string)
 std::string RECC_AUTH_UNCONFIGURED_MSG = DEFAULT_RECC_AUTH_UNCONFIGURED_MSG;
@@ -220,8 +218,6 @@ void parse_config_variables(const char *const *environ)
 
         INTVAR(RECC_RETRY_LIMIT)
         INTVAR(RECC_RETRY_DELAY)
-        INTVAR(RECC_MAX_CONCURRENT_JOBS)
-        INTVAR(RECC_JOBS_COUNT)
 
         SETVAR(RECC_DEPS_OVERRIDE)
         SETVAR(RECC_OUTPUT_FILES_OVERRIDE)
@@ -246,8 +242,7 @@ void find_and_parse_config_files()
     }
 }
 
-// defaults to Baseline
-void handle_special_defaults(Source file)
+void handle_special_defaults()
 {
 
     if (RECC_SERVER.empty()) {
@@ -291,46 +286,19 @@ void handle_special_defaults(Source file)
         }
     }
 
-    /* recc-specific defaults */
-    if (file == Source::e_Recc) {
-        if (RECC_PROJECT_ROOT.empty()) {
-            RECC_PROJECT_ROOT = get_current_working_directory();
-            RECC_LOG_VERBOSE("No RECC_PROJECT_ROOT directory specified. "
-                             << "Defaulting to current working directory ("
-                             << RECC_PROJECT_ROOT << ")");
-        }
-        else if (RECC_PROJECT_ROOT.front() != '/') {
-            RECC_PROJECT_ROOT = make_path_absolute(
-                RECC_PROJECT_ROOT, get_current_working_directory());
-            RECC_LOG_WARNING(
-                "Warning: RECC_PROJECT_ROOT was set to a relative "
-                "path. "
-                << "Rewriting to absolute path " << RECC_PROJECT_ROOT);
-        }
+    if (RECC_PROJECT_ROOT.empty()) {
+        RECC_PROJECT_ROOT = get_current_working_directory();
+        RECC_LOG_VERBOSE("No RECC_PROJECT_ROOT directory specified. "
+                         << "Defaulting to current working directory ("
+                         << RECC_PROJECT_ROOT << ")");
     }
-
-    /* reccworker-specific defaults */
-    if (file == Source::e_Reccworker) {
-        if (RECC_MAX_CONCURRENT_JOBS <= 0) {
-            RECC_LOG_WARNING(
-                "Warning: no RECC_MAX_CONCURRENT_JOBS specified.");
-            RECC_LOG_WARNING("Running "
-                             << DEFAULT_RECC_MAX_CONCURRENT_JOBS
-                             << " job(s) at a time (default option).");
-            RECC_MAX_CONCURRENT_JOBS = DEFAULT_RECC_MAX_CONCURRENT_JOBS;
-        }
-        if (RECC_RETRY_LIMIT < 0) {
-            RECC_LOG_WARNING("Warning: invalid RECC_RETRY_LIMIT setting.");
-            RECC_LOG_WARNING("Retry limit set to " << DEFAULT_RECC_RETRY_LIMIT
-                                                   << " (default value).");
-            RECC_RETRY_LIMIT = DEFAULT_RECC_RETRY_LIMIT;
-        }
-        if (RECC_RETRY_DELAY < 0) {
-            RECC_LOG_WARNING("Warning: invalid RECC_RETRY_DELAY setting.");
-            RECC_LOG_WARNING("Retry delay set to " << DEFAULT_RECC_RETRY_DELAY
-                                                   << "ms (default value).");
-            RECC_RETRY_DELAY = DEFAULT_RECC_RETRY_DELAY;
-        }
+    else if (RECC_PROJECT_ROOT.front() != '/') {
+        RECC_PROJECT_ROOT = make_path_absolute(
+            RECC_PROJECT_ROOT, get_current_working_directory());
+        RECC_LOG_WARNING("Warning: RECC_PROJECT_ROOT was set to a relative "
+                         "path. "
+                         << "Rewriting to absolute path "
+                         << RECC_PROJECT_ROOT);
     }
 }
 

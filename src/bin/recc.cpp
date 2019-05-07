@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
     }
 
     set_config_locations();
-    parse_config_variables(Source::e_Recc);
+    parse_config_variables();
     const std::string cwd = get_current_working_directory();
     ParsedCommand command(&argv[1], cwd.c_str());
 

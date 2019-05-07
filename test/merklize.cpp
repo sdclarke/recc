@@ -247,48 +247,6 @@ TEST(NestedDirectoryTest, AddDirsToExistingNestedDirectory)
     EXPECT_EQ("foo", subdir.directories(0).name());
 }
 
-TEST(NestedDirectoryTest, SubdirectoriesToTree)
-{
-    File file;
-    file.d_digest.set_hash("HASH1");
-
-    File file2;
-    file2.d_digest.set_hash("HASH2");
-
-    NestedDirectory directory;
-    directory.add(file, "sample");
-    directory.add(file2, "subdir/anothersubdir/sample2");
-
-    auto tree = directory.to_tree();
-    EXPECT_EQ(2, tree.children_size());
-
-    std::unordered_map<proto::Digest, proto::Directory> digestMap;
-    for (auto &child : tree.children()) {
-        digestMap[make_digest(child)] = child;
-    }
-
-    auto root = tree.root();
-
-    EXPECT_EQ(1, root.files_size());
-    EXPECT_EQ("sample", root.files(0).name());
-    EXPECT_EQ("HASH1", root.files(0).digest().hash());
-    ASSERT_EQ(1, root.directories_size());
-    EXPECT_EQ("subdir", root.directories(0).name());
-
-    ASSERT_EQ(1, digestMap.count(root.directories(0).digest()));
-    proto::Directory subdir1 = digestMap[root.directories(0).digest()];
-    EXPECT_EQ(0, subdir1.files_size());
-    ASSERT_EQ(1, subdir1.directories_size());
-    EXPECT_EQ("anothersubdir", subdir1.directories(0).name());
-
-    ASSERT_EQ(1, digestMap.count(subdir1.directories(0).digest()));
-    proto::Directory subdir2 = digestMap[subdir1.directories(0).digest()];
-    EXPECT_EQ(0, subdir2.directories_size());
-    ASSERT_EQ(1, subdir2.files_size());
-    EXPECT_EQ("sample2", subdir2.files(0).name());
-    EXPECT_EQ("HASH2", subdir2.files(0).digest().hash());
-}
-
 TEST(NestedDirectoryTest, MakeNestedDirectory)
 {
     std::unordered_map<proto::Digest, std::string> fileMap;

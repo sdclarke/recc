@@ -245,45 +245,5 @@ void CASClient::upload_resources(
     }
 }
 
-void CASClient::download_directory(proto::Digest digest, const char *path,
-                                   std::vector<std::string> *missing)
-{
-    RECC_LOG_VERBOSE("Downloading directory to " << path);
-    auto directory = fetch_message<proto::Directory>(digest);
-
-    for (auto &file : directory.files()) {
-        try {
-            auto blob = fetch_blob(file.digest());
-            const std::string filePath = std::string(path) + "/" + file.name();
-            write_file(filePath.c_str(), blob);
-            if (file.is_executable()) {
-                make_executable(filePath.c_str());
-            }
-        }
-        catch (const std::runtime_error &e) {
-            const std::string base =
-                "Retry limit exceeded. Last gRPC error was ";
-            const std::string expected_err = base + "5: Blob not found";
-            if (e.what() != expected_err) {
-                throw;
-            }
-            proto::Digest digest = file.digest();
-            std::ostringstream resourceName;
-            resourceName << "blobs/" << digest.hash() << "/"
-                         << std::to_string(digest.size_bytes());
-            missing->push_back(resourceName.str());
-        }
-    }
-
-    for (auto &subdirectory : directory.directories()) {
-        auto subdirPath = std::string(path) + "/" + subdirectory.name();
-        if (mkdir(subdirPath.c_str(), 0777) != 0) {
-            if (errno != EEXIST) {
-                throw std::system_error(errno, std::system_category());
-            }
-        }
-        download_directory(subdirectory.digest(), subdirPath.c_str(), missing);
-    }
-}
 } // namespace recc
 } // namespace BloombergLP

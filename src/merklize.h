@@ -86,11 +86,6 @@ struct NestedDirectory {
      */
     proto::Digest to_digest(std::unordered_map<proto::Digest, std::string>
                                 *digestMap = nullptr) const;
-
-    /**
-     * Convert this NestedDirectory to a Tree message.
-     */
-    proto::Tree to_tree() const;
 };
 
 /**

@@ -24,12 +24,6 @@ namespace BloombergLP {
 namespace recc {
 
 /**
- * enum class for specifying source binary which calls
- * handle_special_defaults
- */
-enum class Source { e_Baseline, e_Recc, e_Reccworker };
-
-/**
  * The URI of the server to use, e.g. localhost:8085
  */
 extern std::string RECC_SERVER;
@@ -73,7 +67,7 @@ extern std::string RECC_PROJECT_ROOT;
 extern bool RECC_DEPS_GLOBAL_PATHS;
 
 /**
- * The location to store temporary files. (Currently used only by the worker.)
+ * The location to store temporary files. (Currently used only by the tests.)
  */
 extern std::string TMPDIR;
 
@@ -142,18 +136,6 @@ extern std::string RECC_JWT_JSON_FILE_PATH;
  * string, Recc won't try to refresh. Defaults to empty string.
  */
 extern std::string RECC_AUTH_REFRESH_URL;
-
-/**
- * The maximum number of execution jobs to run concurrently. (Used only by the
- * worker.)
- */
-extern int RECC_MAX_CONCURRENT_JOBS;
-
-/*
- * The maximum number of jobs to run before terminating the worker. (Used only
- * by the worker.)
- */
-extern int RECC_JOBS_COUNT;
 
 /**
  * Defined by cmake when building.
@@ -244,7 +226,7 @@ void find_and_parse_config_files();
 /**
  * Handles the case that RECC_SERVER and RECC_CAS_SERVER have not been set.
  */
-void handle_special_defaults(Source file = Source::e_Baseline);
+void handle_special_defaults();
 
 /*
  * Evaluates ENV and Returns a prioritized deque with the config locations
@@ -280,11 +262,11 @@ extern "C" char **environ;
  * parameter specyfying source file which calls it, to pass to
  * handle_special_defaults
  */
-inline void parse_config_variables(Source file = Source::e_Baseline)
+inline void parse_config_variables()
 {
     find_and_parse_config_files();
     parse_config_variables(environ);
-    handle_special_defaults(file);
+    handle_special_defaults();
 }
 } // namespace recc
 } // namespace BloombergLP
