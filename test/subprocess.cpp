@@ -51,12 +51,3 @@ TEST(SubprocessTest, Environment)
                 std::string::npos);
     EXPECT_EQ(result.d_exitCode, 0);
 }
-
-TEST(SubprocessTest, WorkingDirectory)
-{
-    std::vector<std::string> command = {"pwd"};
-    std::map<std::string, std::string> env;
-    auto result = execute(command, true, false, env, "/usr/");
-    EXPECT_EQ(result.d_exitCode, 0);
-    EXPECT_EQ(result.d_stdOut, "/usr\n");
-}

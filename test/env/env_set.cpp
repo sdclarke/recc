@@ -26,7 +26,6 @@ TEST(EnvTest, EnvSetTest)
                                  "RECC_OUTPUT_FILES_OVERRIDE=one,two,three",
                                  "RECC_REMOTE_ENV_key=val",
                                  "RECC_REMOTE_ENV_anotherkey=anotherval",
-                                 "RECC_MAX_CONCURRENT_JOBS=15",
                                  "TMPDIR=/some/tmp/dir",
                                  nullptr};
     std::string expectedServer = "server:1234";
@@ -41,6 +40,5 @@ TEST(EnvTest, EnvSetTest)
     EXPECT_EQ(expectedDeps, RECC_DEPS_OVERRIDE);
     EXPECT_EQ(expectedOutputFiles, RECC_OUTPUT_FILES_OVERRIDE);
     EXPECT_EQ(expectedRemoteEnv, RECC_REMOTE_ENV);
-    EXPECT_EQ(15, RECC_MAX_CONCURRENT_JOBS);
     EXPECT_EQ("/some/tmp/dir", TMPDIR);
 }

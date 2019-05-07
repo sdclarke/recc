@@ -19,10 +19,6 @@
 #include <build/bazel/remote/execution/v2/remote_execution.pb.h>
 #include <google/bytestream/bytestream.grpc.pb.h>
 #include <google/bytestream/bytestream.pb.h>
-#include <google/devtools/remoteworkers/v1test2/bots.grpc.pb.h>
-#include <google/devtools/remoteworkers/v1test2/bots.pb.h>
-#include <google/devtools/remoteworkers/v1test2/worker.grpc.pb.h>
-#include <google/devtools/remoteworkers/v1test2/worker.pb.h>
 #include <google/longrunning/operations.grpc.pb.h>
 #include <google/longrunning/operations.pb.h>
 #include <google/rpc/code.pb.h>
@@ -35,7 +31,6 @@ namespace proto {
 using namespace reccauth;
 using namespace build::bazel::remote::execution::v2;
 using namespace google::longrunning;
-using namespace google::devtools::remoteworkers::v1test2;
 } // namespace proto
 
 /**

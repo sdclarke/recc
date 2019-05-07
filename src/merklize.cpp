@@ -113,24 +113,6 @@ proto::Digest NestedDirectory::to_digest(
     return digest;
 }
 
-proto::Tree NestedDirectory::to_tree() const
-{
-    proto::Tree result;
-    auto root = result.mutable_root();
-    for (const auto &fileIter : d_files) {
-        *root->add_files() = fileIter.second.to_filenode(fileIter.first);
-    }
-    for (const auto &subdirIter : *d_subdirs) {
-        auto subtree = subdirIter.second.to_tree();
-        result.mutable_children()->MergeFrom(subtree.children());
-        *result.add_children() = subtree.root();
-        auto subdirNode = root->add_directories();
-        subdirNode->set_name(subdirIter.first);
-        *subdirNode->mutable_digest() = make_digest(subtree.root());
-    }
-    return result;
-}
-
 const auto HASH_ALGORITHM = EVP_sha256();
 const unsigned char HEX_DIGITS[] = "0123456789abcdef";
 

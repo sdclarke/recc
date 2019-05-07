@@ -108,13 +108,16 @@ and call `recc` with a compile command.
 [Remote Execution API][] V2. It is primarily tested against [BuildGrid][],
 so follow the instructions there to start a server.
 
-You'll also need to set up a build worker to actually run the build jobs
-you submit. BuildGrid provides one you can use, or alternatively, you can
-use [`reccworker` (see below)](#running-reccworker).
-
 The [Bazel Buildfarm][] project is also working on a Remote Execution server,
 but at time of writing it uses version 1 of the API and so cannot be used with
 `recc`.
+
+#### Worker
+You'll also need to set up a build worker to actually run the build jobs
+you submit. BuildGrid provides one you can use.
+
+This repository used to contain a reference worker called
+`reccworker`, but that has since been deprecated and removed.
 
 [remote execution api]: https://github.com/bazelbuild/remote-apis
 [buildgrid]: https://gitlab.com/BuildGrid/buildgrid
@@ -209,35 +212,6 @@ Not a compiler command, so running locally.
 hello
 $
 ```
-
-## Using `reccworker`
-
-`reccworker` is a prototype Remote Workers API client. It polls a server for
-pending jobs, runs them, and sends the results back.
-
-Note that `reccworker` does not attempt to sandbox builds (they're run with
-the full privileges of the user who ran `reccworker`) and does not enforce
-timeouts.
-
-Bazel Buildfarm does not support the Remote Workers API, so you'll need to
-use BuildGrid to run `reccworker`. Just like with `recc`, you can tell
-`reccworker` where your server is using the `RECC_SERVER` environment variable.
-
-You will probably also want to set `RECC_MAX_CONCURRENT_JOBS` to the number of
-simultaneous build jobs you want the worker to run. (By default, it runs jobs
-one at a time.) Run `reccworker --help` for the full list of environment
-variables `reccworker` accepts.
-
-You can also optionally set `RECC_JOBS_COUNT` to the maximum number of jobs
-each worker can execute before terminating execution. This can be useful when
-running reccworker on Kubernetes (and similar platforms) since it can provide a 
-"free sandbox" with `RECC_JOBS_COUNT=1`  with Kubernetes' (or equivalent) 
-`restartPolicy: Always`.
-
-Once you've set up the servers and environment, start the worker by
-running `reccworker`. You can optionally specify a bot ID (the default is the
-computer's hostname and the pid of the process separated by a '-') by passing
-it as an argument.
 
 ## Additional utilities
 

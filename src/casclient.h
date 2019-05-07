@@ -115,24 +115,6 @@ class CASClient {
     void
     upload_resources(std::unordered_map<proto::Digest, std::string> blobs,
                      std::unordered_map<proto::Digest, std::string> filenames);
-
-    /**
-     * Download the directory with the given digest, storing its contents at
-     * the given path.
-     *
-     * The digest must correspond to a Directory message, and the path must be
-     * a directory that already exists.
-     *
-     * pointer to the string vector 'missing' is passed in. If fetch_blob is
-     * unable to find a file digest declared in the directory digest, it will
-     * add that file's info into missing
-     *
-     * Pass in an empty vector of strings, if the vector is no longer empty
-     * after the function call, it is recommended to throw a failed
-     * precondition error.
-     */
-    void download_directory(proto::Digest digest, const char *path,
-                            std::vector<std::string> *missing);
 };
 } // namespace recc
 } // namespace BloombergLP

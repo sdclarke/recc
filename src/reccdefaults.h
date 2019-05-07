@@ -17,11 +17,9 @@
 
 #include <chrono>
 #include <limits.h>
-#include <recccounterguard.h>
 
 // clang-format off
 
-#define DEFAULT_RECC_WORKER_POLL_WAIT std::chrono::milliseconds(250)
 #define DEFAULT_RECC_POLL_WAIT std::chrono::seconds(1)
 #define DEFAULT_RECC_RETRY_LIMIT 0
 #define DEFAULT_RECC_RETRY_DELAY 100
@@ -29,7 +27,6 @@
 #define DEFAULT_RECC_INSTANCE ""
 #define DEFAULT_RECC_TMPDIR "/tmp"
 #define DEFAULT_RECC_TMP_PREFIX "recc"
-#define DEFAULT_RECC_WORKER_TMP_PREFIX "reccworker"
 #define DEFAULT_RECC_SERVER_AUTH_GOOGLEAPI 0
 #define DEFAULT_RECC_SERVER_SSL 0
 #define DEFAULT_RECC_SERVER_JWT 0
@@ -46,8 +43,6 @@
 #define DEFAULT_RECC_ACTION_UNCACHEABLE 0
 #define DEFAULT_RECC_SKIP_CACHE 0
 #define DEFAULT_RECC_DONT_SAVE_OUTPUT 0
-#define DEFAULT_RECC_JOBS_COUNT ReccCounterGuard::s_NO_LIMIT
-#define DEFAULT_RECC_MAX_CONCURRENT_JOBS 4
 
 #define DEFAULT_RECC_DEPS_DIRECTORY_OVERRIDE ""
 #define DEFAULT_RECC_DEPS_OVERRIDE {}

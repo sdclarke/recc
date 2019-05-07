@@ -29,8 +29,7 @@ namespace recc {
 
 SubprocessResult execute(std::vector<std::string> command, bool pipeStdOut,
                          bool pipeStdErr,
-                         std::map<std::string, std::string> env,
-                         const char *cwd)
+                         std::map<std::string, std::string> env)
 {
     // Convert the command to a char*[]
     int argc = command.size();
@@ -66,12 +65,6 @@ SubprocessResult execute(std::vector<std::string> command, bool pipeStdOut,
             dup2(stdErrPipeFDs[1],
                  STDERR_FILENO); // redirect stderr to input end of pipe
             close(stdErrPipeFDs[1]);
-        }
-        if (cwd != nullptr) {
-            if (chdir(cwd) == -1) {
-                RECC_LOG_PERROR(cwd);
-                _Exit(1);
-            }
         }
         for (auto &envPair : env) {
             setenv(envPair.first.c_str(), envPair.second.c_str(), 1);

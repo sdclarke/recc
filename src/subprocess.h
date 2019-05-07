@@ -45,8 +45,7 @@ struct SubprocessResult {
  */
 SubprocessResult execute(std::vector<std::string> command,
                          bool pipeStdOut = false, bool pipeStdErr = false,
-                         std::map<std::string, std::string> env = {},
-                         const char *cwd = nullptr);
+                         std::map<std::string, std::string> env = {});
 } // namespace recc
 } // namespace BloombergLP
 
