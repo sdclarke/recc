@@ -61,6 +61,14 @@ extern std::string RECC_DEPS_DIRECTORY_OVERRIDE;
 extern std::string RECC_PROJECT_ROOT;
 
 /**
+ * The file or UDP Host:Port to write metrics to.
+ * Empty string for both indicates stderr.
+ * Only taken into account when RECC_ENABLE_METRICS is true.
+ */
+extern std::string RECC_METRICS_FILE;
+extern std::string RECC_METRICS_UDP_SERVER;
+
+/**
  * If set, recc will report all entries returned by the dependency command
  * even if they are absolute paths.
  */
@@ -75,6 +83,11 @@ extern std::string TMPDIR;
  * Enables verbose output, which is logged to stderr.
  */
 extern bool RECC_VERBOSE;
+
+/**
+ * Enables metric collection to the place specified by RECC_METRICS_FILE.
+ */
+extern bool RECC_ENABLE_METRICS;
 
 /**
  * Sends the command to the build server, even if deps doesn't think it's a
@@ -228,6 +241,12 @@ void find_and_parse_config_files();
  */
 void handle_special_defaults();
 
+/**
+ * Verifies that the files referred to in the configuration can be actually
+ * written to.
+ */
+void verify_files_writeable();
+
 /*
  * Evaluates ENV and Returns a prioritized deque with the config locations
  * as follows:
@@ -251,6 +270,14 @@ void set_config_locations();
 void set_config_locations(std::deque<std::string> config_order);
 
 /**
+ * Parses strings of the form `host:port` and stores each segment in the
+ * individual string/int that are referenced/pointed to. If no port is
+ * specified, it defaults to 0. NOTE: This only works for IPv4, not IPv6.
+ */
+void parse_host_port_string(const std::string &inputString,
+                            std::string &serverRet, int *portRet);
+
+/**
  * The process environment.
  */
 extern "C" char **environ;
@@ -267,6 +294,7 @@ inline void parse_config_variables()
     find_and_parse_config_files();
     parse_config_variables(environ);
     handle_special_defaults();
+    verify_files_writeable();
 }
 } // namespace recc
 } // namespace BloombergLP
