@@ -49,8 +49,11 @@ std::string RECC_JWT_JSON_FILE_PATH = DEFAULT_RECC_JWT_JSON_FILE_PATH;
 std::string RECC_AUTH_REFRESH_URL = DEFAULT_RECC_AUTH_REFRESH_URL;
 std::string RECC_CORRELATED_INVOCATIONS_ID =
     DEFAULT_RECC_CORRELATED_INVOCATIONS_ID;
+std::string RECC_METRICS_FILE = DEFAULT_RECC_METRICS_FILE;
+std::string RECC_METRICS_UDP_SERVER = DEFAULT_RECC_METRICS_UDP_SERVER;
 
 bool RECC_VERBOSE = DEFAULT_RECC_VERBOSE;
+bool RECC_ENABLE_METRICS = DEFAULT_RECC_ENABLE_METRICS;
 bool RECC_FORCE_REMOTE = DEFAULT_RECC_FORCE_REMOTE;
 bool RECC_ACTION_UNCACHEABLE = DEFAULT_RECC_ACTION_UNCACHEABLE;
 bool RECC_SKIP_CACHE = DEFAULT_RECC_SKIP_CACHE;
@@ -205,8 +208,11 @@ void parse_config_variables(const char *const *environ)
         STRVAR(RECC_AUTH_UNCONFIGURED_MSG)
         STRVAR(RECC_AUTH_REFRESH_URL)
         STRVAR(RECC_CORRELATED_INVOCATIONS_ID)
+        STRVAR(RECC_METRICS_FILE)
+        STRVAR(RECC_METRICS_UDP_SERVER)
 
         BOOLVAR(RECC_VERBOSE)
+        BOOLVAR(RECC_ENABLE_METRICS)
         BOOLVAR(RECC_FORCE_REMOTE)
         BOOLVAR(RECC_ACTION_UNCACHEABLE)
         BOOLVAR(RECC_SKIP_CACHE)
@@ -300,6 +306,40 @@ void handle_special_defaults()
                          << "Rewriting to absolute path "
                          << RECC_PROJECT_ROOT);
     }
+
+    if (RECC_METRICS_FILE.size() && RECC_METRICS_UDP_SERVER.size()) {
+        throw std::runtime_error("You can either set RECC_METRICS_FILE or "
+                                 "RECC_METRICS_UDP_SERVER, but not both.");
+    }
+}
+
+void verify_files_writeable()
+{
+    if (RECC_METRICS_FILE.size()) {
+        std::ofstream of;
+        of.open(RECC_METRICS_FILE, std::ofstream::out | std::ofstream::app);
+        if (!of.good()) {
+            throw std::runtime_error(
+                "Cannot open RECC_METRICS_FILE for writing: " +
+                RECC_METRICS_FILE);
+        }
+        of.close();
+    }
+    else if (RECC_METRICS_UDP_SERVER.size()) {
+        std::string server_name;
+        int server_port;
+        try {
+            parse_host_port_string(RECC_METRICS_UDP_SERVER, server_name,
+                                   &server_port);
+        }
+        catch (std::invalid_argument &e) {
+            std::string error_msg =
+                "Invalid RECC_METRICS_UDP_SERVER argument: '" +
+                RECC_METRICS_UDP_SERVER + "': ";
+            error_msg += e.what();
+            throw std::runtime_error(error_msg);
+        }
+    }
 }
 
 std::deque<std::string> evaluate_config_locations()
@@ -337,6 +377,34 @@ void set_config_locations()
 void set_config_locations(std::deque<std::string> config_order)
 {
     RECC_CONFIG_LOCATIONS = config_order;
+}
+
+void parse_host_port_string(const std::string &inputString,
+                            std::string &serverRet, int *portRet)
+{
+    // NOTE: This only works for IPv4 addresses, not IPv6.
+    std::size_t split_at = inputString.find_last_of(":");
+
+    if (split_at != std::string::npos &&
+        split_at + 2 <
+            inputString.size()) { // e.g. `localhost:1` or `example.org:1`
+        try {
+            *portRet = std::stoi(inputString.substr(split_at + 1));
+            serverRet =
+                inputString.substr(0, std::min(split_at, inputString.size()));
+        }
+        catch (std::invalid_argument &e) {
+            throw std::invalid_argument(
+                "Invalid port specified (cannot be parsed to int): '" +
+                inputString.substr(split_at + 1) + "'");
+        }
+    }
+    else { // e.g. `localhost` or `localhost:`
+        // default to port 0 if not specified in the string
+        *portRet = 0;
+        serverRet =
+            inputString.substr(0, std::min(split_at, inputString.size()));
+    }
 }
 
 } // namespace recc

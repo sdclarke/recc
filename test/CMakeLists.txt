@@ -81,6 +81,10 @@ add_executable(env_check_order_test env/env_check_order.cpp main.cpp)
 target_link_libraries(env_check_order_test ${GTEST_TARGET} remoteexecution)
 add_test(NAME env_check_order_test COMMAND env_check_order_test)
 
+add_executable(env_utils_test env/env_utils.cpp main.cpp)
+target_link_libraries(env_utils_test ${GTEST_TARGET} remoteexecution)
+add_test(NAME env_utils_test COMMAND env_utils_test)
+
 add_executable(remoteexecutionclient_tests remoteexecutionclient.cpp main.cpp)
 target_link_libraries(remoteexecutionclient_tests ${GMOCK_TARGET} ${GTEST_TARGET} remoteexecution)
 add_test(NAME remoteexecutionclient_tests COMMAND remoteexecutionclient_tests)
