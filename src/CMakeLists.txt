@@ -19,6 +19,11 @@ set(SRCS
     remoteexecutionsignals.cpp
     requestmetadata.cpp
     subprocess.cpp
+    reccmetrics/metriccollectorfactory.cpp
+    reccmetrics/durationmetrictimer.cpp
+    reccmetrics/durationmetricvalue.cpp
+    reccmetrics/totaldurationmetrictimer.cpp
+    reccmetrics/totaldurationmetricvalue.cpp
 )
 
 add_library(remoteexecution STATIC ${SRCS})
