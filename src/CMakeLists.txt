@@ -20,6 +20,8 @@ set(SRCS
     requestmetadata.cpp
     subprocess.cpp
     reccmetrics/metriccollectorfactory.cpp
+    reccmetrics/filewriter.cpp
+    reccmetrics/udpwriter.cpp
     reccmetrics/durationmetrictimer.cpp
     reccmetrics/durationmetricvalue.cpp
     reccmetrics/totaldurationmetrictimer.cpp

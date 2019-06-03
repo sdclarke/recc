@@ -67,6 +67,11 @@ template <class ValueType> class MetricCollector {
         std::lock_guard<std::mutex> lock(d_metrics_mutex);
         d_metrics[name] = value;
     }
+
+    std::unordered_map<std::string, ValueType> *getIterableContainer()
+    {
+        return &d_metrics;
+    }
 };
 
 } // namespace reccmetrics

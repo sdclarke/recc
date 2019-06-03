@@ -12,35 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <reccmetrics/durationmetricvalue.h>
+#ifndef INCLUDED_RECCMETRICS_UDPWRITER_H
+#define INCLUDED_RECCMETRICS_UDPWRITER_H
+
+#include <arpa/inet.h>
+#include <string>
+#include <sys/socket.h>
+#include <unistd.h>
 
 namespace BloombergLP {
 namespace recc {
 namespace reccmetrics {
+/**
+ * UDPWriter
+ */
+class UDPWriter {
+  private:
+    struct sockaddr_in d_server_address;
+    int d_sockfd;
 
-DurationMetricValue::DurationMetricValue(TimeDenomination value)
-    : d_value(value)
-{
-}
+    void connect();
 
-void DurationMetricValue::setValue(DurationMetricValue::TimeDenomination value)
-{
-    d_value = value;
-}
-DurationMetricValue::TimeDenomination DurationMetricValue::value() const
-{
-    return d_value;
-}
-const std::string
-DurationMetricValue::toStatsD(const std::string &myName) const
-{
-    return std::string(
-        myName + ":" +
-        std::to_string(
-            std::chrono::duration_cast<std::chrono::milliseconds>(value())
-                .count()) +
-        "|ms");
-}
+  public:
+    explicit UDPWriter(int port, const std::string &server_name = "127.0.0.1");
+
+    void write(const std::string &buffer);
+
+    ~UDPWriter();
+};
+
 } // namespace reccmetrics
 } // namespace recc
 } // namespace BloombergLP
+#endif

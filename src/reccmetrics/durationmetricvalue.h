@@ -16,6 +16,7 @@
 #define INCLUDED_RECCMETRICS_DURATIONMETRICVALUE_H
 
 #include <chrono>
+#include <string>
 
 namespace BloombergLP {
 namespace recc {
@@ -39,6 +40,8 @@ class DurationMetricValue {
 
     // Delete += operator since this ValueType is non-aggregatable
     DurationMetricValue &operator+=(const DurationMetricValue &other) = delete;
+
+    const std::string toStatsD(const std::string &myName) const;
 
   private:
     TimeDenomination d_value;

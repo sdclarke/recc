@@ -12,35 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <reccmetrics/durationmetricvalue.h>
+#ifndef INCLUDED_RECCMETRICS_STATSDPUBLISHEROPTIONS_H
+#define INCLUDED_RECCMETRICS_STATSDPUBLISHEROPTIONS_H
 
 namespace BloombergLP {
 namespace recc {
 namespace reccmetrics {
-
-DurationMetricValue::DurationMetricValue(TimeDenomination value)
-    : d_value(value)
-{
-}
-
-void DurationMetricValue::setValue(DurationMetricValue::TimeDenomination value)
-{
-    d_value = value;
-}
-DurationMetricValue::TimeDenomination DurationMetricValue::value() const
-{
-    return d_value;
-}
-const std::string
-DurationMetricValue::toStatsD(const std::string &myName) const
-{
-    return std::string(
-        myName + ":" +
-        std::to_string(
-            std::chrono::duration_cast<std::chrono::milliseconds>(value())
-                .count()) +
-        "|ms");
-}
+/**
+ * StatsDPublisherOptions
+ */
+class StatsDPublisherOptions {
+  public:
+    enum PublishMethod { StdErr, File, UDP };
+};
 } // namespace reccmetrics
 } // namespace recc
 } // namespace BloombergLP
+#endif

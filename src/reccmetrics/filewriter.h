@@ -12,35 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <reccmetrics/durationmetricvalue.h>
+#ifndef INCLUDED_RECCMETRICS_FILEWRITER_H
+#define INCLUDED_RECCMETRICS_FILEWRITER_H
+
+#include <fstream>
+#include <string>
 
 namespace BloombergLP {
 namespace recc {
 namespace reccmetrics {
+/**
+ * FileWriter
+ */
+class FileWriter {
+  private:
+    std::ofstream d_of;
 
-DurationMetricValue::DurationMetricValue(TimeDenomination value)
-    : d_value(value)
-{
-}
+    void openFile(const std::string &filePath);
 
-void DurationMetricValue::setValue(DurationMetricValue::TimeDenomination value)
-{
-    d_value = value;
-}
-DurationMetricValue::TimeDenomination DurationMetricValue::value() const
-{
-    return d_value;
-}
-const std::string
-DurationMetricValue::toStatsD(const std::string &myName) const
-{
-    return std::string(
-        myName + ":" +
-        std::to_string(
-            std::chrono::duration_cast<std::chrono::milliseconds>(value())
-                .count()) +
-        "|ms");
-}
+  public:
+    explicit FileWriter(const std::string &filePath);
+
+    void write(const std::string &buffer);
+};
+
 } // namespace reccmetrics
 } // namespace recc
 } // namespace BloombergLP
+#endif

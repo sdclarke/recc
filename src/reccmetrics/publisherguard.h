@@ -12,35 +12,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <reccmetrics/durationmetricvalue.h>
+#ifndef INCLUDED_RECCMETRICS_PUBLISHERGUARD_H
+#define INCLUDED_RECCMETRICS_PUBLISHERGUARD_H
 
 namespace BloombergLP {
 namespace recc {
 namespace reccmetrics {
+/**
+ * PublisherGuard is the Publisher Guard class
+ *
+ * It invokes publish() on the Publisher provided when the guard goes out of
+ * scope.
+ */
+template <class PublisherType> class PublisherGuard {
+  private:
+    PublisherType d_publisher;
+    const bool d_enabled;
 
-DurationMetricValue::DurationMetricValue(TimeDenomination value)
-    : d_value(value)
-{
-}
+  public:
+    explicit PublisherGuard(bool enabled) : d_enabled(enabled), d_publisher()
+    {
+    }
 
-void DurationMetricValue::setValue(DurationMetricValue::TimeDenomination value)
-{
-    d_value = value;
-}
-DurationMetricValue::TimeDenomination DurationMetricValue::value() const
-{
-    return d_value;
-}
-const std::string
-DurationMetricValue::toStatsD(const std::string &myName) const
-{
-    return std::string(
-        myName + ":" +
-        std::to_string(
-            std::chrono::duration_cast<std::chrono::milliseconds>(value())
-                .count()) +
-        "|ms");
-}
+    explicit PublisherGuard(bool enabled, const PublisherType &publisher)
+        : d_enabled(enabled), d_publisher(publisher)
+    {
+    }
+
+    // Destructor
+    ~PublisherGuard()
+    {
+        if (!d_enabled)
+            return;
+        d_publisher.publish();
+    };
+};
+
 } // namespace reccmetrics
 } // namespace recc
 } // namespace BloombergLP
+#endif
