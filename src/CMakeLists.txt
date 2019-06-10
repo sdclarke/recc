@@ -14,6 +14,7 @@ set(SRCS
     grpccontext.cpp
     jsonfilemanager.cpp
     merklize.cpp
+    metricsconfig.cpp
     parsedcommand.cpp
     remoteexecutionclient.cpp
     remoteexecutionsignals.cpp

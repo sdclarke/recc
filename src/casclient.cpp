@@ -18,12 +18,17 @@
 #include <grpcretry.h>
 #include <logging.h>
 #include <merklize.h>
+#include <reccmetrics/durationmetrictimer.h>
+#include <reccmetrics/metricguard.h>
 
 #include <random>
 #include <sstream>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unordered_set>
+
+#define TIMER_NAME_FIND_MISSING_BLOBS "recc.find_missing_blobs"
+#define TIMER_NAME_UPLOAD_MISSING_BLOBS "recc.upload_missing_blobs"
 
 namespace BloombergLP {
 namespace recc {
@@ -175,7 +180,14 @@ void CASClient::upload_resources(
             return d_executionStub->FindMissingBlobs(
                 &context, missingBlobsRequest, &missingBlobsResponse);
         };
-        grpc_retry(missing_blobs_lambda, d_grpcContext);
+
+        { // Timed block
+            reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+                TIMER_NAME_FIND_MISSING_BLOBS, RECC_ENABLE_METRICS);
+
+            grpc_retry(missing_blobs_lambda, d_grpcContext);
+        }
+
         RECC_LOG_VERBOSE("Got missing blobs response: "
                          << missingBlobsResponse.ShortDebugString());
         for (int i = 0; i < missingBlobsResponse.missing_blob_digests_size();
@@ -231,6 +243,10 @@ void CASClient::upload_resources(
         batchSize += digest.hash().length();
     }
     if (batchUpdateRequest.requests_size() > 0) {
+        // Timed block
+        reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+            TIMER_NAME_UPLOAD_MISSING_BLOBS, RECC_ENABLE_METRICS);
+
         proto::BatchUpdateBlobsResponse response;
         RECC_LOG_VERBOSE("Sending final batch update request");
         auto batch_update_lambda = [&](grpc::ClientContext &context) {

@@ -27,6 +27,7 @@
 #include <grpccontext.h>
 #include <logging.h>
 #include <merklize.h>
+#include <metricsconfig.h>
 #include <reccdefaults.h>
 #include <remoteexecutionclient.h>
 #include <requestmetadata.h>
@@ -38,6 +39,16 @@
 #include <iostream>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include <reccmetrics/durationmetrictimer.h>
+#include <reccmetrics/durationmetricvalue.h>
+#include <reccmetrics/metricguard.h>
+#include <reccmetrics/publisherguard.h>
+#include <reccmetrics/statsdpublisher.h>
+#include <reccmetrics/totaldurationmetricvalue.h>
+
+#define TIMER_NAME_EXECUTE_ACTION "recc.execute_action"
+#define TIMER_NAME_QUERY_ACTION_CACHE "recc.query_action_cache"
 
 using namespace BloombergLP::recc;
 
@@ -172,6 +183,10 @@ int main(int argc, char *argv[])
 
     set_config_locations();
     parse_config_variables();
+
+    reccmetrics::PublisherGuard<StatsDPublisherType> statsDPublisherGuard(
+        RECC_ENABLE_METRICS, get_statsdpublisher_from_config());
+
     const std::string cwd = get_current_working_directory();
     ParsedCommand command(&argv[1], cwd.c_str());
 
@@ -222,11 +237,16 @@ int main(int argc, char *argv[])
         bool action_in_cache = false;
         if (!RECC_SKIP_CACHE) {
             try {
-                action_in_cache = client.fetch_from_action_cache(
-                    actionDigest, RECC_INSTANCE, result);
-                if (action_in_cache) {
-                    RECC_LOG_VERBOSE("Action cache hit for "
-                                     << actionDigest.hash());
+                { // Timed block
+                    reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer>
+                        mt(TIMER_NAME_QUERY_ACTION_CACHE, RECC_ENABLE_METRICS);
+
+                    action_in_cache = client.fetch_from_action_cache(
+                        actionDigest, RECC_INSTANCE, result);
+                    if (action_in_cache) {
+                        RECC_LOG_VERBOSE("Action cache hit for "
+                                         << actionDigest.hash());
+                    }
                 }
             }
             catch (const std::runtime_error &e) {
@@ -239,7 +259,12 @@ int main(int argc, char *argv[])
             RECC_LOG_VERBOSE("Uploading resources...");
             client.upload_resources(blobs, filenames);
             RECC_LOG_VERBOSE("Executing action...");
-            result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
+            { // Timed block
+                reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+                    TIMER_NAME_EXECUTE_ACTION, RECC_ENABLE_METRICS);
+
+                result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
+            }
         }
 
         rc = result.d_exitCode;
@@ -256,6 +281,5 @@ int main(int argc, char *argv[])
         RECC_LOG_ERROR(e.what());
         rc = (rc == 0 ? -1 : rc);
     }
-
     return rc;
 }

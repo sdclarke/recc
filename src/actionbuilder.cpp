@@ -18,6 +18,11 @@
 #include <logging.h>
 #include <merklize.h>
 #include <reccdefaults.h>
+#include <reccmetrics/durationmetrictimer.h>
+#include <reccmetrics/metricguard.h>
+
+#define TIMER_NAME_COMPILER_DEPS "recc.compiler_deps"
+#define TIMER_NAME_BUILD_MERKLE_TREE "recc.build_merkle_tree"
 
 namespace BloombergLP {
 namespace recc {
@@ -51,7 +56,13 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
             RECC_LOG_VERBOSE("Getting dependencies");
 
             /* Can throw subprocess_failed_error */
-            auto fileInfo = get_file_info(command);
+            CommandFileInfo fileInfo;
+            { // Timed block
+                reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+                    TIMER_NAME_COMPILER_DEPS, RECC_ENABLE_METRICS);
+
+                fileInfo = get_file_info(command);
+            }
             deps = fileInfo.d_dependencies;
 
             if (RECC_OUTPUT_DIRECTORIES_OVERRIDE.empty() &&
@@ -60,31 +71,37 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
             }
         }
 
-        RECC_LOG_VERBOSE("Building Merkle tree");
-        int parentsNeeded = 0;
-        for (const auto &dep : deps) {
-            parentsNeeded =
-                std::max(parentsNeeded, parent_directory_levels(dep.c_str()));
-        }
-        for (const auto &product : products) {
-            parentsNeeded = std::max(parentsNeeded,
-                                     parent_directory_levels(product.c_str()));
-        }
-        commandWorkingDirectory = last_n_segments(cwd.c_str(), parentsNeeded);
-        for (const auto &dep : deps) {
-            // If the dependency is an absolute path, leave
-            // the merkePath untouched
-            std::string merklePath;
-            if (dep[0] == '/') {
-                merklePath = dep;
+        { // Timed block
+            reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+                TIMER_NAME_BUILD_MERKLE_TREE, RECC_ENABLE_METRICS);
+
+            RECC_LOG_VERBOSE("Building Merkle tree");
+            int parentsNeeded = 0;
+            for (const auto &dep : deps) {
+                parentsNeeded = std::max(parentsNeeded,
+                                         parent_directory_levels(dep.c_str()));
             }
-            else {
-                merklePath = commandWorkingDirectory + "/" + dep;
+            for (const auto &product : products) {
+                parentsNeeded = std::max(
+                    parentsNeeded, parent_directory_levels(product.c_str()));
             }
-            merklePath = normalize_path(merklePath.c_str());
-            File file(dep.c_str());
-            nestedDirectory.add(file, merklePath.c_str());
-            (*filenames)[file.d_digest] = dep;
+            commandWorkingDirectory =
+                last_n_segments(cwd.c_str(), parentsNeeded);
+            for (const auto &dep : deps) {
+                // If the dependency is an absolute path, leave
+                // the merkePath untouched
+                std::string merklePath;
+                if (dep[0] == '/') {
+                    merklePath = dep;
+                }
+                else {
+                    merklePath = commandWorkingDirectory + "/" + dep;
+                }
+                merklePath = normalize_path(merklePath.c_str());
+                File file(dep.c_str());
+                nestedDirectory.add(file, merklePath.c_str());
+                (*filenames)[file.d_digest] = dep;
+            }
         }
     }
     if (!commandWorkingDirectory.empty()) {
