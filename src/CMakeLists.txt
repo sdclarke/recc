@@ -14,11 +14,19 @@ set(SRCS
     grpccontext.cpp
     jsonfilemanager.cpp
     merklize.cpp
+    metricsconfig.cpp
     parsedcommand.cpp
     remoteexecutionclient.cpp
     remoteexecutionsignals.cpp
     requestmetadata.cpp
     subprocess.cpp
+    reccmetrics/metriccollectorfactory.cpp
+    reccmetrics/filewriter.cpp
+    reccmetrics/udpwriter.cpp
+    reccmetrics/durationmetrictimer.cpp
+    reccmetrics/durationmetricvalue.cpp
+    reccmetrics/totaldurationmetrictimer.cpp
+    reccmetrics/totaldurationmetricvalue.cpp
 )
 
 add_library(remoteexecution STATIC ${SRCS})

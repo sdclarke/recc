@@ -17,6 +17,8 @@
 #include <logging.h>
 #include <merklize.h>
 #include <reccdefaults.h>
+#include <reccmetrics/durationmetrictimer.h>
+#include <reccmetrics/metricguard.h>
 #include <remoteexecutionclient.h>
 #include <remoteexecutionsignals.h>
 
@@ -25,6 +27,8 @@
 #include <functional>
 #include <future>
 #include <sstream>
+
+#define TIMER_NAME_FETCH_WRITE_RESULTS "recc.fetch_write_results"
 
 using namespace google::longrunning;
 
@@ -236,6 +240,10 @@ void RemoteExecutionClient::cancel_operation(const std::string &operationName)
 void RemoteExecutionClient::write_files_to_disk(ActionResult result,
                                                 const char *root)
 {
+    // Timed function
+    reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+        TIMER_NAME_FETCH_WRITE_RESULTS, RECC_ENABLE_METRICS);
+
     for (const auto &fileIter : result.d_outputFiles) {
         std::string path = std::string(root) + "/" + fileIter.first;
         RECC_LOG_VERBOSE("Writing " << path);

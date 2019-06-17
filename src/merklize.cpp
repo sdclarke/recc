@@ -16,6 +16,8 @@
 
 #include <fileutils.h>
 #include <logging.h>
+#include <reccmetrics/metricguard.h>
+#include <reccmetrics/totaldurationmetrictimer.h>
 
 #include <cerrno>
 #include <cstring>
@@ -25,6 +27,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <system_error>
+
+#define TIMER_NAME_CALCULATE_DIGESTS_TOTAL "recc.calculate_digests_total"
 
 namespace BloombergLP {
 namespace recc {
@@ -119,23 +123,29 @@ const unsigned char HEX_DIGITS[] = "0123456789abcdef";
 proto::Digest make_digest(const std::string &blob)
 {
     proto::Digest result;
-
-    // Calculate the hash.
-    auto hashContext = EVP_MD_CTX_create();
-    EVP_DigestInit(hashContext, HASH_ALGORITHM);
-    EVP_DigestUpdate(hashContext, &blob[0], blob.length());
-
-    // Store the hash in a char array.
-    int hashSize = EVP_MD_size(HASH_ALGORITHM);
-    unsigned char hash[hashSize];
-    EVP_DigestFinal_ex(hashContext, hash, nullptr);
-    EVP_MD_CTX_destroy(hashContext);
-
-    //  Convert the hash to hexadecimal.
+    const int hashSize = EVP_MD_size(HASH_ALGORITHM);
     std::string hashHex(hashSize * 2, '\0');
-    for (int i = 0; i < hashSize; ++i) {
-        hashHex[i * 2] = HEX_DIGITS[hash[i] >> 4];
-        hashHex[i * 2 + 1] = HEX_DIGITS[hash[i] & 0xF];
+
+    { // Timed block
+        reccmetrics::MetricGuard<reccmetrics::TotalDurationMetricTimer> mt(
+            TIMER_NAME_CALCULATE_DIGESTS_TOTAL, RECC_ENABLE_METRICS);
+
+        // Calculate the hash.
+        auto hashContext = EVP_MD_CTX_create();
+        EVP_DigestInit(hashContext, HASH_ALGORITHM);
+        EVP_DigestUpdate(hashContext, &blob[0], blob.length());
+
+        // Store the hash in a char array.
+
+        unsigned char hash[hashSize];
+        EVP_DigestFinal_ex(hashContext, hash, nullptr);
+        EVP_MD_CTX_destroy(hashContext);
+
+        //  Convert the hash to hexadecimal.
+        for (int i = 0; i < hashSize; ++i) {
+            hashHex[i * 2] = HEX_DIGITS[hash[i] >> 4];
+            hashHex[i * 2 + 1] = HEX_DIGITS[hash[i] & 0xF];
+        }
     }
 
     result.set_hash(hashHex);
