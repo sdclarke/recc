@@ -132,7 +132,7 @@ target_link_libraries(formpost_test ${GTEST_TARGET} remoteexecution)
 add_test(NAME formpost_test COMMAND formpost_test)
 
 add_executable(requestmetadata_tests requestmetadata.cpp main.cpp)
-target_link_libraries(requestmetadata_tests ${GTEST_TARGET} remoteexecution)
+target_link_libraries(requestmetadata_tests ${GMOCK_TARGET} ${GTEST_TARGET} remoteexecution)
 add_test(NAME requestmetadata_tests COMMAND requestmetadata_tests)
 
 add_executable(reccmetrics_durationmetrictimer_test reccmetrics/durationmetrictimer_test.cpp main.cpp)
