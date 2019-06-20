@@ -67,9 +67,15 @@ void grpc_retry(
         }
     } while (n_attempts < RECC_RETRY_LIMIT + 1);
 
-    throw std::runtime_error("Retry limit exceeded. Last gRPC error was " +
-                             std::to_string(status.error_code()) + ": " +
-                             status.error_message());
+    std::string error_message =
+        std::to_string(status.error_code()) + ": " + status.error_message();
+
+    if (RECC_RETRY_LIMIT > 0) {
+        error_message =
+            "Retry limit exceeded. Last gRPC error was " + error_message;
+    }
+
+    throw std::runtime_error(error_message);
 }
 
 } // namespace recc
