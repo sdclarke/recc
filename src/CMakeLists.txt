@@ -29,6 +29,10 @@ set(SRCS
     reccmetrics/totaldurationmetricvalue.cpp
 )
 
+if(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    set(DEBUG_FLAGS -Werror -Wextra -pedantic-errors -Wall -Wconversion -Wno-vla)
+endif()
+
 add_library(remoteexecution STATIC ${SRCS})
 target_link_libraries(remoteexecution reccproto ${_EXTRA_LDD_FLAGS} ${CURL_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_TARGET} ${OPENSSL_TARGET})
 
@@ -51,7 +55,11 @@ target_link_libraries(deps remoteexecution)
 
 install(TARGETS recc RUNTIME DESTINATION bin)
 
-set_target_properties(remoteexecution PROPERTIES COMPILER_FLAGS "-Wall -Werror")
-set_target_properties(recc PROPERTIES COMPILER_FLAGS "-Wall -Werror")
-set_target_properties(casupload PROPERTIES COMPILER_FLAGS "-Wall -Werror")
-set_target_properties(deps PROPERTIES COMPILER_FLAGS "-Wall -Werror")
+if(${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
+    message("Skipping all warnings due to GNU compiler + AIX system")
+else()
+    target_compile_options(remoteexecution PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
+    target_compile_options(recc PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
+    target_compile_options(casupload PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
+    target_compile_options(deps PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
+endif()

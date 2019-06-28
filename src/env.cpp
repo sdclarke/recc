@@ -158,44 +158,44 @@ void parse_config_files(const std::string &config_file_name)
     parse_config_variables(env_cstrings.data());
 }
 
-void parse_config_variables(const char *const *environ)
+void parse_config_variables(const char *const *env)
 {
 #define VARS_START()                                                          \
-    if (strncmp(environ[i], "RECC_", 4) != 0 &&                               \
-        strncmp(environ[i], "TMPDIR", 6) != 0) {                              \
+    if (strncmp(env[i], "RECC_", 4) != 0 &&                                   \
+        strncmp(env[i], "TMPDIR", 6) != 0) {                                  \
         continue;                                                             \
     }
 #define STRVAR(name)                                                          \
-    else if (strncmp(environ[i], #name "=", strlen(#name "=")) == 0)          \
+    else if (strncmp(env[i], #name "=", strlen(#name "=")) == 0)              \
     {                                                                         \
-        name = std::string(environ[i] + strlen(#name "="));                   \
+        name = std::string(env[i] + strlen(#name "="));                       \
     }
 #define BOOLVAR(name)                                                         \
-    else if (strncmp(environ[i], #name "=", strlen(#name "=")) == 0)          \
+    else if (strncmp(env[i], #name "=", strlen(#name "=")) == 0)              \
     {                                                                         \
-        name = strlen(environ[i]) > strlen(#name "=");                        \
+        name = strlen(env[i]) > strlen(#name "=");                            \
     }
 #define INTVAR(name)                                                          \
-    else if (strncmp(environ[i], #name "=", strlen(#name "=")) == 0)          \
+    else if (strncmp(env[i], #name "=", strlen(#name "=")) == 0)              \
     {                                                                         \
-        name = strtol(environ[i] + strlen(#name "="), nullptr, 10);           \
+        name = strtol(env[i] + strlen(#name "="), nullptr, 10);               \
     }
 #define SETVAR(name)                                                          \
-    else if (strncmp(environ[i], #name "=", strlen(#name "=")) == 0)          \
+    else if (strncmp(env[i], #name "=", strlen(#name "=")) == 0)              \
     {                                                                         \
-        parse_set(environ[i] + strlen(#name "="), &name);                     \
+        parse_set(env[i] + strlen(#name "="), &name);                         \
     }
 #define MAPVAR(name)                                                          \
-    else if (strncmp(environ[i], #name "_", strlen(#name "_")) == 0)          \
+    else if (strncmp(env[i], #name "_", strlen(#name "_")) == 0)              \
     {                                                                         \
-        auto equals = strchr(environ[i], '=');                                \
-        std::string key(environ[i] + strlen(#name "_"),                       \
-                        equals - environ[i] - strlen(#name "_"));             \
+        auto equals = strchr(env[i], '=');                                    \
+        std::string key(env[i] + strlen(#name "_"),                           \
+                        equals - env[i] - strlen(#name "_"));                 \
         name[key] = std::string(equals + 1);                                  \
     }
 
     // Parse all the options from ENV
-    for (int i = 0; environ[i] != nullptr; ++i) {
+    for (int i = 0; env[i] != nullptr; ++i) {
         VARS_START()
         STRVAR(RECC_SERVER)
         STRVAR(RECC_CAS_SERVER)
