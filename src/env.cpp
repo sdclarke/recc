@@ -117,18 +117,17 @@ void parse_set(const char *str, std::set<std::string> *result)
  * Formats line to be used in parse_config_variables.
  * Modifies parameter passed to it by reference
  */
-void format_config_string(std::string &line)
+void format_config_string(std::string *line)
 {
-    // remove whitespace
-    line.erase(remove(line.begin(), line.end(), ' '), line.end());
-
     // converts only the KEY to uppercase
-    transform(line.begin(), line.begin() + line.find('='), line.begin(),
+    transform(line->begin(), line->begin() + line->find('='), line->begin(),
               [](unsigned char c) -> unsigned char { return toupper(c); });
 
+    const std::string tmpdirConfig = "TMPDIR";
+
     // prefix "RECC_" to name, unless name is TMPDIR
-    if (line.substr(0, 6) != "TMPDIR") {
-        line = "RECC_" + line;
+    if (line->substr(0, tmpdirConfig.length()) != tmpdirConfig) {
+        *line = "RECC_" + *line;
     }
 }
 
@@ -146,7 +145,7 @@ void parse_config_files(const std::string &config_file_name)
         if (line.empty() || isspace(line[0]) || line[0] == '#') {
             continue;
         }
-        format_config_string(line);
+        format_config_string(&line);
         env_array.push_back(line);
     }
     // first push std::strings into vector, then push_back char *
@@ -347,12 +346,10 @@ std::deque<std::string> evaluate_config_locations()
     // Note that the order in which the config locations are pushed
     // is significant.
     std::deque<std::string> config_order;
-
-    const char *home = getenv("HOME");
     const std::string cwd_recc = "./recc";
-
     config_order.push_front(cwd_recc);
 
+    const char *home = getenv("HOME");
     if (home != nullptr and home[0] != '\0') {
         config_order.push_front(home + std::string("/.recc"));
     }
