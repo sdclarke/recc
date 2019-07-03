@@ -30,12 +30,12 @@ template <class PublisherType> class PublisherGuard {
     const bool d_enabled;
 
   public:
-    explicit PublisherGuard(bool enabled) : d_enabled(enabled), d_publisher()
+    explicit PublisherGuard(bool enabled) : d_publisher(), d_enabled(enabled)
     {
     }
 
     explicit PublisherGuard(bool enabled, const PublisherType &publisher)
-        : d_enabled(enabled), d_publisher(publisher)
+        : d_publisher(publisher), d_enabled(enabled)
     {
     }
 

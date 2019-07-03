@@ -21,7 +21,9 @@ namespace recc {
 namespace reccmetrics {
 
 TotalDurationMetricTimer::TotalDurationMetricTimer(const std::string &name)
-    : d_name(name), d_done(false){};
+    : d_done(false), d_name(name)
+{
+}
 
 void TotalDurationMetricTimer::start()
 {

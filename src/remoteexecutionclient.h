@@ -49,8 +49,9 @@ struct OutputBlob {
     {
     }
     OutputBlob(std::string blob, proto::Digest digest)
-        : d_blob(blob), d_digest(digest),
-          d_inlined(!blob.empty() || digest.size_bytes() == 0)
+        : d_inlined(!blob.empty() || digest.size_bytes() == 0), d_blob(blob),
+          d_digest(digest)
+
     {
     }
 };

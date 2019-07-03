@@ -43,9 +43,9 @@ template <class... ValueTypeList> class StatsDPublisher {
         const std::string &publishPath = "", int publishPort = 0,
         MetricCollectorFactory *metricCollectorFactory =
             MetricCollectorFactory::getInstance())
-        : d_publishMethod(publishMethod), d_publishPath(publishPath),
-          d_publishPort(publishPort),
-          d_metricCollectorFactory(metricCollectorFactory)
+        : d_metricCollectorFactory(metricCollectorFactory),
+          d_publishMethod(publishMethod), d_publishPath(publishPath),
+          d_publishPort(publishPort)
     {
         switch (d_publishMethod) {
             case StatsDPublisherOptions::PublishMethod::File: {

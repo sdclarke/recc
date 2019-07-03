@@ -45,6 +45,7 @@ size_t write_server_response(char *contents, size_t size, size_t nmemb,
 
 } // Unnamed namespace
 
+AuthBase::~AuthBase() {}
 AuthSession::AuthSession(Post *formPostFactory)
 {
     init_jwt();
