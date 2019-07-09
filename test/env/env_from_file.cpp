@@ -25,11 +25,13 @@ TEST(EnvTest, EnvFromFile)
     unsetenv("RECC_SERVER");
     unsetenv("RECC_CAS_SERVER");
     unsetenv("TMPDIR");
+    unsetenv("RECC_AUTH_UNCONFIGURED_MSG");
 
-    // should be set from file
-    std::string expectedReccServer = "localhost:99999";
-    std::string expectedRecCasServer = "localhost:66666";
-    std::string expectedTMPDIR = "/tmp/dir";
+    // should be set from file in data/recc/recc.conf
+    const std::string expectedReccServer = "localhost:99999";
+    const std::string expectedRecCasServer = "localhost:66666";
+    const std::string expectedTMPDIR = "/tmp/dir";
+    const std::string expectedAuthMsg = "authentication not configured";
 
     // In this test use the usual config location list
     set_config_locations();
@@ -38,4 +40,5 @@ TEST(EnvTest, EnvFromFile)
     EXPECT_EQ(expectedReccServer, RECC_SERVER);
     EXPECT_EQ(expectedRecCasServer, RECC_CAS_SERVER);
     EXPECT_EQ(expectedTMPDIR, TMPDIR);
+    EXPECT_EQ(expectedAuthMsg, RECC_AUTH_UNCONFIGURED_MSG);
 }

@@ -1,7 +1,7 @@
 # recc
 
 `recc` is the Remote Execution Caching Compiler. It is a cross between `ccache` and `distcc` using the [Remote Execution APIs](remoteex).
-When invoked with a C/C++ compilation command, it will use the APIs to communicate with a Remote Execution service (such as [BuildGrid][]) to 
+When invoked with a C/C++ compilation command, it will use the APIs to communicate with a Remote Execution service (such as [BuildGrid][]) to
 first determine whether the same build has been done before and is cached. If the build is cached remotely, download the result. Otherwise, enqueue
 the build to be executed remotely using the same execution service which will then dispatch the job to a worker, such as [buildbox-worker][].
 
@@ -113,9 +113,9 @@ However, this is slightly complicated because Kerberos isn't generally available
 ## Running `recc`
 
 `recc` is a command-line utility that runs compile commands on a Remote
-Execution server. To run it, you'll first need to set up an execution server 
-for it to talk to. Then, set the appropriate configuration options
-and call `recc` with a compile command.
+Execution server. To run it, you'll first need to set up an execution server
+for it to talk to. Then, set the appropriate configuration options and call
+`recc` with a compile command.
 
 ### Setting up a Remote Execution server
 
@@ -140,7 +140,12 @@ This repository used to contain a reference worker called
 
 ### Configuration
 
-`recc`’s default behavior can be overridden by configuration file settings, which in turn can be overridden by environment variables with names starting with `RECC_`. `recc` by default reads configuration options from the following places, applying settings bottom-up, with 1 being the last applied configuration (i.e. if an option is set in multiple files, the one higher on this list will be the effective one):
+`recc`’s default behavior can be overridden by configuration file settings,
+which in turn can be overridden by environment variables with names starting
+with `RECC_`. `recc` by default reads configuration options from the following
+places, applying settings bottom-up, with 1 being the last applied
+configuration (i.e. if an option is set in multiple files, the one higher on
+this list will be the effective one):
 
   1) Environment variables
 
@@ -153,7 +158,9 @@ This repository used to contain a reference worker called
   5) `${INSTALL_DIR}/../etc/recc/recc.conf`
 
 #### Configuration File Syntax
-Configuration files are in a simple “key = value” format, one setting per line. Lines starting with a hash sign are comments. Blank lines are ignored, as is whitespace surrounding keys and values.
+
+Configuration files are in a simple “key=value” format, one setting per
+line. Lines starting with a hash sign are comments. Blank lines are ignored.
 
 At minimum, you'll need to set `RECC_SERVER` to the URI of your Remote:
 ```

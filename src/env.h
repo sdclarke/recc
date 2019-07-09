@@ -151,6 +151,12 @@ extern std::string RECC_JWT_JSON_FILE_PATH;
 extern std::string RECC_AUTH_REFRESH_URL;
 
 /**
+ * Customisable msg to display to indicate that authentication has not been
+ * configured.
+ */
+extern std::string RECC_AUTH_UNCONFIGURED_MSG;
+
+/**
  * Defined by cmake when building.
  * On linux defaults to: /usr/local
  */
