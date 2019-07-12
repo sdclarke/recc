@@ -52,6 +52,10 @@
 
 using namespace BloombergLP::recc;
 
+/**
+ * NOTE: If a variable is intended to be used in a configuration file, omit the
+ * "RECC_" prefix.
+ */
 const std::string HELP(
     "USAGE: recc <command>\n"
     "\n"
@@ -59,7 +63,7 @@ const std::string HELP(
     "server. Otherwise, runs it locally.\n"
     "\n"
     "The following environment variables can be used to change recc's\n"
-    "behavior:\n"
+    "behavior. To set them in a recc.conf file, omit the \"RECC_\" prefix.\n"
     "\n"
     "RECC_SERVER - the URI of the server to use (e.g. localhost:8085)\n"
     "\n"
