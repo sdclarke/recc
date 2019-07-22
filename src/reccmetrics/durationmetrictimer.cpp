@@ -21,7 +21,9 @@ namespace recc {
 namespace reccmetrics {
 
 DurationMetricTimer::DurationMetricTimer(const std::string &name)
-    : d_name(name), d_done(false){};
+    : d_done(false), d_name(name)
+{
+}
 
 void DurationMetricTimer::start()
 {
@@ -33,6 +35,7 @@ void DurationMetricTimer::start()
     }
     d_start = SteadyClock::now();
 }
+
 void DurationMetricTimer::stop()
 {
     if (d_done) {

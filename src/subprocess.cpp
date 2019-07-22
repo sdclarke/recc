@@ -88,7 +88,6 @@ SubprocessResult execute(std::vector<std::string> command, bool pipeStdOut,
         close(stdErrPipeFDs[1]);
     }
     char buffer[4096];
-    bool hasMoreData = true;
     while (FD_ISSET(stdOutPipeFDs[0], &fdSet) ||
            FD_ISSET(stdErrPipeFDs[0], &fdSet)) {
         fd_set readFDSet = fdSet;

@@ -42,7 +42,7 @@ template <class MetricType> class MetricGuard {
     MetricGuard(const std::string &name, bool enabled,
                 MetricCollector<ValueType> *collector =
                     MetricCollectorFactory::getCollector<ValueType>())
-        : d_collector(collector), d_enabled(enabled), d_metric(name)
+        : d_enabled(enabled), d_collector(collector), d_metric(name)
     {
         if (!enabled)
             return;

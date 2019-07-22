@@ -49,6 +49,7 @@ class AuthBase {
   public:
     virtual std::string get_access_token() = 0;
     virtual void refresh_current_token() = 0;
+    virtual ~AuthBase();
 };
 
 /**
@@ -68,7 +69,7 @@ class AuthSession : public AuthBase {
     /**
      * Clean up curl if RECC_AUTH_REFRESH_URL is set
      */
-    ~AuthSession();
+    virtual ~AuthSession();
 
     /**
      * Will retrieve the access_token from d_jwtToken.
