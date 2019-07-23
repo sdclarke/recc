@@ -262,7 +262,8 @@ int main(int argc, char *argv[])
             blobs[actionDigest] = action.SerializeAsString();
             RECC_LOG_VERBOSE("Uploading resources...");
             client.upload_resources(blobs, filenames);
-            RECC_LOG_VERBOSE("Executing action...");
+            RECC_LOG_VERBOSE(
+                "Executing action... actionDigest: " << actionDigest.hash());
             { // Timed block
                 reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
                     TIMER_NAME_EXECUTE_ACTION, RECC_ENABLE_METRICS);
