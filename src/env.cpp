@@ -101,13 +101,13 @@ std::deque<std::string> RECC_CONFIG_LOCATIONS = {};
 void parse_set(const char *str, std::set<std::string> *result)
 {
     while (true) {
-        auto comma = strchr(str, ',');
+        const auto comma = strchr(str, ',');
         if (comma == nullptr) {
             result->insert(std::string(str));
             return;
         }
         else {
-            result->insert(std::string(str, comma - str));
+            result->insert(std::string(str, static_cast<size_t>(comma - str)));
             str = comma + 1;
         }
     }
@@ -115,13 +115,15 @@ void parse_set(const char *str, std::set<std::string> *result)
 
 /**
  * Formats line to be used in parse_config_variables.
- * Modifies parameter passed to it by reference
+ * Modifies parameter passed to it by pointer
  */
 void format_config_string(std::string *line)
 {
     // converts only the KEY to uppercase
-    transform(line->begin(), line->begin() + line->find('='), line->begin(),
-              [](unsigned char c) -> unsigned char { return toupper(c); });
+    transform(line->cbegin(),
+              line->cbegin() +
+                  static_cast<std::string::difference_type>(line->find('=')),
+              line->begin(), ::toupper);
 
     const std::string tmpdirConfig = "TMPDIR";
 
@@ -150,7 +152,7 @@ void parse_config_files(const std::string &config_file_name)
     }
     // first push std::strings into vector, then push_back char *
     // done for easy const char** conversion
-    for (std::string &i : env_array) {
+    for (const std::string &i : env_array) {
         env_cstrings.push_back(const_cast<char *>(i.c_str()));
     }
     env_cstrings.push_back(nullptr);
@@ -177,7 +179,7 @@ void parse_config_variables(const char *const *env)
 #define INTVAR(name)                                                          \
     else if (strncmp(env[i], #name "=", strlen(#name "=")) == 0)              \
     {                                                                         \
-        name = strtol(env[i] + strlen(#name "="), nullptr, 10);               \
+        name = std::stoi(std::string(env[i] + strlen(#name "=")));            \
     }
 #define SETVAR(name)                                                          \
     else if (strncmp(env[i], #name "=", strlen(#name "=")) == 0)              \
@@ -187,7 +189,7 @@ void parse_config_variables(const char *const *env)
 #define MAPVAR(name)                                                          \
     else if (strncmp(env[i], #name "_", strlen(#name "_")) == 0)              \
     {                                                                         \
-        auto equals = strchr(env[i], '=');                                    \
+        const char *equals = strchr(env[i], '=');                             \
         std::string key(env[i] + strlen(#name "_"),                           \
                         equals - env[i] - strlen(#name "_"));                 \
         name[key] = std::string(equals + 1);                                  \
@@ -232,7 +234,7 @@ void parse_config_variables(const char *const *env)
         MAPVAR(RECC_REMOTE_ENV)
         MAPVAR(RECC_REMOTE_PLATFORM)
     }
-}
+} // namespace recc
 
 void find_and_parse_config_files()
 {
@@ -331,7 +333,7 @@ void verify_files_writeable()
             parse_host_port_string(RECC_METRICS_UDP_SERVER, server_name,
                                    &server_port);
         }
-        catch (std::invalid_argument &e) {
+        catch (const std::invalid_argument &e) {
             std::string error_msg =
                 "Invalid RECC_METRICS_UDP_SERVER argument: '" +
                 RECC_METRICS_UDP_SERVER + "': ";
@@ -371,7 +373,7 @@ void set_config_locations()
     set_config_locations(evaluate_config_locations());
 }
 
-void set_config_locations(std::deque<std::string> config_order)
+void set_config_locations(const std::deque<std::string> &config_order)
 {
     RECC_CONFIG_LOCATIONS = config_order;
 }
@@ -380,7 +382,7 @@ void parse_host_port_string(const std::string &inputString,
                             std::string &serverRet, int *portRet)
 {
     // NOTE: This only works for IPv4 addresses, not IPv6.
-    std::size_t split_at = inputString.find_last_of(":");
+    const std::size_t split_at = inputString.find_last_of(":");
 
     if (split_at != std::string::npos &&
         split_at + 2 <
@@ -390,7 +392,7 @@ void parse_host_port_string(const std::string &inputString,
             serverRet =
                 inputString.substr(0, std::min(split_at, inputString.size()));
         }
-        catch (std::invalid_argument &e) {
+        catch (const std::invalid_argument &) {
             throw std::invalid_argument(
                 "Invalid port specified (cannot be parsed to int): '" +
                 inputString.substr(split_at + 1) + "'");
