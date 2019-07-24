@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <sys/stat.h>
@@ -62,7 +63,8 @@ void create_directory_recursive(const char *path)
             if (lastSlash == nullptr) {
                 throw std::system_error(errno, std::system_category());
             }
-            std::string parent(path, lastSlash - path);
+            std::string parent(
+                path, static_cast<std::string::size_type>(lastSlash - path));
             create_directory_recursive(parent.c_str());
             if (mkdir(path, 0777) != 0) {
                 throw std::system_error(errno, std::system_category());
@@ -107,28 +109,35 @@ std::string get_file_contents(const char *path)
     }
 
     std::string contents;
+
     std::ifstream fileStream;
     fileStream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     fileStream.open(path, std::ios::in | std::ios::binary);
-    auto start = fileStream.tellg();
+
+    std::streamoff start = fileStream.tellg();
     fileStream.seekg(0, std::ios::end);
-    auto size = fileStream.tellg() - start;
+    std::streamsize size = fileStream.tellg() - start;
+
     RECC_LOG_VERBOSE("Reading file at " << path << " - size " << size);
-    contents.resize(size);
+
+    contents.resize(static_cast<std::string::size_type>(size));
     fileStream.seekg(start);
+
     if (fileStream) {
-        fileStream.read(&contents[0], contents.length());
+        fileStream.read(&contents[0],
+                        static_cast<std::streamsize>(contents.length()));
     }
     return contents;
 }
 
-void write_file(const char *path, std::string contents)
+void write_file(const char *path, const std::string &contents)
 {
     std::ofstream fileStream(path, std::ios::trunc | std::ios::binary);
     if (!fileStream) {
-        auto slash = strrchr(path, '/');
+        const auto slash = strrchr(path, '/');
         if (slash != nullptr) {
-            std::string slashPath(path, slash - path);
+            std::string slashPath(
+                path, static_cast<std::string::size_type>(slash - path));
             slashPath = normalize_path(slashPath.c_str());
             create_directory_recursive(slashPath.c_str());
             fileStream.open(path, std::ios::trunc | std::ios::binary);
@@ -141,22 +150,27 @@ void write_file(const char *path, std::string contents)
 std::string normalize_path(const char *path)
 {
     std::vector<std::string> segments;
-    bool global = path[0] == '/';
+    const bool global = path[0] == '/';
+
     while (path[0] != '\0') {
         const char *slash = strchr(path, '/');
         std::string segment;
+
         if (slash == nullptr) {
             segment = std::string(path);
         }
         else {
-            segment = std::string(path, slash - path);
+            segment = std::string(
+                path, static_cast<std::string::size_type>(slash - path));
         }
+
         if (segment == ".." && !segments.empty() && segments.back() != "..") {
             segments.pop_back();
         }
         else if (segment != "." && segment != "") {
             segments.push_back(segment);
         }
+
         if (slash == nullptr) {
             break;
         }
@@ -208,8 +222,8 @@ std::string make_path_relative(std::string path, const char *workingDirectory)
             "Working directory must be null or an absolute path");
     }
 
-    int i = 0;
-    int lastMatchingSegmentEnd = 0;
+    unsigned int i = 0;
+    unsigned int lastMatchingSegmentEnd = 0;
     while (i < path.length() && path[i] == workingDirectory[i]) {
         if (workingDirectory[i + 1] == 0) {
             // Working directory is prefix of path, so if the last
@@ -244,16 +258,18 @@ std::string make_path_relative(std::string path, const char *workingDirectory)
         }
     }
 
-    int dotdotsNeeded = 1;
+    unsigned int dotdotsNeeded = 1;
     while (workingDirectory[i] != 0) {
         if (workingDirectory[i] == '/' && workingDirectory[i + 1] != 0) {
             ++dotdotsNeeded;
         }
         ++i;
     }
+
     auto result =
         path.replace(0, lastMatchingSegmentEnd, dotdotsNeeded * 3 - 1, '.');
-    for (int j = 0; j < dotdotsNeeded - 1; ++j) {
+
+    for (unsigned int j = 0; j < dotdotsNeeded - 1; ++j) {
         result[j * 3 + 2] = '/';
     }
     return result;
@@ -264,6 +280,7 @@ std::string make_path_absolute(const std::string &path, const std::string &cwd)
     if (path.empty() || path.front() == '/') {
         return path;
     }
+
     const std::string fullPath = cwd + '/' + path;
     std::string normalizedPath = normalize_path(fullPath.c_str());
 
@@ -319,10 +336,11 @@ std::string expand_path(const std::string &path)
 
 std::string get_current_working_directory()
 {
-    int bufferSize = 1024;
+    unsigned int bufferSize = 1024;
     while (true) {
-        char buffer[bufferSize];
-        char *cwd = getcwd(buffer, bufferSize);
+        std::unique_ptr<char[]> buffer(new char[bufferSize]);
+        char *cwd = getcwd(buffer.get(), bufferSize);
+
         if (cwd != nullptr) {
             return std::string(cwd);
         }
@@ -341,11 +359,14 @@ int parent_directory_levels(const char *path)
 {
     int currentLevel = 0;
     int lowestLevel = 0;
+
     while (*path != 0) {
         const char *slash = strchr(path, '/');
-        if (!slash)
+        if (!slash) {
             break;
-        const int segmentLength = slash - path;
+        }
+
+        const auto segmentLength = slash - path;
         if (segmentLength == 0 || (segmentLength == 1 && path[0] == '.')) {
             // Empty or dot segments don't change the level.
         }
@@ -356,6 +377,7 @@ int parent_directory_levels(const char *path)
         else {
             currentLevel++;
         }
+
         path = slash + 1;
     }
     if (strcmp(path, "..") == 0) {
@@ -367,15 +389,19 @@ int parent_directory_levels(const char *path)
 
 std::string last_n_segments(const char *path, int n)
 {
-    if (n == 0)
-        return std::string();
-    const int pathLength = strlen(path);
+    if (n == 0) {
+        return "";
+    }
+
+    const auto pathLength = strlen(path);
     const char *substringStart = path + pathLength - 1;
-    int substringLength = 1;
+    unsigned int substringLength = 1;
     int slashesSeen = 0;
+
     if (path[pathLength - 1] == '/') {
         substringLength = 0;
     }
+
     while (substringStart != path) {
         if (*(substringStart - 1) == '/') {
             slashesSeen++;
@@ -386,6 +412,7 @@ std::string last_n_segments(const char *path, int n)
         substringStart--;
         substringLength++;
     }
+
     // The path might only be one segment (no slashes)
     if (slashesSeen == 0 && n == 1) {
         return std::string(path, pathLength);
