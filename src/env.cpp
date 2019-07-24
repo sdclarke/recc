@@ -249,40 +249,38 @@ void find_and_parse_config_files()
 
 void handle_special_defaults()
 {
-
     if (RECC_SERVER.empty()) {
         RECC_SERVER = DEFAULT_RECC_SERVER;
         RECC_LOG_WARNING("Warning: no RECC_SERVER environment variable "
                          "specified."
-                         << "Using default server (" << RECC_SERVER << ")");
+                         << " Using default server (" << RECC_SERVER << ")");
     }
 
     if (RECC_CAS_SERVER.empty()) {
-        RECC_CAS_SERVER = RECC_SERVER;
-        RECC_LOG_VERBOSE("No RECC_CAS_SERVER environment variable "
-                         "specified."
-                         << "Using the same as RECC_SERVER ("
-                         << RECC_CAS_SERVER << ")");
-
         if (RECC_ACTION_CACHE_SERVER.empty()) {
-            RECC_ACTION_CACHE_SERVER = RECC_SERVER;
-            /* This is how Bazel defaults */
+            RECC_CAS_SERVER = RECC_SERVER;
+            RECC_LOG_VERBOSE("No RECC_CAS_SERVER environment variable "
+                             "specified."
+                             << " Using the same as RECC_SERVER ("
+                             << RECC_CAS_SERVER << ")");
+        }
+        else {
+            // Since it makes most sense for the action cache and the CAS to
+            // live together rather than the CAS living with the Execution
+            // Service, using the AC endpoint.
+            RECC_CAS_SERVER = RECC_ACTION_CACHE_SERVER;
             RECC_LOG_VERBOSE(
-                "No RECC_ACTION_CACHE_SERVER environment variable "
-                "specified."
-                << "Using the same as RECC_SERVER (" << RECC_CAS_SERVER
-                << ")");
+                "No RECC_CAS_SERVER environment variable specified. Using the "
+                "same RECC_ACTION_CACHE_SERVER ("
+                << RECC_ACTION_CACHE_SERVER << ")");
         }
     }
-    else {
-        if (RECC_ACTION_CACHE_SERVER.empty()) {
-            RECC_ACTION_CACHE_SERVER = RECC_CAS_SERVER;
-            RECC_LOG_VERBOSE(
-                "No RECC_ACTION_CACHE_SERVER environment variable "
-                "specified."
-                << "Using the same as RECC_CAS_SERVER (" << RECC_CAS_SERVER
-                << ")");
-        }
+    if (RECC_ACTION_CACHE_SERVER.empty()) {
+        RECC_ACTION_CACHE_SERVER = RECC_CAS_SERVER;
+        RECC_LOG_VERBOSE("No RECC_ACTION_CACHE_SERVER environment variable "
+                         "specified."
+                         << " Using the same as RECC_CAS_SERVER ("
+                         << RECC_CAS_SERVER << ")");
     }
 
     if (!(RECC_SERVER_AUTH_GOOGLEAPI || RECC_SERVER_SSL || RECC_SERVER_JWT)) {
