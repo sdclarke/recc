@@ -28,7 +28,7 @@ namespace BloombergLP {
 namespace recc {
 
 std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
-    ParsedCommand command, const std::string cwd,
+    const ParsedCommand &command, const std::string &cwd,
     std::unordered_map<proto::Digest, std::string> *blobs,
     std::unordered_map<proto::Digest, std::string> *filenames)
 {
@@ -85,8 +85,10 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
                 parentsNeeded = std::max(
                     parentsNeeded, parent_directory_levels(product.c_str()));
             }
+
             commandWorkingDirectory =
                 last_n_segments(cwd.c_str(), parentsNeeded);
+
             for (const auto &dep : deps) {
                 // If the dependency is an absolute path, leave
                 // the merkePath untouched
@@ -98,15 +100,18 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
                     merklePath = commandWorkingDirectory + "/" + dep;
                 }
                 merklePath = normalize_path(merklePath.c_str());
+
                 File file(dep.c_str());
                 nestedDirectory.add(file, merklePath.c_str());
                 (*filenames)[file.d_digest] = dep;
             }
         }
     }
+
     if (!commandWorkingDirectory.empty()) {
         nestedDirectory.addDirectory(commandWorkingDirectory.c_str());
     }
+
     for (const auto &product : products) {
         if (!product.empty() && product[0] == '/') {
             RECC_LOG_VERBOSE("Command produces file in a location unrelated "
@@ -117,7 +122,7 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
         }
     }
 
-    auto directoryDigest = nestedDirectory.to_digest(blobs);
+    const auto directoryDigest = nestedDirectory.to_digest(blobs);
 
     proto::Command commandProto;
 
@@ -140,9 +145,11 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
         property->set_name(platformIter.first);
         property->set_value(platformIter.second);
     }
+
     *commandProto.mutable_working_directory() = commandWorkingDirectory;
+
     RECC_LOG_VERBOSE("Command: " << commandProto.ShortDebugString());
-    auto commandDigest = make_digest(commandProto);
+    const auto commandDigest = make_digest(commandProto);
     (*blobs)[commandDigest] = commandProto.SerializeAsString();
 
     proto::Action action;
