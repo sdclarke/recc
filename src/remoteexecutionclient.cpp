@@ -104,7 +104,13 @@ void add_from_directory(
 void read_operation_async(ReaderPointer reader_ptr,
                           OperationPointer operation_ptr)
 {
+    bool logged = false;
     while (reader_ptr->Read(operation_ptr.get())) {
+        if (!logged && !operation_ptr->name().empty()) {
+            RECC_LOG_VERBOSE(
+                "Waiting for Operation: " << operation_ptr->name())
+            logged = true;
+        }
         if (operation_ptr->done()) {
             break;
         }
@@ -139,9 +145,10 @@ void RemoteExecutionClient::read_operation(ReaderPointer &reader_ptr,
     do {
         status = future.wait_for(DEFAULT_RECC_POLL_WAIT);
         if (RemoteExecutionClient::s_sigint_received) {
-            RECC_LOG_VERBOSE("Cancelling job");
+            RECC_LOG_VERBOSE(
+                "Cancelling job, operation name: " << operation_ptr->name());
             /* Cancel the operation if the execution service gave it a name */
-            if (operation_ptr->name() != "") {
+            if (!operation_ptr->name().empty()) {
                 cancel_operation(operation_ptr->name());
             }
             exit(130); // Ctrl+C exit code
