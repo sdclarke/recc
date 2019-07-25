@@ -157,8 +157,8 @@ void RemoteExecutionClient::read_operation(ReaderPointer &reader_ptr,
 }
 
 bool RemoteExecutionClient::fetch_from_action_cache(
-    proto::Digest actionDigest, const std::string &instanceName,
-    ActionResult &result)
+    const proto::Digest &actionDigest, const std::string &instanceName,
+    ActionResult *result)
 {
 
     grpc::ClientContext context;
@@ -168,7 +168,7 @@ bool RemoteExecutionClient::fetch_from_action_cache(
     *actionRequest.mutable_action_digest() = actionDigest;
 
     proto::ActionResult actionResult;
-    grpc::Status status = d_actionCacheStub->GetActionResult(
+    const grpc::Status status = d_actionCacheStub->GetActionResult(
         &context, actionRequest, &actionResult);
 
     if (!status.ok()) {
@@ -179,15 +179,18 @@ bool RemoteExecutionClient::fetch_from_action_cache(
                                  status.error_message());
     }
 
-    result = from_proto(actionResult);
+    if (result != nullptr) {
+        *result = from_proto(actionResult);
+    }
 
     return true;
 }
 
-ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
-                                                   bool skipCache)
+ActionResult
+RemoteExecutionClient::execute_action(const proto::Digest &actionDigest,
+                                      bool skipCache)
 {
-    /* Prepare an asynchonous Execute request */
+    /* Prepare an asynchronous Execute request */
     proto::ExecuteRequest executeRequest;
     executeRequest.set_instance_name(d_instance);
     *executeRequest.mutable_action_digest() = actionDigest;
@@ -200,8 +203,7 @@ ActionResult RemoteExecutionClient::execute_action(proto::Digest actionDigest,
 
     /* Create the lambda to pass to grpc_retry */
     auto execute_lambda = [&](grpc::ClientContext &context) {
-        reader_ptr =
-            std::move(d_executionStub->Execute(&context, executeRequest));
+        reader_ptr = d_executionStub->Execute(&context, executeRequest);
 
         /* Read the result of the Execute request into an OperationPointer */
         operation_ptr = std::make_shared<Operation>();
@@ -244,7 +246,7 @@ void RemoteExecutionClient::cancel_operation(const std::string &operationName)
     }
 }
 
-void RemoteExecutionClient::write_files_to_disk(ActionResult result,
+void RemoteExecutionClient::write_files_to_disk(const ActionResult &result,
                                                 const char *root)
 {
     // Timed function
@@ -252,7 +254,7 @@ void RemoteExecutionClient::write_files_to_disk(ActionResult result,
         TIMER_NAME_FETCH_WRITE_RESULTS, RECC_ENABLE_METRICS);
 
     for (const auto &fileIter : result.d_outputFiles) {
-        std::string path = std::string(root) + "/" + fileIter.first;
+        const std::string path = std::string(root) + "/" + fileIter.first;
         RECC_LOG_VERBOSE("Writing " << path);
         write_file(path.c_str(), fetch_blob(fileIter.second.d_digest));
         if (fileIter.second.d_executable) {
@@ -277,9 +279,10 @@ RemoteExecutionClient::from_proto(const proto::ActionResult &proto)
     }
 
     for (int i = 0; i < proto.output_directories_size(); ++i) {
-        auto outputDirectoryProto = proto.output_directories(i);
-        auto tree =
+        const auto outputDirectoryProto = proto.output_directories(i);
+        const auto tree =
             fetch_message<proto::Tree>(outputDirectoryProto.tree_digest());
+
         std::unordered_map<proto::Digest, proto::Directory> digestMap;
         for (int j = 0; j < tree.children_size(); ++j) {
             digestMap[make_digest(tree.children(j))] = tree.children(j);

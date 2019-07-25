@@ -36,8 +36,6 @@
 using namespace BloombergLP::recc;
 using namespace testing;
 
-const std::string emptyString;
-
 /*
  * This fixture sets up all of the dependencies for execute_action
  *
@@ -87,9 +85,9 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
         actionDigest.set_hash("Action digest hash here");
         *expectedExecuteRequest.mutable_action_digest() = actionDigest;
 
-        // Begin contructing a fake ExecuteResponse to return to the client.
+        // Begin constructing a fake ExecuteResponse to return to the client.
         proto::ExecuteResponse executeResponse;
-        auto actionResultProto = executeResponse.mutable_result();
+        const auto actionResultProto = executeResponse.mutable_result();
         actionResultProto->set_stdout_raw("Raw stdout.");
         std::string stdErr("Stderr, which will be sent as a digest.");
         stdErrDigest = make_digest(stdErr);
@@ -126,7 +124,7 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
         *tree.mutable_root()->add_directories()->mutable_digest() =
             make_digest(*childDirectory);
         tree.mutable_root()->mutable_directories(0)->set_name("subdirectory");
-        auto treeDigest = make_digest(tree);
+        const auto treeDigest = make_digest(tree);
         *actionResultProto->add_output_directories()->mutable_tree_digest() =
             treeDigest;
         actionResultProto->mutable_output_directories(0)->set_path(
@@ -180,7 +178,7 @@ TEST_F(RemoteExecutionClientTestFixture, ExecuteActionTest)
 
     // Ask the client to execute the action, and make sure the result is
     // correct.
-    auto actionResult = client->execute_action(actionDigest);
+    const auto actionResult = client->execute_action(actionDigest);
 
     EXPECT_EQ(actionResult.d_exitCode, 123);
     EXPECT_TRUE(actionResult.d_stdOut.d_inlined);
@@ -188,22 +186,23 @@ TEST_F(RemoteExecutionClientTestFixture, ExecuteActionTest)
     EXPECT_EQ(actionResult.d_stdOut.d_blob, "Raw stdout.");
     EXPECT_EQ(actionResult.d_stdErr.d_digest.hash(), stdErrDigest.hash());
 
-    EXPECT_EQ(actionResult.d_outputFiles["some/path/with/slashes.txt"]
+    EXPECT_EQ(actionResult.d_outputFiles.at("some/path/with/slashes.txt")
                   .d_digest.hash(),
               "File hash goes here");
-    EXPECT_EQ(
-        actionResult.d_outputFiles["output/directory/out.txt"].d_digest.hash(),
-        "File hash goes here");
-    EXPECT_TRUE(
-        actionResult.d_outputFiles["output/directory/subdirectory/a.out"]
-            .d_executable);
-    EXPECT_EQ(actionResult.d_outputFiles["output/directory/subdirectory/a.out"]
+    EXPECT_EQ(actionResult.d_outputFiles.at("output/directory/out.txt")
                   .d_digest.hash(),
-              "Executable file hash");
+              "File hash goes here");
+    EXPECT_TRUE(
+        actionResult.d_outputFiles.at("output/directory/subdirectory/a.out")
+            .d_executable);
     EXPECT_EQ(
-        actionResult.d_outputFiles["output/directory/subdirectory/nested/q.mk"]
+        actionResult.d_outputFiles.at("output/directory/subdirectory/a.out")
             .d_digest.hash(),
-        "q.mk file hash");
+        "Executable file hash");
+    EXPECT_EQ(actionResult.d_outputFiles
+                  .at("output/directory/subdirectory/nested/q.mk")
+                  .d_digest.hash(),
+              "q.mk file hash");
 }
 
 TEST_F(RemoteExecutionClientTestFixture, RpcRetryTest)
@@ -241,7 +240,7 @@ TEST_F(RemoteExecutionClientTestFixture, RpcRetryTest)
 
     // Ask the client to execute the action, and make sure the result is
     // correct.
-    auto actionResult = client->execute_action(actionDigest);
+    const auto actionResult = client->execute_action(actionDigest);
 
     RECC_RETRY_LIMIT = old_retry_limit;
 }
@@ -322,7 +321,7 @@ TEST_F(RemoteExecutionClientTestFixture, CancelOperation)
 
     pid_t pid = fork();
 
-    if (pid == (pid_t)0) {
+    if (pid == static_cast<pid_t>(0)) {
         close(timingPipe[1]);
 
         /* Wait for the parent to write its PID before sending the signal */
@@ -383,7 +382,7 @@ TEST_F(RemoteExecutionClientTestFixture, CancelOperation)
             },
             ::testing::ExitedWithCode(130), ".*");
     }
-    waitpid(pid, NULL, 0);
+    waitpid(pid, nullptr, 0);
 }
 
 TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestMiss)
@@ -397,8 +396,8 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestMiss)
 
     ActionResult actionResultOut = actionResult;
 
-    bool in_cache = client->fetch_from_action_cache(
-        actionDigest, std::string(), actionResultOut);
+    const bool in_cache = client->fetch_from_action_cache(
+        actionDigest, std::string(), &actionResultOut);
 
     EXPECT_FALSE(in_cache);
     EXPECT_EQ(actionResultOut.d_exitCode, actionResult.d_exitCode);
@@ -415,8 +414,8 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestHit)
 
     ActionResult actionResultOut = actionResult;
 
-    bool in_cache = client->fetch_from_action_cache(
-        actionDigest, std::string(), actionResultOut);
+    const bool in_cache = client->fetch_from_action_cache(
+        actionDigest, std::string(), &actionResultOut);
 
     EXPECT_TRUE(in_cache);
     EXPECT_EQ(actionResultOut.d_exitCode, 0);
@@ -431,6 +430,29 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestServerError)
 
     ActionResult actionResultOut;
     ASSERT_THROW(client->fetch_from_action_cache(actionDigest, std::string(),
-                                                 actionResultOut),
+                                                 &actionResultOut),
                  std::runtime_error);
+}
+
+TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestMissNoActionResult)
+{
+    EXPECT_CALL(*actionCacheStub, GetActionResult(_, _, _))
+        .WillOnce(Return(grpc::Status(grpc::NOT_FOUND, "not found")));
+    // `NOT_FOUND` => return false and do not write the ActionResult parameter.
+
+    const bool in_cache =
+        client->fetch_from_action_cache(actionDigest, std::string(), nullptr);
+
+    EXPECT_FALSE(in_cache);
+}
+
+TEST_F(RemoteExecutionClientTestFixture, ActionCacheHitNoActionResult)
+{
+    EXPECT_CALL(*actionCacheStub, GetActionResult(_, _, _))
+        .WillOnce(Return(grpc::Status::OK));
+
+    const bool in_cache =
+        client->fetch_from_action_cache(actionDigest, std::string(), nullptr);
+
+    EXPECT_TRUE(in_cache);
 }

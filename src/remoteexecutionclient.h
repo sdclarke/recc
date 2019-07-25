@@ -129,28 +129,28 @@ class RemoteExecutionClient : public CASClient {
     }
 
     /**
-     * Attemps to fetch the ActionResult with the given digest from the action
+     * Attempts to fetch the ActionResult with the given digest from the action
      * cache and store it in the `result` parameter. The return value
      * indicates whether the ActionResult was found in the action cache.
      * If it wasn't, `result` is not modified.
      *
      */
-    bool fetch_from_action_cache(proto::Digest actionDigest,
+    bool fetch_from_action_cache(const proto::Digest &actionDigest,
                                  const std::string &instanceName,
-                                 ActionResult &result);
+                                 ActionResult *result);
 
     /**
      * Run the action with the given digest on the given server, waiting
      * synchronously for it to complete. The Action must already be present in
      * the server's CAS.
      */
-    ActionResult execute_action(proto::Digest actionDigest,
+    ActionResult execute_action(const proto::Digest &actionDigest,
                                 bool skipCache = false);
 
     /**
      * Get the contents of the given OutputBlob.
      */
-    inline std::string get_outputblob(OutputBlob b)
+    inline std::string get_outputblob(const OutputBlob &b)
     {
         return b.d_inlined ? b.d_blob : fetch_blob(b.d_digest);
     }
@@ -158,7 +158,8 @@ class RemoteExecutionClient : public CASClient {
     /**
      * Write the given ActionResult's output files to disk.
      */
-    void write_files_to_disk(ActionResult result, const char *root = ".");
+    void write_files_to_disk(const ActionResult &result,
+                             const char *root = ".");
 
     /**
      * Signal handler to mark the remote execution task for cancellation
