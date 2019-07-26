@@ -36,9 +36,9 @@ class PreconditionFail : public std::exception {
     std::vector<std::string> d_missingFiles;
 
   public:
-    PreconditionFail(std::vector<std::string> missingFileList)
+    PreconditionFail(const std::vector<std::string> &missingFileList)
+        : d_missingFiles(missingFileList)
     {
-        this->d_missingFiles = missingFileList;
     }
     const char *what() const throw()
     {
@@ -87,17 +87,19 @@ class CASClient {
     /**
      * Unconditionally upload a blob using the ByteStream API.
      */
-    void upload_blob(proto::Digest digest, std::string blob);
+    void upload_blob(const proto::Digest &digest,
+                     const std::string &blob) const;
 
     /**
      * Fetch a blob using the ByteStream API.
      */
-    std::string fetch_blob(proto::Digest digest);
+    std::string fetch_blob(const proto::Digest &digest) const;
 
     /**
      * Fetch a message using the ByteStream API.
      */
-    template <typename Msg> inline Msg fetch_message(proto::Digest digest)
+    template <typename Msg>
+    inline Msg fetch_message(const proto::Digest &digest)
     {
         Msg result;
         if (!result.ParseFromString(fetch_blob(digest))) {
@@ -112,9 +114,9 @@ class CASClient {
      * uploaded, then uses the ByteStream and BatchUpdateBlobs APIs to upload
      * them.
      */
-    void
-    upload_resources(std::unordered_map<proto::Digest, std::string> blobs,
-                     std::unordered_map<proto::Digest, std::string> filenames);
+    void upload_resources(
+        const std::unordered_map<proto::Digest, std::string> &blobs,
+        const std::unordered_map<proto::Digest, std::string> &filenames) const;
 };
 } // namespace recc
 } // namespace BloombergLP

@@ -40,12 +40,15 @@ const char HEX_CHARS[] = "0123456789abcdef";
  */
 std::string generate_guid()
 {
+    const auto GUID_LENGTH = 36;
+    std::string result(GUID_LENGTH, '0');
+
     std::random_device randomDevice;
     std::default_random_engine engine(randomDevice());
     std::uniform_int_distribution<> hexDist(0, 15);
-    std::string result(36, '0');
-    for (int i = 0; i < 36; ++i) {
-        int num = hexDist(engine);
+
+    for (unsigned int i = 0; i < GUID_LENGTH; ++i) {
+        const int num = hexDist(engine);
         switch (i) {
             case 8:
             case 13:
@@ -69,7 +72,8 @@ std::string generate_guid()
 const std::string GUID = generate_guid();
 const int BYTESTREAM_CHUNK_SIZE = 1 << 20;
 
-void CASClient::upload_blob(proto::Digest digest, std::string blob)
+void CASClient::upload_blob(const proto::Digest &digest,
+                            const std::string &blob) const
 {
     google::bytestream::WriteResponse response;
 
@@ -87,13 +91,15 @@ void CASClient::upload_blob(proto::Digest digest, std::string blob)
 
         initialRequest.set_resource_name(resourceName);
         initialRequest.set_write_offset(0);
+
         if (writer->Write(initialRequest)) {
-            for (int offset = 0; offset < blob.length();
+            for (unsigned int offset = 0; offset < blob.length();
                  offset += BYTESTREAM_CHUNK_SIZE) {
                 google::bytestream::WriteRequest request;
                 request.set_write_offset(offset);
                 request.set_finish_write((offset + BYTESTREAM_CHUNK_SIZE) >=
                                          blob.length());
+
                 if (request.finish_write()) {
                     request.set_data(blob.c_str() + offset,
                                      blob.length() - offset);
@@ -102,6 +108,7 @@ void CASClient::upload_blob(proto::Digest digest, std::string blob)
                     request.set_data(blob.c_str() + offset,
                                      BYTESTREAM_CHUNK_SIZE);
                 }
+
                 if (!writer->Write(request)) {
                     break;
                 }
@@ -113,12 +120,13 @@ void CASClient::upload_blob(proto::Digest digest, std::string blob)
 
     grpc_retry(write_lambda, d_grpcContext);
 
-    if (response.committed_size() != blob.length()) {
+    if (response.committed_size() !=
+        static_cast<google::protobuf::int64>(blob.length())) {
         throw std::runtime_error("ByteStream upload failed.");
     }
 }
 
-std::string CASClient::fetch_blob(proto::Digest digest)
+std::string CASClient::fetch_blob(const proto::Digest &digest) const
 {
     std::string resourceName = d_instance;
     if (!d_instance.empty()) {
@@ -133,14 +141,18 @@ std::string CASClient::fetch_blob(proto::Digest digest)
     auto fetch_lambda = [&](grpc::ClientContext &context) {
         google::bytestream::ReadRequest request;
         request.set_resource_name(resourceName);
-        request.set_read_offset(result.size());
+        request.set_read_offset(
+            static_cast<google::protobuf::int64>(result.size()));
+
         auto reader = d_byteStreamStub->Read(&context, request);
+
         google::bytestream::ReadResponse readResponse;
         while (reader->Read(&readResponse)) {
             result += readResponse.data();
         }
         return reader->Finish();
     };
+
     grpc_retry(fetch_lambda, d_grpcContext);
     return result;
 }
@@ -149,8 +161,8 @@ const int MAX_TOTAL_BATCH_SIZE = 1 << 21;
 const int MAX_MISSING_BLOBS_REQUEST_ITEMS = 1 << 14;
 
 void CASClient::upload_resources(
-    std::unordered_map<proto::Digest, std::string> blobs,
-    std::unordered_map<proto::Digest, std::string> filenames)
+    const std::unordered_map<proto::Digest, std::string> &blobs,
+    const std::unordered_map<proto::Digest, std::string> &filenames) const
 {
     std::unordered_set<proto::Digest> digestsToUpload;
     for (const auto &i : blobs) {
@@ -161,6 +173,7 @@ void CASClient::upload_resources(
     }
 
     std::unordered_set<proto::Digest> missingDigests;
+
     auto digestIter = digestsToUpload.cbegin();
     while (digestIter != digestsToUpload.cend()) {
         proto::FindMissingBlobsRequest missingBlobsRequest;
@@ -171,6 +184,7 @@ void CASClient::upload_resources(
             *missingBlobsRequest.add_blob_digests() = *digestIter;
             ++digestIter;
         }
+
         RECC_LOG_VERBOSE("Sending missing blobs request: "
                          << missingBlobsRequest.ShortDebugString());
         proto::FindMissingBlobsResponse missingBlobsResponse;
@@ -202,15 +216,16 @@ void CASClient::upload_resources(
     int batchSize = 0;
     for (const auto &digest : missingDigests) {
         std::string blob;
+
         if (blobs.count(digest)) {
-            blob = blobs[digest];
+            blob = blobs.at(digest);
         }
         else if (filenames.count(digest)) {
-            blob = get_file_contents(filenames[digest].c_str());
+            blob = get_file_contents(filenames.at(digest).c_str());
         }
         else {
             throw std::runtime_error(
-                "CAS server requested nonexistent digest");
+                "CAS server requested non-existent digest");
         }
 
         if (digest.size_bytes() > MAX_TOTAL_BATCH_SIZE) {
@@ -219,17 +234,20 @@ void CASClient::upload_resources(
         }
         else if (digest.size_bytes() + batchSize > MAX_TOTAL_BATCH_SIZE) {
             proto::BatchUpdateBlobsResponse response;
+
             auto batch_update_lambda = [&](grpc::ClientContext &context) {
                 response.Clear();
                 return d_executionStub->BatchUpdateBlobs(
                     &context, batchUpdateRequest, &response);
             };
+
             RECC_LOG_VERBOSE("Sending batch update request");
             grpc_retry(batch_update_lambda, d_grpcContext);
 
             for (int j = 0; j < response.responses_size(); ++j) {
                 ensure_ok(response.responses(j).status());
             }
+
             batchUpdateRequest = proto::BatchUpdateBlobsRequest();
             batchUpdateRequest.set_instance_name(d_instance);
             batchSize = 0;
@@ -242,6 +260,7 @@ void CASClient::upload_resources(
         batchSize += digest.size_bytes();
         batchSize += digest.hash().length();
     }
+
     if (batchUpdateRequest.requests_size() > 0) {
         // Timed block
         reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
@@ -249,12 +268,15 @@ void CASClient::upload_resources(
 
         proto::BatchUpdateBlobsResponse response;
         RECC_LOG_VERBOSE("Sending final batch update request");
+
         auto batch_update_lambda = [&](grpc::ClientContext &context) {
             response.Clear();
             return d_executionStub->BatchUpdateBlobs(
                 &context, batchUpdateRequest, &response);
         };
+
         grpc_retry(batch_update_lambda, d_grpcContext);
+
         for (int i = 0; i < response.responses_size(); ++i) {
             ensure_ok(response.responses(i).status());
         }
