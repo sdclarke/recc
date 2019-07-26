@@ -18,7 +18,6 @@
 #include <cerrno>
 #include <cstdio>
 #include <env.h>
-
 #include <iostream>
 
 #ifdef RECC_DEBUG
@@ -26,12 +25,12 @@
     if (RECC_VERBOSE) {                                                       \
         std::clog << __FILE__ << ":" << __PRETTY_FUNCTION__ << ":"            \
                   << __LINE__ << " ";                                         \
-        std::clog << x << std::endl;                                          \
+        std::clog << x << "\n";                                               \
     }
 #else
 #define RECC_LOG_VERBOSE(x)                                                   \
     if (RECC_VERBOSE) {                                                       \
-        std::clog << x << std::endl;                                          \
+        std::clog << x << "\n";                                               \
     }
 
 #endif
@@ -40,9 +39,12 @@
 
 #define RECC_LOG(x) std::cout << x << std::endl;
 
-#define RECC_LOG_ERROR(x) std::cerr << x << std::endl;
+#define RECC_LOG_ERROR(x) std::cerr << x << "\n";
 
-#define RECC_LOG_WARNING(x) std::cerr << x << std::endl;
+#define RECC_LOG_WARNING(x) std::cerr << x << "\n";
+
+#define RECC_LOG_DEBUG(x)                                                     \
+    std::clog << __FILE__ << ":" << __LINE__ << ":" << x << "\n";
 
 using BloombergLP::recc::RECC_VERBOSE;
 #endif
