@@ -212,7 +212,7 @@ extern std::map<std::string, std::string> RECC_REMOTE_PLATFORM;
 
 /**
  * Used to specify absolute paths for finding recc.conf.
- * If specifing absolute path, only include up until directory containing
+ * If specifying absolute path, only include up until directory containing
  * config, no trailing "/". Additions to the list should be in order of
  * priority: LEAST-> MOST important.
  *
@@ -273,7 +273,7 @@ void set_config_locations();
  * Sets the prioritized configuration file locations as specified
  * in config_order
  */
-void set_config_locations(std::deque<std::string> config_order);
+void set_config_locations(const std::deque<std::string> &config_order);
 
 /**
  * Parses strings of the form `host:port` and stores each segment in the
@@ -292,7 +292,7 @@ extern "C" char **environ;
  * Calculate and set the config locations, parse the config files from those,
  * then parse the environment variables for overrides and run some sanity
  * checks (handle_special_defaults) on the resulting config. Takes optional
- * parameter specyfying source file which calls it, to pass to
+ * parameter specifying source file which calls it, to pass to
  * handle_special_defaults
  */
 inline void parse_config_variables()
