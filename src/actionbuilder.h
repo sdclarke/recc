@@ -37,7 +37,7 @@ class ActionBuilder {
      * which will get uploaded to CAS by the caller.
      */
     static std::shared_ptr<proto::Action>
-    BuildAction(ParsedCommand command, std::string cwd,
+    BuildAction(const ParsedCommand &command, const std::string &cwd,
                 std::unordered_map<proto::Digest, std::string> *filenames,
                 std::unordered_map<proto::Digest, std::string> *blobs);
 };
