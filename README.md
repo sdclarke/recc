@@ -67,6 +67,12 @@ $ cd build
 $ cmake .. && make
 ```
 
+If you want to set the instance name at compile time, then you may pass in a special flag:
+
+```sh
+cmake -DDEFAULT_RECC_INSTANCE=name_you_want ../ && make
+```
+
 Note that on macOS, you'll need to manually specify the locations of OpenSSL and GoogleTest when running CMake:
 
 ```sh
