@@ -51,6 +51,9 @@ endif()
 
 add_definitions(-DRECC_VERSION="${RECC_VERSION}")
 
+# define DEFAULT_RECC_INSTANCE
+add_definitions(-DDEFAULT_RECC_INSTANCE="${DEFAULT_RECC_INSTANCE}")
+
 include(cmake/deps.cmake)
 
 # define CMAKE_INSTALL_DIR

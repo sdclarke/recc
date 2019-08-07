@@ -19,12 +19,14 @@
 #include <limits.h>
 
 // clang-format off
-
+// allow default instance name to be set at compile time
+#ifndef DEFAULT_RECC_INSTANCE
+#define DEFAULT_RECC_INSTANCE "" 
+#endif
 #define DEFAULT_RECC_POLL_WAIT std::chrono::seconds(1)
 #define DEFAULT_RECC_RETRY_LIMIT 0
 #define DEFAULT_RECC_RETRY_DELAY 100
 #define DEFAULT_RECC_SERVER "localhost:8085"
-#define DEFAULT_RECC_INSTANCE ""
 #define DEFAULT_RECC_TMPDIR "/tmp"
 #define DEFAULT_RECC_TMP_PREFIX "recc"
 #define DEFAULT_RECC_SERVER_AUTH_GOOGLEAPI 0
