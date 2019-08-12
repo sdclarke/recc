@@ -163,7 +163,6 @@ add_executable(reccmetrics_metricguard_enabled_test reccmetrics/metricguard_enab
 target_link_libraries(reccmetrics_metricguard_enabled_test ${GTEST_TARGET} remoteexecution)
 add_test(NAME reccmetrics_metricguard_enabled_test COMMAND reccmetrics_metricguard_enabled_test)
 
-
 add_executable(reccmetrics_publisherguard_test reccmetrics/publisherguard_test.cpp main.cpp)
 target_link_libraries(reccmetrics_publisherguard_test ${GTEST_TARGET} remoteexecution)
 add_test(NAME reccmetrics_publisherguard_test COMMAND reccmetrics_publisherguard_test)
