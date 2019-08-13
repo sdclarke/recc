@@ -123,9 +123,6 @@ add_test(NAME jsonfilemanager_tests
          COMMAND jsonfilemanager_tests
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/authsession_fixture)
 
-add_executable(commandlineutils_tests commandlineutils.cpp main.cpp)
-target_link_libraries(commandlineutils_tests ${GMOCK_TARGET} ${GTEST_TARGET} remoteexecution)
-add_test(NAME commandlineutils_tests COMMAND commandlineutils_tests)
 
 add_executable(formpost_test formpost.cpp main.cpp)
 target_link_libraries(formpost_test ${GTEST_TARGET} remoteexecution)
