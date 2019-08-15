@@ -97,6 +97,15 @@ void make_executable(const char *path)
 
 std::string get_file_contents(const char *path)
 {
+    struct stat statResult;
+    if (stat(path, &statResult) != 0) {
+        throw std::system_error(errno, std::system_category());
+    }
+    if (!S_ISREG(statResult.st_mode)) {
+        throw std::runtime_error("\"" + std::string(path) +
+                                 "\" is not a regular file");
+    }
+
     std::string contents;
     std::ifstream fileStream;
     fileStream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
