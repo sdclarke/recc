@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
                         mt(TIMER_NAME_QUERY_ACTION_CACHE, RECC_ENABLE_METRICS);
 
                     action_in_cache = client.fetch_from_action_cache(
-                        actionDigest, RECC_INSTANCE, result);
+                        actionDigest, RECC_INSTANCE, &result);
                     if (action_in_cache) {
                         RECC_LOG_VERBOSE("Action cache hit for "
                                          << actionDigest.hash());
