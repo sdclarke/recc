@@ -185,8 +185,9 @@ void CASClient::upload_resources(
             ++digestIter;
         }
 
-        RECC_LOG_VERBOSE("Sending missing blobs request: "
-                         << missingBlobsRequest.ShortDebugString());
+        RECC_LOG_VERBOSE(
+            "Sending FindMissingBlobsRequest with a total number of blobs: "
+            << missingBlobsRequest.blob_digests_size());
         proto::FindMissingBlobsResponse missingBlobsResponse;
 
         auto missing_blobs_lambda = [&](grpc::ClientContext &context) {
@@ -202,8 +203,9 @@ void CASClient::upload_resources(
             grpc_retry(missing_blobs_lambda, d_grpcContext);
         }
 
-        RECC_LOG_VERBOSE("Got missing blobs response: "
-                         << missingBlobsResponse.ShortDebugString());
+        RECC_LOG_VERBOSE(
+            "Received FindMissingBlobsResponse with a total number of blobs: "
+            << missingBlobsResponse.missing_blob_digests_size());
         for (int i = 0; i < missingBlobsResponse.missing_blob_digests_size();
              ++i) {
             missingDigests.insert(
