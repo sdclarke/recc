@@ -67,7 +67,7 @@ std::string get_file_contents(const char *path);
 /**
  * Overwrite the given file with the given contents.
  */
-void write_file(const char *path, std::string contents);
+void write_file(const char *path, const std::string &contents);
 
 /**
  * Simplify the given path.
