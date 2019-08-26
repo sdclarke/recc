@@ -91,7 +91,7 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
 
             for (const auto &dep : deps) {
                 // If the dependency is an absolute path, leave
-                // the merkePath untouched
+                // the merklePath untouched
                 std::string merklePath;
                 if (dep[0] == '/') {
                     merklePath = dep;
