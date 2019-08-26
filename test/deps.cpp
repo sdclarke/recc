@@ -35,6 +35,7 @@ std::set<std::string> normalize_all(const std::set<std::string> &paths)
 TEST(DepsTest, Empty)
 {
     parse_config_variables();
+    RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.", "empty.c"};
     std::set<std::string> expectedDeps = {"empty.c"};
     EXPECT_EQ(expectedDeps,
@@ -44,6 +45,7 @@ TEST(DepsTest, Empty)
 TEST(DepsTest, SimpleInclude)
 {
     parse_config_variables();
+    RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c"};
     std::set<std::string> expected = {"includes_empty.c", "empty.h"};
@@ -53,6 +55,7 @@ TEST(DepsTest, SimpleInclude)
 TEST(DepsTest, RecursiveDependency)
 {
     parse_config_variables();
+    RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_includes_empty.c"};
     std::set<std::string> expected = {"includes_includes_empty.c",
@@ -63,6 +66,7 @@ TEST(DepsTest, RecursiveDependency)
 TEST(DepsTest, MultiFile)
 {
     parse_config_variables();
+    RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_includes_empty.c", "includes_empty.c"};
     std::set<std::string> expected = {"includes_includes_empty.c",
@@ -74,6 +78,7 @@ TEST(DepsTest, MultiFile)
 TEST(DepsTest, EdgeCases)
 {
     parse_config_variables();
+    RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "edge_cases.c"};
     std::set<std::string> expected = {"edge_cases.c", "empty.h",
@@ -84,6 +89,7 @@ TEST(DepsTest, EdgeCases)
 TEST(DepsTest, OutputArgument)
 {
     parse_config_variables();
+    RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c",     "-o", "/dev/null"};
     std::set<std::string> expected = {"includes_empty.c", "empty.h"};
@@ -93,6 +99,7 @@ TEST(DepsTest, OutputArgument)
 TEST(DepsTest, OutputArgumentNoSpace)
 {
     parse_config_variables();
+    RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c", "-o/dev/null"};
     std::set<std::string> expected = {"includes_empty.c", "empty.h"};
@@ -113,6 +120,7 @@ TEST(DepsTest, PreprocessorOutputArgument)
 TEST(DepsTest, Subdirectory)
 {
     parse_config_variables();
+    RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "-Isubdirectory", "includes_from_subdirectory.c"};
     std::set<std::string> expected = {"includes_from_subdirectory.c",
@@ -124,6 +132,7 @@ TEST(DepsTest, SystemSubdirectory)
 {
     if (command_basename(RECC_PLATFORM_COMPILER) == "gcc") {
         parse_config_variables();
+        RECC_DEPS_GLOBAL_PATHS = 0;
         ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                                  "-isystemsubdirectory",
                                  "includes_from_subdirectory.c"};
@@ -137,6 +146,7 @@ TEST(DepsTest, SystemSubdirectory)
 TEST(DepsTest, InputInSubdirectory)
 {
     parse_config_variables();
+    RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c",
                              "subdirectory/empty.c"};
     std::set<std::string> expected = {"subdirectory/empty.c"};
@@ -154,6 +164,7 @@ TEST(DepsTest, SubprocessFailure)
 TEST(DepsTest, GlobalPathsAllowed)
 {
     parse_config_variables();
+    RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "ctype_include.c"};
     std::set<std::string> expected = {"ctype_include.c"};
     EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
