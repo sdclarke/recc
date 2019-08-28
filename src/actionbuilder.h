@@ -16,6 +16,7 @@
 #define INCLUDED_ACTIONBUILDER
 
 #include <deps.h>
+#include <merklize.h>
 #include <protos.h>
 
 #include <memory>
@@ -33,13 +34,13 @@ class ActionBuilder {
      * non-compile command or trying to output files in directory unrelated
      * to the current working directory.
      *
-     * "filenames" and "blobs" are used to store parsed input and output files,
-     * which will get uploaded to CAS by the caller.
+     * "digest_to_filecontents" and "blobs" are used to store parsed input and
+     * output files, which will get uploaded to CAS by the caller.
      */
     static std::shared_ptr<proto::Action>
     BuildAction(const ParsedCommand &command, const std::string &cwd,
-                std::unordered_map<proto::Digest, std::string> *filenames,
-                std::unordered_map<proto::Digest, std::string> *blobs);
+                digest_string_umap *digest_to_filecontents,
+                digest_string_umap *blobs);
 };
 
 } // namespace recc

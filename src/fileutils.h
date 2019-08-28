@@ -145,6 +145,24 @@ int parent_directory_levels(const char *path);
  * If the given path doesn't have that many segments, throws an exception.
  */
 std::string last_n_segments(const char *path, int n);
+
+/**
+ * Determine if the path is absolute.
+ * Replace with std::filesystem if compiling with C++17.
+ */
+bool is_absolute_path(const char *path);
+
+/**
+ * Check and replace input str if a path matches one in PREFIX_REPLACEMENT_MAP.
+ */
+std::string resolve_path_from_prefix_map(const std::string &path);
+
+/**
+ * Return a std::string containing the basename of a path. For example, if the
+ * path is a/b/c.txt return c.txt.
+ */
+std::string path_basename(const char *path);
+
 } // namespace recc
 } // namespace BloombergLP
 #endif

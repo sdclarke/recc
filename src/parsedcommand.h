@@ -119,6 +119,7 @@ inline std::string command_basename(std::string path)
 {
     return command_basename(path.c_str());
 }
+
 } // namespace recc
 } // namespace BloombergLP
 

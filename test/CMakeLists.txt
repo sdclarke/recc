@@ -85,6 +85,10 @@ add_executable(env_utils_test env/env_utils.cpp main.cpp)
 target_link_libraries(env_utils_test ${GTEST_TARGET} remoteexecution)
 add_test(NAME env_utils_test COMMAND env_utils_test)
 
+add_executable(env_path_vector_test env/env_path_vector.cpp main.cpp)
+target_link_libraries(env_path_vector_test ${GTEST_TARGET} remoteexecution)
+add_test(NAME env_path_vector_test COMMAND env_path_vector_test)
+
 add_executable(remoteexecutionclient_tests remoteexecutionclient.cpp main.cpp)
 target_link_libraries(remoteexecutionclient_tests ${GMOCK_TARGET} ${GTEST_TARGET} remoteexecution)
 add_test(NAME remoteexecutionclient_tests COMMAND remoteexecutionclient_tests)

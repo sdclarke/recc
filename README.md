@@ -139,6 +139,7 @@ you submit. BuildGrid provides one you can use.
 
 This repository used to contain a reference worker called
 `reccworker`, but that has since been deprecated and removed.
+Some examples of workers are: [buildbox-worker](https://gitlab.com/BuildGrid/buildbox/buildbox-worker), [bgd-bot](https://gitlab.com/BuildGrid/buildgrid)
 
 [remote execution api]: https://github.com/bazelbuild/remote-apis
 [buildgrid]: https://gitlab.com/BuildGrid/buildgrid
@@ -199,8 +200,18 @@ tell it where to find the library:
 $ export RECC_DEPS_ENV_LDR_PRELOAD=/path/to/libreccdevshim.so
 $ export RECC_DEPS_ENV_LDR_PRELOAD64=/path/to/64bit/libreccdevshim.so
 ```
+#### Support for dependency path replacement.
 
-[`libreccdevshim`]: src/lib/reccdevshim
+A common problem that can hinder reproducibility and cacheabilty of remote builds, are dependencies that are local to the user, system, and set of machines the build command is sent from. To solve this issue, `recc` supports specifying the `RECC_PREFIX_MAP` configuration variable, allowing changing a prefix in a path, with another one. For example, replacing all paths with prefixes including `/usr/local/bin` with `/usr/bin` can be done by specifying:
+```
+export RECC_PREFIX_MAP=/usr/local/bin=/usr/bin
+```
+Supports multiple prefixes by specifying `:` as a delimiter.
+
+Guidelines for replacement are:
+1. Both keys/values for RECC_PREFIX_MAP must be absolute paths.
+2. Prefix candidates are matched from left to right, and once a match is found it is replaced and no more prefix replacement is done.
+3. Path prefix replacement happens before absolute to relative path conversion.
 
 ### Running `recc` against Google's RBE (Remote Build Execution) API
 

@@ -290,3 +290,59 @@ TEST(RewriteAbsolutePathsTest, ComplexOptions)
     EXPECT_EQ(parsedCommand.get_dependencies_command(), expectedDepsCommand);
     EXPECT_EQ(parsedCommand.get_products(), expectedProducts);
 }
+
+TEST(ReplacePathTest, SimpleRewrite)
+{
+    RECC_PREFIX_REPLACEMENT = {{"/usr/bin/include", "/include"}};
+    RECC_PROJECT_ROOT = "/home/nobody/";
+
+    const std::vector<std::string> command = {
+        "gcc", "-c", "hello.c", "-I/usr/bin/include/headers", "-o", "hello.o"};
+
+    const ParsedCommand parsedCommand(command, "/home");
+
+    // -I should be replaced.
+    const std::vector<std::string> expectedCommand = {
+        "gcc", "-c", "hello.c", "-I/include/headers", "-o", "hello.o"};
+
+    // Deps command shouldn't be rewritten.
+    const std::vector<std::string> expectedDepsCommand = {
+        "gcc", "-c", "hello.c", "-I/usr/bin/include/headers", "-M"};
+
+    const std::set<std::string> expectedProducts = {"hello.o"};
+
+    ASSERT_TRUE(parsedCommand.is_compiler_command());
+    EXPECT_EQ(parsedCommand.get_command(), expectedCommand);
+    EXPECT_EQ(parsedCommand.get_dependencies_command(), expectedDepsCommand);
+    EXPECT_EQ(parsedCommand.get_products(), expectedProducts);
+}
+
+TEST(ReplacePathTest, PathInProjectRoot)
+{
+    // Path to replace is inside project root, the behavior expected is:
+    // Path replaced by path in PREFIX_MAP, then if still relative to
+    // PROJECT_ROOT Replaced again to be made relative.
+    RECC_PREFIX_REPLACEMENT = {{"/home/usr/bin", "/home/bin"}};
+    RECC_PROJECT_ROOT = "/home/";
+
+    const std::vector<std::string> command = {
+        "gcc", "-c",     "hello.c", "-I/home/usr/bin/include/headers",
+        "-o",  "hello.o"};
+
+    const ParsedCommand parsedCommand(command, "/home/");
+
+    // Deps command shouldn't be rewritten.
+    const std::vector<std::string> expectedDepsCommand = {
+        "gcc", "-c", "hello.c", "-Iusr/bin/include/headers", "-M"};
+
+    // -I should be replaced, and made relative
+    const std::vector<std::string> expectedCommand = {
+        "gcc", "-c", "hello.c", "-Ibin/include/headers", "-o", "hello.o"};
+
+    const std::set<std::string> expectedProducts = {"hello.o"};
+
+    ASSERT_TRUE(parsedCommand.is_compiler_command());
+    EXPECT_EQ(parsedCommand.get_command(), expectedCommand);
+    EXPECT_EQ(parsedCommand.get_dependencies_command(), expectedDepsCommand);
+    EXPECT_EQ(parsedCommand.get_products(), expectedProducts);
+}

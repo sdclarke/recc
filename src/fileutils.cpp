@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <system_error>
+#include <unordered_map>
 
 #include <unistd.h>
 
@@ -114,11 +115,9 @@ std::string get_file_contents(const char *path)
     fileStream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     fileStream.open(path, std::ios::in | std::ios::binary);
 
-    std::streamoff start = fileStream.tellg();
+    auto start = fileStream.tellg();
     fileStream.seekg(0, std::ios::end);
-    std::streamsize size = fileStream.tellg() - start;
-
-    RECC_LOG_VERBOSE("Reading file at " << path << " - size " << size);
+    auto size = fileStream.tellg() - start;
 
     contents.resize(static_cast<std::string::size_type>(size));
     fileStream.seekg(start);
@@ -144,7 +143,7 @@ void write_file(const char *path, const std::string &contents)
         }
     }
     fileStream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
-    fileStream << contents;
+    fileStream << contents << std::flush;
 }
 
 std::string normalize_path(const char *path)
@@ -284,7 +283,8 @@ std::string make_path_absolute(const std::string &path, const std::string &cwd)
     const std::string fullPath = cwd + '/' + path;
     std::string normalizedPath = normalize_path(fullPath.c_str());
 
-    /* normalize_path removes trailing slashes, so let's preserve them here */
+    /* normalize_path removes trailing slashes, so let's preserve them here
+     */
     if (path.back() == '/' && normalizedPath.back() != '/') {
         normalizedPath.push_back('/');
     }
@@ -418,6 +418,41 @@ std::string last_n_segments(const char *path, int n)
         return std::string(path, pathLength);
     }
     throw std::logic_error("Not enough segments in path");
+}
+
+bool is_absolute_path(const char *path)
+{
+    return path != nullptr && path[0] == '/';
+}
+
+std::string resolve_path_from_prefix_map(const std::string &path)
+{
+    if (RECC_PREFIX_REPLACEMENT.empty()) {
+        return path;
+    }
+
+    // Iterate through dictionary, replacing path if it includes key, with
+    // value.
+    for (const auto &pair : RECC_PREFIX_REPLACEMENT) {
+        // Check if prefix is found in the path, and that it is a prefix.
+        if (has_path_prefix(path, pair.first)) {
+            // Append a trailing slash to the replacement, in cases of
+            // replacing `/` Double slashes will get removed during
+            // normalization.
+            const std::string replaced_path =
+                pair.second + '/' + path.substr(pair.first.length());
+            const std::string newPath = normalize_path(replaced_path.c_str());
+            RECC_LOG_VERBOSE("Replacing and normalized path: ["
+                             << path << "] with newpath: [" << newPath << "]");
+            return newPath;
+        }
+    }
+    return path;
+}
+
+std::string path_basename(const char *path)
+{
+    return last_n_segments(path, 1);
 }
 
 } // namespace recc

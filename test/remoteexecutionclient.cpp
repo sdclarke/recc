@@ -187,21 +187,21 @@ TEST_F(RemoteExecutionClientTestFixture, ExecuteActionTest)
     EXPECT_EQ(actionResult.d_stdErr.d_digest.hash(), stdErrDigest.hash());
 
     EXPECT_EQ(actionResult.d_outputFiles.at("some/path/with/slashes.txt")
-                  .d_digest.hash(),
+                  .first.hash(),
               "File hash goes here");
-    EXPECT_EQ(actionResult.d_outputFiles.at("output/directory/out.txt")
-                  .d_digest.hash(),
-              "File hash goes here");
+    EXPECT_EQ(
+        actionResult.d_outputFiles.at("output/directory/out.txt").first.hash(),
+        "File hash goes here");
     EXPECT_TRUE(
         actionResult.d_outputFiles.at("output/directory/subdirectory/a.out")
-            .d_executable);
+            .second);
     EXPECT_EQ(
         actionResult.d_outputFiles.at("output/directory/subdirectory/a.out")
-            .d_digest.hash(),
+            .first.hash(),
         "Executable file hash");
     EXPECT_EQ(actionResult.d_outputFiles
                   .at("output/directory/subdirectory/nested/q.mk")
-                  .d_digest.hash(),
+                  .first.hash(),
               "q.mk file hash");
 }
 
@@ -250,17 +250,17 @@ TEST_F(RemoteExecutionClientTestFixture, WriteFilesToDisk)
     TemporaryDirectory tempDir;
 
     ActionResult testResult;
-    File testFile;
-    testFile.d_executable = true;
-    testFile.d_digest.set_hash("Test file hash");
-    testFile.d_digest.set_size_bytes(18);
+    proto::Digest d;
+    d.set_hash("Test file hash");
+    d.set_size_bytes(18);
+    auto testFile = std::pair<proto::Digest, bool>(d, true);
     testResult.d_outputFiles["test.txt"] = testFile;
 
     // Allow the client to fetch the file from CAS.
     google::bytestream::ReadRequest expectedByteStreamRequest;
     expectedByteStreamRequest.set_resource_name(
-        "blobs/" + testFile.d_digest.hash() + "/" +
-        std::to_string(testFile.d_digest.size_bytes()));
+        "blobs/" + testFile.first.hash() + "/" +
+        std::to_string(testFile.first.size_bytes()));
     google::bytestream::ReadResponse readResponse;
     readResponse.set_data("Test file content!");
     EXPECT_CALL(*byteStreamStub,

@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <env.h>
 #include <fileutils.h>
 #include <gtest/gtest.h>
+#include <map>
 #include <merklize.h>
+#include <reccfile.h>
 
 using namespace BloombergLP::recc;
 
@@ -38,32 +41,34 @@ TEST(DigestTest, TrivialDigest)
 
 TEST(FileTest, TrivialFile)
 {
-    File file("abc.txt");
-    EXPECT_EQ(3, file.d_digest.size_bytes());
+    const auto path = "abc.txt";
+    auto file = ReccFileFactory::createFile(path);
+    EXPECT_EQ(3, file->getDigest().size_bytes());
     EXPECT_EQ(
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-        file.d_digest.hash());
-    EXPECT_FALSE(file.d_executable);
+        file->getDigest().hash());
+    EXPECT_FALSE(file->isExecutable());
 }
 
 TEST(FileTest, ExecutableFile)
 {
-    File file("script.sh");
-    EXPECT_EQ(41, file.d_digest.size_bytes());
+    const auto path = "script.sh";
+    auto file = ReccFileFactory::createFile(path);
+    EXPECT_EQ(41, file->getDigest().size_bytes());
     EXPECT_EQ(
         "a56e86eefe699eb6a759ff6ddf94ca54efc2f6463946b9585858511e07c88b8c",
-        file.d_digest.hash());
-    EXPECT_TRUE(file.d_executable);
+        file->getDigest().hash());
+    EXPECT_TRUE(file->isExecutable());
 }
 
 TEST(FileTest, ToFilenode)
 {
-    File file;
-    file.d_digest.set_hash("HASH HERE");
-    file.d_digest.set_size_bytes(123);
-    file.d_executable = true;
+    proto::Digest d;
+    d.set_hash("HASH HERE");
+    d.set_size_bytes(123);
+    ReccFile file("", "", "", d, true);
 
-    auto fileNode = file.to_filenode(std::string("file.name"));
+    auto fileNode = file.getFileNode(std::string("file.name"));
 
     EXPECT_EQ(fileNode.name(), "file.name");
     EXPECT_EQ(fileNode.digest().hash(), "HASH HERE");
@@ -73,7 +78,7 @@ TEST(FileTest, ToFilenode)
 
 TEST(NestedDirectoryTest, EmptyNestedDirectory)
 {
-    std::unordered_map<proto::Digest, std::string> digestMap;
+    digest_string_umap digestMap;
     auto digest = NestedDirectory().to_digest(&digestMap);
     EXPECT_EQ(1, digestMap.size());
     ASSERT_EQ(1, digestMap.count(digest));
@@ -86,13 +91,14 @@ TEST(NestedDirectoryTest, EmptyNestedDirectory)
 
 TEST(NestedDirectoryTest, TrivialNestedDirectory)
 {
-    File file;
-    file.d_digest.set_hash("DIGESTHERE");
+    proto::Digest d;
+    d.set_hash("DIGESTHERE");
+    ReccFile file("", "", "", d, false);
 
     NestedDirectory directory;
-    directory.add(file, "sample");
+    directory.add(std::make_shared<ReccFile>(file), "sample");
 
-    std::unordered_map<proto::Digest, std::string> digestMap;
+    digest_string_umap digestMap;
     auto digest = directory.to_digest(&digestMap);
     EXPECT_EQ(1, digestMap.size());
     ASSERT_EQ(1, digestMap.count(digest));
@@ -107,17 +113,20 @@ TEST(NestedDirectoryTest, TrivialNestedDirectory)
 
 TEST(NestedDirectoryTest, Subdirectories)
 {
-    File file;
-    file.d_digest.set_hash("HASH1");
+    proto::Digest d;
+    d.set_hash("HASH1");
+    ReccFile file("", "", "", d, true);
 
-    File file2;
-    file2.d_digest.set_hash("HASH2");
+    proto::Digest d2;
+    d2.set_hash("HASH2");
+    ReccFile file2("", "", "", d2, true);
 
     NestedDirectory directory;
-    directory.add(file, "sample");
-    directory.add(file2, "subdir/anothersubdir/sample2");
+    directory.add(std::make_shared<ReccFile>(file), "sample");
+    directory.add(std::make_shared<ReccFile>(file2),
+                  "subdir/anothersubdir/sample2");
 
-    std::unordered_map<proto::Digest, std::string> digestMap;
+    digest_string_umap digestMap;
     auto digest = directory.to_digest(&digestMap);
     EXPECT_EQ(3, digestMap.size());
     ASSERT_EQ(1, digestMap.count(digest));
@@ -152,7 +161,7 @@ TEST(NestedDirectoryTest, AddSingleDirectory)
     NestedDirectory directory;
     directory.addDirectory("foo");
 
-    std::unordered_map<proto::Digest, std::string> digestMap;
+    digest_string_umap digestMap;
     auto digest = directory.to_digest(&digestMap);
 
     proto::Directory message;
@@ -167,7 +176,7 @@ TEST(NestedDirectoryTest, AddSlashDirectory)
     NestedDirectory directory;
     directory.addDirectory("/");
 
-    std::unordered_map<proto::Digest, std::string> digestMap;
+    digest_string_umap digestMap;
     auto digest = directory.to_digest(&digestMap);
 
     proto::Directory message;
@@ -181,7 +190,7 @@ TEST(NestedDirectoryTest, AddAbsoluteDirectory)
     NestedDirectory directory;
     directory.addDirectory("/root");
 
-    std::unordered_map<proto::Digest, std::string> digestMap;
+    digest_string_umap digestMap;
     auto digest = directory.to_digest(&digestMap);
 
     proto::Directory message;
@@ -197,7 +206,7 @@ TEST(NestedDirectoryTest, EmptySubdirectories)
     NestedDirectory directory;
     directory.addDirectory("foo/bar/baz");
 
-    std::unordered_map<proto::Digest, std::string> digestMap;
+    digest_string_umap digestMap;
     auto digest = directory.to_digest(&digestMap);
 
     proto::Directory message;
@@ -221,15 +230,16 @@ TEST(NestedDirectoryTest, EmptySubdirectories)
 
 TEST(NestedDirectoryTest, AddDirsToExistingNestedDirectory)
 {
-    File file;
-    file.d_digest.set_hash("DIGESTHERE");
+    proto::Digest d;
+    d.set_hash("DIGESTHERE");
+    ReccFile file("", "", "", d, true);
 
     NestedDirectory directory;
-    directory.add(file, "directory/file");
+    directory.add(std::make_shared<ReccFile>(file), "directory/file");
     directory.addDirectory("directory/foo");
     directory.addDirectory("otherdir");
 
-    std::unordered_map<proto::Digest, std::string> digestMap;
+    digest_string_umap digestMap;
     auto digest = directory.to_digest(&digestMap);
 
     proto::Directory message;
@@ -249,23 +259,20 @@ TEST(NestedDirectoryTest, AddDirsToExistingNestedDirectory)
 
 TEST(NestedDirectoryTest, MakeNestedDirectory)
 {
-    std::unordered_map<proto::Digest, std::string> fileMap;
-    auto nestedDirectory = make_nesteddirectory(".", &fileMap);
+    digest_string_umap fileMap;
+    RECC_PROJECT_ROOT = get_current_working_directory();
+    std::string cwd = get_current_working_directory();
+    auto nestedDirectory = make_nesteddirectory(cwd.c_str(), &fileMap);
 
-    EXPECT_EQ(1, nestedDirectory.d_subdirs->size());
+    EXPECT_EQ(2, nestedDirectory.d_subdirs->size());
     EXPECT_EQ(2, nestedDirectory.d_files.size());
 
-    EXPECT_EQ(
-        "abc",
-        get_file_contents(
-            fileMap[nestedDirectory.d_files["abc.txt"].d_digest].c_str()));
+    EXPECT_EQ("abc", fileMap[nestedDirectory.d_files["abc.txt"]->getDigest()]);
 
     auto subdirectory = &(*nestedDirectory.d_subdirs)["subdir"];
     EXPECT_EQ(0, subdirectory->d_subdirs->size());
     EXPECT_EQ(1, subdirectory->d_files.size());
-    EXPECT_EQ("abc",
-              get_file_contents(
-                  fileMap[subdirectory->d_files["abc.txt"].d_digest].c_str()));
+    EXPECT_EQ("abc", fileMap[nestedDirectory.d_files["abc.txt"]->getDigest()]);
 }
 
 // Make sure the digest is calculated correctly regardless of the order in
@@ -273,10 +280,17 @@ TEST(NestedDirectoryTest, MakeNestedDirectory)
 TEST(NestedDirectoryTest, ConsistentDigestRegardlessOfFileOrder)
 {
     int N = 5;
-    // Get us some mock files
-    File files[N];
+    // Get us some mock digests
+    proto::Digest digests[N];
     for (int i = 0; i < N; i++) {
-        files[i].d_digest.set_hash("HASH_" + std::to_string(i));
+        digests[i].set_hash("HASH_" + std::to_string(i));
+    }
+
+    // Make files
+    std::vector<std::shared_ptr<ReccFile>> files;
+    for (int i = 0; i < N; i++) {
+        files.push_back(std::make_shared<ReccFile>(
+            ReccFile("", "", "", digests[i], false)));
     }
 
     // Create Nested Directory and add everything in-order
@@ -303,12 +317,24 @@ TEST(NestedDirectoryTest, ConsistentDigestRegardlessOfFileOrder)
 TEST(NestedDirectoryTest, NestedDirectoryDigestsReallyBasedOnFiles)
 {
     int N = 5;
-    // Get us some mock files
-    File files_dir1[N]; // Files to add in the first directory
-    File files_dir2[N]; // Files to add in the second directory
+    // Get us some mock digests
+    proto::Digest digests1[N];
+    proto::Digest digests2[N];
+
     for (int i = 0; i < N; i++) {
-        files_dir1[i].d_digest.set_hash("HASH_DIR1_" + std::to_string(i));
-        files_dir2[i].d_digest.set_hash("HASH_DIR2_" + std::to_string(i));
+        digests1[i].set_hash("HASH_DIR1_" + std::to_string(i));
+        digests2[i].set_hash("HASH_DIR2_" + std::to_string(i));
+    }
+
+    // Get us some mock files
+    std::vector<std::shared_ptr<ReccFile>> files_dir1;
+    std::vector<std::shared_ptr<ReccFile>> files_dir2;
+
+    for (int i = 0; i < N; i++) {
+        files_dir1.push_back(std::make_shared<ReccFile>(
+            ReccFile("", "", "", digests1[i], false)));
+        files_dir2.push_back(std::make_shared<ReccFile>(
+            ReccFile("", "", "", digests2[i], false)));
     }
 
     // Create Nested Directories and add everything in-order
@@ -322,4 +348,157 @@ TEST(NestedDirectoryTest, NestedDirectoryDigestsReallyBasedOnFiles)
 
     // Make sure the digests are different
     EXPECT_NE(directory1.to_digest().hash(), directory2.to_digest().hash());
+}
+
+TEST(NestedDirectoryTest, NestedDirectoryPathReplacement)
+{
+    // Replace subdir located in $cwd/data/merklize with $cwd/hi
+    // Get current working directory
+    std::string cwd = get_current_working_directory();
+    RECC_PREFIX_REPLACEMENT = {{cwd + "/nestdir/nestdir2", cwd + "/hi"}};
+    digest_string_umap fileMap;
+    auto make_nested_dir = cwd + "/nestdir";
+    auto nestedDirectory =
+        make_nesteddirectory(make_nested_dir.c_str(), &fileMap);
+
+    EXPECT_EQ(1, nestedDirectory.d_subdirs->size());
+    EXPECT_EQ(0, nestedDirectory.d_files.size());
+
+    // Make sure that replaced subdirectory exists
+    auto subdirectory = &(*nestedDirectory.d_subdirs)["hi"];
+    // Make sure [nestdir2] doesn't exist
+    EXPECT_EQ((*nestedDirectory.d_subdirs).find("nestdir2"),
+              (*nestedDirectory.d_subdirs).end());
+    EXPECT_EQ(1, subdirectory->d_subdirs->size());
+    EXPECT_EQ(1, subdirectory->d_files.size());
+}
+
+TEST(NestedDirectoryTest, NestedDirectoryMultipleNestedDirPathReplacement)
+{
+    std::string cwd = get_current_working_directory();
+    RECC_PREFIX_REPLACEMENT = {
+        {cwd + "/nestdir/nestdir2/nestdir3", cwd + "/nestdir"}};
+    digest_string_umap fileMap;
+
+    auto dir_to_use = cwd + "/nestdir";
+    auto nestedDirectory = make_nesteddirectory(dir_to_use.c_str(), &fileMap);
+
+    auto secondsubDir = &(*nestedDirectory.d_subdirs)["nestdir"];
+    auto thirdsubDir = &(*nestedDirectory.d_subdirs)["nestdir2"];
+    // Make sure nestdir3 doesn't exist
+    EXPECT_EQ(thirdsubDir->d_subdirs->find("nestdir3"),
+              thirdsubDir->d_subdirs->end());
+
+    EXPECT_EQ(1, secondsubDir->d_subdirs->size());
+    EXPECT_EQ(1, secondsubDir->d_files.size());
+    EXPECT_EQ(0, thirdsubDir->d_subdirs->size());
+    EXPECT_EQ(0, thirdsubDir->d_files.size());
+}
+
+TEST(NestedDirectoryTest, NestedDirectoryNotAPrefix)
+{
+    std::string cwd = get_current_working_directory();
+    // not a prefix
+    RECC_PREFIX_REPLACEMENT = {{cwd + "/nestdir/nestdir2", "/nestdir/hi"}};
+    digest_string_umap fileMap;
+    auto nestedDirectory = make_nesteddirectory(cwd.c_str(), &fileMap);
+
+    EXPECT_EQ(2, nestedDirectory.d_subdirs->size());
+    EXPECT_EQ(2, nestedDirectory.d_files.size());
+
+    auto secondsubDir = &(*nestedDirectory.d_subdirs)["nestdir"];
+    EXPECT_EQ(1, secondsubDir->d_subdirs->size());
+    EXPECT_EQ(0, secondsubDir->d_files.size());
+
+    auto subdirectory = &(*secondsubDir->d_subdirs)["nestdir2"];
+    EXPECT_EQ(0, subdirectory->d_subdirs->size());
+    EXPECT_EQ(0, subdirectory->d_files.size());
+}
+
+// Tests nestedDirectory construction with prefix replacement using add.
+TEST(NestedDirectoryTest, NestedDirectoryAddPrefixReplacement)
+{
+    std::string cwd = get_current_working_directory();
+    RECC_PREFIX_REPLACEMENT = {{"/nestdir/nestdir2/nestdir3", "/nestdir"}};
+    digest_string_umap fileMap;
+
+    NestedDirectory nestdir;
+
+    std::string nestdirfile2 = "/nestdir/nestdir2/nestdir3/nestdirfile2.txt";
+    std::string nestdirfiledir = cwd + nestdirfile2;
+    auto file = ReccFileFactory::createFile(nestdirfiledir.c_str());
+    // add the directory and file, make sure file contents are the same.
+    nestdir.add(file, nestdirfile2.c_str());
+
+    EXPECT_EQ(1, nestdir.d_subdirs->size());
+    auto subDir = &(*nestdir.d_subdirs)["nestdir"];
+    EXPECT_EQ(0, subDir->d_subdirs->size());
+    EXPECT_EQ(1, subDir->d_files.size());
+    ASSERT_EQ(file->getFileContents(),
+              subDir->d_files["nestdirfile2.txt"]->getFileContents());
+}
+
+// Tests prefix replacement precidence.
+TEST(NestedDirectoryTest, TestPrefixOrder)
+{
+    // Test that paths are replaced in order specified.
+    std::string cwd = get_current_working_directory();
+    // Set two of the same prefixes with different replacements, make sure that
+    // the first one gets used.
+    const auto recc_prefix_string =
+        "/nestdir/nestdir2/nestdir3=/nestdir:/nestdir/nestdir2/nestdir3=/nope";
+
+    RECC_PREFIX_REPLACEMENT = vector_from_delimited_string(recc_prefix_string);
+    std::unordered_map<proto::Digest, std::string> fileMap;
+
+    NestedDirectory nestdir;
+
+    std::string nestdirfile2 = "/nestdir/nestdir2/nestdir3/nestdirfile2.txt";
+    std::string nestdirfiledir = cwd + nestdirfile2;
+    auto file = ReccFileFactory::createFile(nestdirfiledir.c_str());
+    // add the directory and file, make sure file contents are the same.
+    nestdir.add(file, nestdirfile2.c_str());
+
+    EXPECT_EQ(1, nestdir.d_subdirs->size());
+    auto subDir = &(*nestdir.d_subdirs)["nestdir"];
+    EXPECT_EQ(0, subDir->d_subdirs->size());
+    EXPECT_EQ(1, subDir->d_files.size());
+    ASSERT_EQ(file->getFileContents(),
+              subDir->d_files["nestdirfile2.txt"]->getFileContents());
+}
+
+// Tests nestedDirectory construction checking that the entire root is
+// replaced.
+TEST(NestedDirectoryTest, TestRootReplacement)
+{
+    // Test that paths are replaced in order specified.
+    std::string cwd = get_current_working_directory();
+
+    // Replace the root with "hi"
+    const auto recc_prefix_string = "/=/hi";
+    RECC_PREFIX_REPLACEMENT = vector_from_delimited_string(recc_prefix_string);
+    const std::vector<std::pair<std::string, std::string>> test_vector = {
+        {"/", "/hi"}};
+    ASSERT_EQ(RECC_PREFIX_REPLACEMENT, test_vector);
+
+    std::unordered_map<proto::Digest, std::string> fileMap;
+    NestedDirectory nestdir;
+    std::string nestdirfile2 = "/nestdir/nestdir2/nestdir3/nestdirfile2.txt";
+    std::string nestdirfiledir = cwd + nestdirfile2;
+    auto file = ReccFileFactory::createFile(nestdirfiledir.c_str());
+    // add the directory and file, make sure file contents are the same.
+    nestdir.add(file, nestdirfile2.c_str());
+
+    EXPECT_EQ(1, nestdir.d_subdirs->size());
+    auto subDir = &(*nestdir.d_subdirs)["hi"];
+    EXPECT_EQ(1, subDir->d_subdirs->size());
+    auto subDir2 = &(*subDir->d_subdirs)["nestdir"];
+    EXPECT_EQ(1, subDir2->d_subdirs->size());
+    auto subDir3 = &(*subDir2->d_subdirs)["nestdir2"];
+    EXPECT_EQ(1, subDir3->d_subdirs->size());
+    auto subDir4 = &(*subDir3->d_subdirs)["nestdir3"];
+    EXPECT_EQ(0, subDir4->d_subdirs->size());
+    EXPECT_EQ(1, subDir4->d_files.size());
+    ASSERT_EQ(file->getFileContents(),
+              subDir4->d_files["nestdirfile2.txt"]->getFileContents());
 }

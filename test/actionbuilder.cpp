@@ -24,10 +24,33 @@ using namespace BloombergLP::recc;
 
 class ActionBuilderTestFixture : public ::testing::Test {
   protected:
-    std::unordered_map<proto::Digest, std::string> blobs;
-    std::unordered_map<proto::Digest, std::string> filenames;
-    std::string cwd;
     ActionBuilderTestFixture() : cwd(get_current_working_directory()) {}
+    void SetUp() override
+    {
+        d_previous_recc_replacement_map = RECC_PREFIX_REPLACEMENT;
+        d_previous_deps_override = RECC_DEPS_OVERRIDE;
+        d_previous_force_remote = RECC_FORCE_REMOTE;
+        d_previous_deps_global_path = RECC_DEPS_GLOBAL_PATHS;
+    }
+
+    void TearDown() override
+    {
+        RECC_PREFIX_REPLACEMENT = d_previous_recc_replacement_map;
+        RECC_DEPS_OVERRIDE = d_previous_deps_override;
+        RECC_FORCE_REMOTE = d_previous_force_remote;
+        RECC_DEPS_GLOBAL_PATHS = d_previous_deps_global_path;
+    }
+
+    digest_string_umap blobs;
+    digest_string_umap digest_to_filecontents;
+    std::string cwd;
+
+  private:
+    std::vector<std::pair<std::string, std::string>>
+        d_previous_recc_replacement_map;
+    std::set<std::string> d_previous_deps_override;
+    bool d_previous_force_remote;
+    bool d_previous_deps_global_path;
 };
 
 // This is a representation of a flat merkle tree, where things are stored in
@@ -50,8 +73,7 @@ void fail_to_build_action(const std::vector<std::string> &recc_args)
 // Recursively verify that a merkle tree matches an expected input layout.
 // This doesn't look at the hashes, just that the declared layout matches
 void verify_merkle_tree(proto::Digest digest, MerkleTreeItr expected,
-                        MerkleTreeItr end,
-                        std::unordered_map<proto::Digest, std::string> blobs)
+                        MerkleTreeItr end, digest_string_umap blobs)
 {
     ASSERT_NE(expected, end) << "Reached end of expected output early";
     proto::Directory directory;
@@ -98,8 +120,8 @@ TEST_F(ActionBuilderTestFixture, ActionBuilt)
                                           "hello.o"};
     ParsedCommand command(recc_args, cwd.c_str());
 
-    auto actionPtr =
-        ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
+    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                &digest_to_filecontents);
 
     if (!actionPtr) {
         fail_to_build_action(recc_args);
@@ -126,15 +148,13 @@ TEST_F(ActionBuilderTestFixture, ActionBuilt)
  */
 TEST_F(ActionBuilderTestFixture, NonCompileCommand)
 {
-    bool previousReccForceRemote = RECC_FORCE_REMOTE;
     RECC_FORCE_REMOTE = false;
     std::vector<std::string> recc_args = {"ls"};
     ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr =
-        ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
+    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                &digest_to_filecontents);
 
     ASSERT_EQ(actionPtr, nullptr);
-    RECC_FORCE_REMOTE = previousReccForceRemote;
 }
 
 /**
@@ -142,12 +162,11 @@ TEST_F(ActionBuilderTestFixture, NonCompileCommand)
  */
 TEST_F(ActionBuilderTestFixture, NonCompileCommandForceRemote)
 {
-    bool previousReccForceRemote = RECC_FORCE_REMOTE;
     RECC_FORCE_REMOTE = true;
     std::vector<std::string> recc_args = {"ls"};
     ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr =
-        ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
+    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                &digest_to_filecontents);
 
     if (!actionPtr) {
         fail_to_build_action(recc_args);
@@ -167,8 +186,6 @@ TEST_F(ActionBuilderTestFixture, NonCompileCommandForceRemote)
     EXPECT_EQ(
         "2be362296e706dc8a62dba77b81bd0b951347f733e2f8f706aa5f69041ef8ba7",
         digest.hash());
-
-    RECC_FORCE_REMOTE = previousReccForceRemote;
 }
 
 /**
@@ -178,15 +195,13 @@ TEST_F(ActionBuilderTestFixture, NonCompileCommandForceRemote)
  */
 TEST_F(ActionBuilderTestFixture, AbsolutePathActionBuilt)
 {
-    auto prev_deps_override = RECC_DEPS_OVERRIDE;
-    auto prev_deps_global = RECC_DEPS_GLOBAL_PATHS;
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
     std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
                                           "hello.o"};
     ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr =
-        ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
+    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                &digest_to_filecontents);
 
     // Since this test unfortunately relies on the hash of a system installed
     // file, it can't compare the input root digest. Instead go through the
@@ -199,9 +214,6 @@ TEST_F(ActionBuilderTestFixture, AbsolutePathActionBuilt)
         {{"files", {"ctype.h"}}}};
     verify_merkle_tree(current_digest, expected_tree.begin(),
                        expected_tree.end(), blobs);
-
-    RECC_DEPS_OVERRIDE = prev_deps_override;
-    RECC_DEPS_GLOBAL_PATHS = prev_deps_global;
 }
 
 /**
@@ -211,9 +223,6 @@ TEST_F(ActionBuilderTestFixture, AbsolutePathActionBuilt)
  */
 TEST_F(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
 {
-    auto prev_deps_override = RECC_DEPS_OVERRIDE;
-    auto prev_deps_global = RECC_DEPS_GLOBAL_PATHS;
-
     cwd = get_current_working_directory();
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
                           "hello.cpp"};
@@ -221,8 +230,8 @@ TEST_F(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
     std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
                                           "hello.o"};
     ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr =
-        ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
+    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                &digest_to_filecontents);
 
     auto current_digest = actionPtr->input_root_digest();
     MerkleTree expected_tree = {
@@ -233,9 +242,6 @@ TEST_F(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
         {{"files", {"ctype.h"}}}};
     verify_merkle_tree(current_digest, expected_tree.begin(),
                        expected_tree.end(), blobs);
-
-    RECC_DEPS_OVERRIDE = prev_deps_override;
-    RECC_DEPS_GLOBAL_PATHS = prev_deps_global;
 }
 
 /**
@@ -244,15 +250,13 @@ TEST_F(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
  */
 TEST_F(ActionBuilderTestFixture, EmptyWorkingDirInputRoot)
 {
-    auto prev_deps_override = RECC_DEPS_OVERRIDE;
-
     cwd = get_current_working_directory();
     RECC_DEPS_OVERRIDE = {"../deps/empty.c"};
     std::vector<std::string> recc_args = {"gcc", "-c", "../deps/empty.c", "-o",
                                           "empty.o"};
     ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr =
-        ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
+    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                &digest_to_filecontents);
 
     auto current_digest = actionPtr->input_root_digest();
     MerkleTree expected_tree = {{{"directories", {"actionbuilder", "deps"}}},
@@ -260,8 +264,6 @@ TEST_F(ActionBuilderTestFixture, EmptyWorkingDirInputRoot)
                                 {{"files", {"empty.c"}}}};
     verify_merkle_tree(current_digest, expected_tree.begin(),
                        expected_tree.end(), blobs);
-
-    RECC_DEPS_OVERRIDE = prev_deps_override;
 }
 
 /**
@@ -273,8 +275,34 @@ TEST_F(ActionBuilderTestFixture, UnrelatedOutputDirectory)
     std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
                                           "/fakedirname/hello.o"};
     ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr =
-        ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
+    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                &digest_to_filecontents);
 
     ASSERT_EQ(actionPtr, nullptr);
+}
+
+/**
+ * Force path replacement, and make sure paths are correctly replaced in the
+ * resulting action.
+ */
+TEST_F(ActionBuilderTestFixture, SimplePathReplacement)
+{
+    // Replace all paths to /usr/include to /usr
+    RECC_PREFIX_REPLACEMENT = {{"/usr/include", "/usr"}};
+
+    RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "hello.cpp"};
+    RECC_DEPS_GLOBAL_PATHS = 1;
+    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                          "hello.o"};
+    ParsedCommand command(recc_args, cwd.c_str());
+    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                &digest_to_filecontents);
+
+    auto current_digest = actionPtr->input_root_digest();
+    MerkleTree expected_tree = {
+        {{"files", {"hello.cpp"}}, {"directories", {"usr"}}},
+        {{"files", {"ctype.h"}}}};
+
+    verify_merkle_tree(current_digest, expected_tree.begin(),
+                       expected_tree.end(), blobs);
 }

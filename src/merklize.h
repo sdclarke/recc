@@ -15,7 +15,11 @@
 #ifndef INCLUDED_MERKLIZE
 #define INCLUDED_MERKLIZE
 
+#include <env.h>
+#include <fileutils.h>
+#include <logging.h>
 #include <protos.h>
+#include <reccfile.h>
 
 #include <google/protobuf/message.h>
 #include <set>
@@ -26,28 +30,7 @@
 namespace BloombergLP {
 namespace recc {
 
-/**
- * Represents a single file.
- */
-struct File {
-    proto::Digest d_digest;
-    bool d_executable;
-
-    File(){};
-
-    File(proto::Digest digest, bool executable)
-        : d_digest(digest), d_executable(executable){};
-
-    /**
-     * Constructs a File given the path to a file on disk.
-     */
-    File(const char *path);
-
-    /**
-     * Converts a File to a FileNode with the given name.
-     */
-    proto::FileNode to_filenode(const std::string &name) const;
-};
+typedef std::unordered_map<proto::Digest, std::string> digest_string_umap;
 
 /**
  * Represents a directory that, optionally, has other directories inside.
@@ -58,34 +41,38 @@ struct NestedDirectory {
 
     std::unique_ptr<subdir_map> d_subdirs;
     // Important to use a sorted map to keep files ordered by name
-    std::map<std::string, File> d_files;
+    std::map<std::string, std::shared_ptr<ReccFile>> d_files;
 
     NestedDirectory() : d_subdirs(new subdir_map){};
 
     /**
      * Add the given File to this NestedDirectory at the given relative path,
      * which may include subdirectories.
+     * checkedPrefix is used to test whether this is the first recursive call,
+     * and if so check the prefix.
      */
-    void add(File, const char *relativePath);
+    void add(std::shared_ptr<ReccFile> file, const char *relativePath,
+             bool checkedPrefix = false);
 
     /**
      * Add the given Directory to this NestedDirectory at a given relative
      * path. If the directory has contents, the add method should be used
-     * instead
+     * instead.
+     * checkedPrefix is used to test whether this is the first recursive
+     * call, and if so check the prefix.
      */
-    void addDirectory(const char *directory);
+    void addDirectory(const char *directory, bool checkedPrefix = false);
 
     /**
      * Convert this NestedDirectory to a Directory message and return its
      * Digest.
      *
-     * If a digestMap is passed, serialized Directory messages corresponding to
-     * this directory and its subdirectories will be stored in it using their
-     * Digest messages as the keys. (This is recursive -- nested subdirectories
-     * will also be stored.
+     * If a digestMap is passed, serialized Directory messages
+     * corresponding to this directory and its subdirectories will be
+     * stored in it using their Digest messages as the keys. (This is
+     * recursive -- nested subdirectories will also be stored.
      */
-    proto::Digest to_digest(std::unordered_map<proto::Digest, std::string>
-                                *digestMap = nullptr) const;
+    proto::Digest to_digest(digest_string_umap *digestMap = nullptr) const;
 };
 
 /**
@@ -107,10 +94,12 @@ inline proto::Digest make_digest(const google::protobuf::MessageLite &message)
  *
  * If a fileMap is passed, paths to all files referenced by the NestedDirectory
  * will be stored in it using their Digest messages as the keys.
+ *
+ * CheckedPrefix is used to test whether this is the first recursive
+ * call, and if so check the prefix.
  */
-NestedDirectory make_nesteddirectory(
-    const char *path,
-    std::unordered_map<proto::Digest, std::string> *fileMap = nullptr);
+NestedDirectory make_nesteddirectory(const char *path,
+                                     digest_string_umap *fileMap = nullptr);
 
 } // namespace recc
 } // namespace BloombergLP

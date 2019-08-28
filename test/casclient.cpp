@@ -33,7 +33,7 @@ using namespace testing;
 const std::string abc("abc");
 const std::string defg("defg");
 const std::string emptyString;
-const std::unordered_map<proto::Digest, std::string> emptyMap;
+const digest_string_umap emptyMap;
 
 MATCHER_P(MessageEq, expected, "")
 {
@@ -87,7 +87,7 @@ TEST(CASClientTest, AlreadyUploadedBlob)
     GrpcContext grpcContext;
     CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
-    std::unordered_map<proto::Digest, std::string> blobs;
+    digest_string_umap blobs;
     blobs[make_digest(abc)] = abc;
     proto::FindMissingBlobsResponse response;
 
@@ -109,15 +109,15 @@ TEST(CASClientTest, AlreadyUploadedFile)
     GrpcContext grpcContext;
     CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
-    std::unordered_map<proto::Digest, std::string> filenames;
-    filenames[make_digest(abc)] = path;
+    digest_string_umap digest_to_filecontents;
+    digest_to_filecontents[make_digest(abc)] = path;
     proto::FindMissingBlobsResponse response;
 
     EXPECT_CALL(*stub, FindMissingBlobs(_, HasBlobDigest(make_digest(abc)), _))
         .WillOnce(DoAll(SetArgPointee<2>(response), Return(grpc::Status::OK)));
     EXPECT_CALL(*stub, BatchUpdateBlobs(_, _, _)).Times(0);
 
-    cas.upload_resources(emptyMap, filenames);
+    cas.upload_resources(emptyMap, digest_to_filecontents);
 }
 
 TEST(CASClientTest, NewBlobUpload)
@@ -127,7 +127,7 @@ TEST(CASClientTest, NewBlobUpload)
     GrpcContext grpcContext;
     CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
-    std::unordered_map<proto::Digest, std::string> blobs;
+    digest_string_umap blobs;
     blobs[make_digest(abc)] = abc;
     blobs[make_digest(defg)] = defg;
     proto::FindMissingBlobsResponse response;
@@ -162,8 +162,8 @@ TEST(CASClientTest, NewFileUpload)
     GrpcContext grpcContext;
     CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
-    std::unordered_map<proto::Digest, std::string> filenames;
-    filenames[make_digest(abc)] = path;
+    digest_string_umap digest_to_filecontents;
+    digest_to_filecontents[make_digest(abc)] = get_file_contents(path.c_str());
     proto::FindMissingBlobsResponse response;
     *response.add_missing_blob_digests() = make_digest(abc);
 
@@ -177,7 +177,7 @@ TEST(CASClientTest, NewFileUpload)
         .WillOnce(DoAll(SetArgPointee<2>(updateBlobsResponse),
                         Return(grpc::Status::OK)));
 
-    cas.upload_resources(emptyMap, filenames);
+    cas.upload_resources(emptyMap, digest_to_filecontents);
 }
 
 ACTION_P3(AddWriteRequestData, blob, name, isComplete)
@@ -205,7 +205,7 @@ TEST(CASClientTest, LargeBlobUpload)
     auto writer = new grpc::testing::MockClientWriter<
         google::bytestream::WriteRequest>();
 
-    std::unordered_map<proto::Digest, std::string> blobs;
+    digest_string_umap blobs;
     std::string bigBlob(50000000, 'q');
     auto bigBlobDigest = make_digest(bigBlob);
     blobs[bigBlobDigest] = bigBlob;

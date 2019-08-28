@@ -19,6 +19,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 namespace BloombergLP {
 namespace recc {
@@ -211,6 +212,13 @@ extern std::map<std::string, std::string> RECC_REMOTE_ENV;
 extern std::map<std::string, std::string> RECC_REMOTE_PLATFORM;
 
 /**
+ * Only gets defined if RECC_PREFIX_MAP is populated.
+ * Contains pairs of the prefixes in the order defined by RECC_PREFIX_MAP.
+ */
+extern std::vector<std::pair<std::string, std::string>>
+    RECC_PREFIX_REPLACEMENT;
+
+/**
  * Used to specify absolute paths for finding recc.conf.
  * If specifying absolute path, only include up until directory containing
  * config, no trailing "/". Additions to the list should be in order of
@@ -262,6 +270,17 @@ void verify_files_writeable();
  *  4. ${INSTALL_DIR}/../etc/recc
  */
 std::deque<std::string> evaluate_config_locations();
+
+/**
+ * Given a string, return a vector of pairs containing key=value pairs of the
+ * string split at the delimiter, key/values split by second delimiter.
+ * Default delimiters = ":", "=".
+ * Ex. recc=build:build=recc will return a vector [(recc, build),(build, recc)]
+ **/
+std::vector<std::pair<std::string, std::string>>
+vector_from_delimited_string(std::string prefix_map,
+                             const std::string &first_delimiter = ":",
+                             const std::string &second_delimiter = "=");
 
 /**
  * Sets the prioritized configuration file locations from

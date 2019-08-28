@@ -27,10 +27,10 @@
 namespace BloombergLP {
 namespace recc {
 
-std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
-    const ParsedCommand &command, const std::string &cwd,
-    std::unordered_map<proto::Digest, std::string> *blobs,
-    std::unordered_map<proto::Digest, std::string> *filenames)
+std::shared_ptr<proto::Action>
+ActionBuilder::BuildAction(const ParsedCommand &command,
+                           const std::string &cwd, digest_string_umap *blobs,
+                           digest_string_umap *digest_to_filecontents)
 {
 
     if (!command.is_compiler_command() && !RECC_FORCE_REMOTE) {
@@ -47,7 +47,7 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
     if (!RECC_DEPS_DIRECTORY_OVERRIDE.empty()) {
         RECC_LOG_VERBOSE("Building Merkle tree using directory override");
         nestedDirectory = make_nesteddirectory(
-            RECC_DEPS_DIRECTORY_OVERRIDE.c_str(), filenames);
+            RECC_DEPS_DIRECTORY_OVERRIDE.c_str(), digest_to_filecontents);
     }
     else {
         std::set<std::string> deps = RECC_DEPS_OVERRIDE;
@@ -85,7 +85,6 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
                 parentsNeeded = std::max(
                     parentsNeeded, parent_directory_levels(product.c_str()));
             }
-
             commandWorkingDirectory =
                 last_n_segments(cwd.c_str(), parentsNeeded);
 
@@ -101,9 +100,12 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
                 }
                 merklePath = normalize_path(merklePath.c_str());
 
-                File file(dep.c_str());
+                std::shared_ptr<ReccFile> file =
+                    ReccFileFactory::createFile(dep.c_str());
                 nestedDirectory.add(file, merklePath.c_str());
-                (*filenames)[file.d_digest] = dep;
+                // Store the digest to the file content.
+                (*digest_to_filecontents)[file->getDigest()] =
+                    file->getFileContents();
             }
         }
     }
@@ -145,9 +147,11 @@ std::shared_ptr<proto::Action> ActionBuilder::BuildAction(
         property->set_name(platformIter.first);
         property->set_value(platformIter.second);
     }
-
-    *commandProto.mutable_working_directory() = commandWorkingDirectory;
-
+    // If deps paths aren't absolute, they are made absolute by having the CWD
+    // prepended, and then normalized and replaced. If that is the case, and
+    // the CWD contains a replaced prefix, then replace it.
+    *commandProto.mutable_working_directory() =
+        resolve_path_from_prefix_map(commandWorkingDirectory);
     RECC_LOG_VERBOSE("Command: " << commandProto.ShortDebugString());
     const auto commandDigest = make_digest(commandProto);
     (*blobs)[commandDigest] = commandProto.SerializeAsString();

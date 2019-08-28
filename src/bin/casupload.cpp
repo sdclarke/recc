@@ -19,6 +19,7 @@
 #include <grpccontext.h>
 #include <logging.h>
 #include <merklize.h>
+#include <reccfile.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -59,13 +60,13 @@ int main(int argc, char *argv[])
     parse_config_variables();
 
     NestedDirectory nestedDirectory;
-    std::unordered_map<proto::Digest, std::string> blobs;
-    std::unordered_map<proto::Digest, std::string> filenames;
+    digest_string_umap blobs;
+    digest_string_umap digest_to_filecontents;
 
     for (int i = 1; i < argc; ++i) {
-        File file(argv[i]);
+        std::shared_ptr<ReccFile> file = ReccFileFactory::createFile(argv[i]);
         nestedDirectory.add(file, argv[i]);
-        filenames[file.d_digest] = argv[i];
+        digest_to_filecontents[file->getDigest()] = file->getFileContents();
     }
 
     auto directoryDigest = nestedDirectory.to_digest(&blobs);
@@ -79,7 +80,7 @@ int main(int argc, char *argv[])
         grpcContext.set_auth(reccAuthSession.get());
     }
     CASClient(returnChannels.cas(), RECC_INSTANCE, &grpcContext)
-        .upload_resources(blobs, filenames);
+        .upload_resources(blobs, digest_to_filecontents);
 
     RECC_LOG(directoryDigest.hash());
     RECC_LOG(directoryDigest.size_bytes());
