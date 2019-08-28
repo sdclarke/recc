@@ -1,8 +1,32 @@
 include_directories(.)
 
-file(GLOB SRCS
-    *.cpp
-    reccmetrics/*.cpp
+set(SRCS
+    actionbuilder.cpp
+    authsession.cpp
+    casclient.cpp
+    deps.cpp
+    env.cpp
+    fileutils.cpp
+    formpost.cpp
+    grpcretry.cpp
+    grpcchannels.cpp
+    grpccontext.cpp
+    jsonfilemanager.cpp
+    merklize.cpp
+    metricsconfig.cpp
+    parsedcommand.cpp
+    reccfile.cpp
+    remoteexecutionclient.cpp
+    remoteexecutionsignals.cpp
+    requestmetadata.cpp
+    subprocess.cpp
+    reccmetrics/metriccollectorfactory.cpp
+    reccmetrics/filewriter.cpp
+    reccmetrics/udpwriter.cpp
+    reccmetrics/durationmetrictimer.cpp
+    reccmetrics/durationmetricvalue.cpp
+    reccmetrics/totaldurationmetrictimer.cpp
+    reccmetrics/totaldurationmetricvalue.cpp
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
