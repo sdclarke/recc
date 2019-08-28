@@ -167,7 +167,12 @@ const std::string HELP(
     "			towards the limit\n"
     "\n"
     "RECC_RETRY_DELAY - base delay (in ms) between retries\n"
-    "                   grows exponentially (default 100ms)");
+    "                   grows exponentially (default 100ms)\n"
+    "\n"
+    "RECC_PREFIX_MAP - specify path mappings to replace. The source and "
+    "destination must both be absolute paths. \n"
+    "Supports multiple paths, separated by "
+    "colon(:). Ex. RECC_PREFIX_MAP=/usr/bin=/usr/local/bin)\n");
 
 int main(int argc, char *argv[])
 {
@@ -199,14 +204,14 @@ int main(int argc, char *argv[])
     const std::string cwd = get_current_working_directory();
     ParsedCommand command(&argv[1], cwd.c_str());
 
-    std::unordered_map<proto::Digest, std::string> blobs;
-    std::unordered_map<proto::Digest, std::string> filenames;
+    digest_string_umap blobs;
+    digest_string_umap digest_to_filecontents;
 
     std::shared_ptr<proto::Action> actionPtr;
 
     try {
-        actionPtr =
-            ActionBuilder::BuildAction(command, cwd, &blobs, &filenames);
+        actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                               &digest_to_filecontents);
     }
     catch (const subprocess_failed_error &e) {
         exit(e.d_error_code);
@@ -266,7 +271,7 @@ int main(int argc, char *argv[])
         if (!action_in_cache) {
             blobs[actionDigest] = action.SerializeAsString();
             RECC_LOG_VERBOSE("Uploading resources...");
-            client.upload_resources(blobs, filenames);
+            client.upload_resources(blobs, digest_to_filecontents);
             RECC_LOG_VERBOSE(
                 "Executing action... actionDigest: " << actionDigest.hash());
             { // Timed block

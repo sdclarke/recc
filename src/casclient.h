@@ -16,6 +16,7 @@
 #define INCLUDED_CASCLIENT
 
 #include <grpccontext.h>
+#include <merklize.h>
 #include <protos.h>
 
 #include <exception>
@@ -114,9 +115,9 @@ class CASClient {
      * uploaded, then uses the ByteStream and BatchUpdateBlobs APIs to upload
      * them.
      */
-    void upload_resources(
-        const std::unordered_map<proto::Digest, std::string> &blobs,
-        const std::unordered_map<proto::Digest, std::string> &filenames) const;
+    void
+    upload_resources(const digest_string_umap &blobs,
+                     const digest_string_umap &digest_to_filecontents) const;
 };
 } // namespace recc
 } // namespace BloombergLP

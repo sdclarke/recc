@@ -82,11 +82,17 @@ typedef std::function<bool(std::vector<std::string> *, const char *,
                        command->begin() + i + 1);                             \
         i -= argumentLength;                                                  \
     }
-
+// First, make path relative to WORKING_DIR, then include in depsCommand.
+// Then, check if original path is in PREFIX_MAP, replace and make relative.
 #define INCLUDE_OPTION_IN_DEPS_COMMAND                                        \
     {                                                                         \
-        for (int j = i - argumentLength + 1; j < i + 1; j++)                  \
+        auto original_arg = argument;                                         \
+        ARGUMENT_IS_PATH                                                      \
+        for (int j = i - argumentLength + 1; j < i + 1; j++) {                \
             depsCommand->push_back((*command)[j]);                            \
+        }                                                                     \
+        ARGUMENT_IS_SEARCH_PATH(original_arg);                                \
+        ARGUMENT_IS_PATH;                                                     \
     }
 #define REPLACE_ARGUMENT(new_arg)                                             \
     {                                                                         \
@@ -100,7 +106,10 @@ typedef std::function<bool(std::vector<std::string> *, const char *,
     if (argument.length() > 0 && argument[0] == '/') {                        \
         REPLACE_ARGUMENT(make_path_relative(argument, workingDirectory));     \
     }
-
+#define ARGUMENT_IS_SEARCH_PATH(arg)                                          \
+    if (arg.length() > 0) {                                                   \
+        REPLACE_ARGUMENT(resolve_path_from_prefix_map(arg));                  \
+    }
 #define OPTIONS_START()                                                       \
     bool isCompileCommand = false;                                            \
     for (int i = 0; i < command->size(); ++i) {                               \
@@ -116,11 +125,9 @@ typedef std::function<bool(std::vector<std::string> *, const char *,
         option, ARGUMENT_IS_PATH;                                             \
         if (argument.length() > 0) { outputs->insert(argument); })
 #define GCC_OPTION_IS_INPUT_PATH(option)                                      \
-    else IF_GCC_OPTION_ARGUMENT(option, ARGUMENT_IS_PATH;                     \
-                                INCLUDE_OPTION_IN_DEPS_COMMAND)
+    else IF_GCC_OPTION_ARGUMENT(option, INCLUDE_OPTION_IN_DEPS_COMMAND)
 #define EQUALS_OPTION_IS_INPUT_PATH(option)                                   \
-    else IF_EQUALS_OPTION_ARGUMENT(option, ARGUMENT_IS_PATH;                  \
-                                   INCLUDE_OPTION_IN_DEPS_COMMAND)
+    else IF_EQUALS_OPTION_ARGUMENT(option, INCLUDE_OPTION_IN_DEPS_COMMAND)
 #define OPTION_INDICATES_COMPILE(option)                                      \
     else if ((*command)[i] == option)                                         \
     {                                                                         \

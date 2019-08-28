@@ -59,7 +59,7 @@ TEST(FileUtilsTest, CreateDirectoryRecursive)
 TEST(FileUtilsTest, Executable)
 {
     TemporaryDirectory tempDir;
-    std::string fileName = tempDir.name() + std::string("/testfile");
+    std::string fileName = tempDir.name() + std::string("/testfile.txt");
 
     ASSERT_THROW(is_executable(fileName.c_str()), std::exception);
     ASSERT_THROW(make_executable(fileName.c_str()), std::exception);
@@ -74,7 +74,7 @@ TEST(FileUtilsTest, Executable)
 TEST(FileUtilsTest, FileContents)
 {
     TemporaryDirectory tempDir;
-    std::string fileName = tempDir.name() + std::string("/testfile");
+    std::string fileName = tempDir.name() + std::string("/testfile.txt");
 
     EXPECT_THROW(get_file_contents(fileName.c_str()), std::exception);
 
@@ -430,4 +430,53 @@ TEST(FileUtilsTest, ExpandPath)
     // make sure $HOME is reset so other tests don't break
     setenv("HOME", home.c_str(), true);
     EXPECT_EQ(getenv("HOME"), home);
+}
+
+TEST(FileUtilsTest, AbsolutePaths)
+{
+    EXPECT_EQ(false, is_absolute_path("../hello"));
+    EXPECT_EQ(true, is_absolute_path("/../hello/"));
+    EXPECT_EQ(false, is_absolute_path(""));
+    EXPECT_EQ(true, is_absolute_path("/hello/world"));
+}
+
+// Test paths are rewritten
+TEST(PathRewriteTest, SimpleRewriting)
+{
+    RECC_PREFIX_REPLACEMENT = {{"/hello/hi", "/hello"},
+                               {"/usr/bin/system/bin/hello", "/usr/system"}};
+    std::string test_path = "/hello/hi/file.txt";
+    ASSERT_EQ("/hello/file.txt", resolve_path_from_prefix_map(test_path));
+
+    test_path = "/usr/bin/system/bin/hello/file.txt";
+    ASSERT_EQ("/usr/system/file.txt", resolve_path_from_prefix_map(test_path));
+
+    test_path = "/hello/bin/not_replaced.txt";
+    ASSERT_EQ(test_path, resolve_path_from_prefix_map(test_path));
+}
+
+// Test more complicated paths
+TEST(PathRewriteTest, ComplicatedPathRewriting)
+{
+    RECC_PREFIX_REPLACEMENT = {{"/hello/hi", "/hello"},
+                               {"/usr/bin/system/bin/hello", "/usr/system"},
+                               {"/bin", "/"}};
+
+    auto test_path = "/usr/bin/system/bin/hello/world/";
+    ASSERT_EQ("/usr/system/world", resolve_path_from_prefix_map(test_path));
+
+    // Don't rewrite non-absolute path
+    test_path = "../hello/hi/hi.txt";
+    ASSERT_EQ(test_path, resolve_path_from_prefix_map(test_path));
+
+    test_path = "/bin/hello/file.txt";
+    ASSERT_EQ("/hello/file.txt", resolve_path_from_prefix_map(test_path));
+}
+
+TEST(FileUtilsTest, BasenameTest)
+{
+    EXPECT_EQ("hello", path_basename("a/b/hello"));
+    EXPECT_EQ("hello.txt", path_basename("a/b/hello.txt"));
+    EXPECT_EQ("hello", path_basename("//hello/a/b/hello"));
+    EXPECT_EQ("hello", path_basename("a/b/../../hello"));
 }

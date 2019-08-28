@@ -161,14 +161,14 @@ const int MAX_TOTAL_BATCH_SIZE = 1 << 21;
 const int MAX_MISSING_BLOBS_REQUEST_ITEMS = 1 << 14;
 
 void CASClient::upload_resources(
-    const std::unordered_map<proto::Digest, std::string> &blobs,
-    const std::unordered_map<proto::Digest, std::string> &filenames) const
+    const digest_string_umap &blobs,
+    const digest_string_umap &digest_to_filecontents) const
 {
     std::unordered_set<proto::Digest> digestsToUpload;
     for (const auto &i : blobs) {
         digestsToUpload.insert(i.first);
     }
-    for (const auto &i : filenames) {
+    for (const auto &i : digest_to_filecontents) {
         digestsToUpload.insert(i.first);
     }
 
@@ -222,8 +222,8 @@ void CASClient::upload_resources(
         if (blobs.count(digest)) {
             blob = blobs.at(digest);
         }
-        else if (filenames.count(digest)) {
-            blob = get_file_contents(filenames.at(digest).c_str());
+        else if (digest_to_filecontents.count(digest)) {
+            blob = digest_to_filecontents.at(digest);
         }
         else {
             throw std::runtime_error(

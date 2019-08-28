@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <string>
 #include <unistd.h>
+#include <utility>
 #include <vector>
 
 namespace BloombergLP {
@@ -52,8 +53,9 @@ std::string RECC_CORRELATED_INVOCATIONS_ID =
     DEFAULT_RECC_CORRELATED_INVOCATIONS_ID;
 std::string RECC_METRICS_FILE = DEFAULT_RECC_METRICS_FILE;
 std::string RECC_METRICS_UDP_SERVER = DEFAULT_RECC_METRICS_UDP_SERVER;
+std::string RECC_PREFIX_MAP = DEFAULT_RECC_PREFIX_MAP;
+std::vector<std::pair<std::string, std::string>> RECC_PREFIX_REPLACEMENT;
 
-bool RECC_VERBOSE = DEFAULT_RECC_VERBOSE;
 bool RECC_ENABLE_METRICS = DEFAULT_RECC_ENABLE_METRICS;
 bool RECC_FORCE_REMOTE = DEFAULT_RECC_FORCE_REMOTE;
 bool RECC_ACTION_UNCACHEABLE = DEFAULT_RECC_ACTION_UNCACHEABLE;
@@ -63,6 +65,7 @@ bool RECC_SERVER_AUTH_GOOGLEAPI = DEFAULT_RECC_SERVER_AUTH_GOOGLEAPI;
 bool RECC_SERVER_SSL = DEFAULT_RECC_SERVER_SSL;
 bool RECC_SERVER_JWT = DEFAULT_RECC_SERVER_JWT;
 bool RECC_DEPS_GLOBAL_PATHS = DEFAULT_RECC_DEPS_GLOBAL_PATHS;
+bool RECC_VERBOSE = DEFAULT_RECC_VERBOSE;
 
 int RECC_RETRY_LIMIT = DEFAULT_RECC_RETRY_LIMIT;
 int RECC_RETRY_DELAY = DEFAULT_RECC_RETRY_DELAY;
@@ -133,6 +136,60 @@ void format_config_string(std::string *line)
         *line = "RECC_" + *line;
     }
 }
+
+std::vector<std::pair<std::string, std::string>>
+vector_from_delimited_string(std::string prefix_map,
+                             const std::string &first_delimiter,
+                             const std::string &second_delimiter)
+{
+    std::vector<std::pair<std::string, std::string>> return_vector;
+    // To reduce code duplication, lambda parses key/value by second
+    // delimiter, and emplaces back into the vector.
+    auto emplace_key_values = [&return_vector,
+                               &second_delimiter](auto key_value) {
+        const auto equal_pos = key_value.find(second_delimiter);
+        // Extra check in case there is input with no second
+        // delimiter.
+        if (equal_pos == std::string::npos) {
+            RECC_LOG_WARNING("Incorrect path specification for key/value: ["
+                             << key_value << "] please see README for usage.")
+            return;
+        }
+        // Check if key/values are absolute paths
+        std::string key = key_value.substr(0, equal_pos);
+        std::string value = key_value.substr(equal_pos + 1);
+        key = normalize_path(key.c_str());
+        value = normalize_path(value.c_str());
+        if (!is_absolute_path(key.c_str()) &&
+            !is_absolute_path(value.c_str())) {
+            RECC_LOG_WARNING("Input paths must be absolute: [" << key_value
+                                                               << "]");
+            return;
+        }
+        if (has_path_prefix(RECC_PROJECT_ROOT, key.c_str())) {
+            RECC_LOG_WARNING("Path to replace: ["
+                             << key.c_str()
+                             << "] is a prefix of the project root: ["
+                             << RECC_PROJECT_ROOT << "]");
+        }
+        return_vector.emplace_back(std::make_pair(key, value));
+    };
+    size_t delim_pos = std::string::npos;
+    // Iterate while we can find the first delimiter
+    while ((delim_pos = prefix_map.find(first_delimiter)) !=
+           std::string::npos) {
+        emplace_key_values(prefix_map.substr(0, delim_pos));
+        // Erase the key/value, including the delimiter
+        prefix_map.erase(0, delim_pos + 1);
+    }
+    // If there is only one key/value, or it's the final key/value pair after
+    // multiple, emplace it back.
+    if (!prefix_map.empty() &&
+        prefix_map.find(first_delimiter) == std::string::npos) {
+        emplace_key_values(prefix_map);
+    }
+    return return_vector;
+} // namespace recc
 
 /*
  * Parse the config variables, and pass to parse_config_variables
@@ -212,6 +269,7 @@ void parse_config_variables(const char *const *env)
         STRVAR(RECC_CORRELATED_INVOCATIONS_ID)
         STRVAR(RECC_METRICS_FILE)
         STRVAR(RECC_METRICS_UDP_SERVER)
+        STRVAR(RECC_PREFIX_MAP)
 
         BOOLVAR(RECC_VERBOSE)
         BOOLVAR(RECC_ENABLE_METRICS)
@@ -310,6 +368,11 @@ void handle_special_defaults()
     if (RECC_METRICS_FILE.size() && RECC_METRICS_UDP_SERVER.size()) {
         throw std::runtime_error("You can either set RECC_METRICS_FILE or "
                                  "RECC_METRICS_UDP_SERVER, but not both.");
+    }
+
+    if (!RECC_PREFIX_MAP.empty()) {
+        RECC_PREFIX_REPLACEMENT =
+            vector_from_delimited_string(RECC_PREFIX_MAP);
     }
 }
 

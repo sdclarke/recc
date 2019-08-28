@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <merklize.h>
-
 #include <fileutils.h>
 #include <logging.h>
+#include <merklize.h>
 #include <reccmetrics/metricguard.h>
 #include <reccmetrics/totaldurationmetrictimer.h>
 
@@ -23,6 +22,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <iostream>
+#include <memory>
 #include <openssl/evp.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -33,67 +33,87 @@
 namespace BloombergLP {
 namespace recc {
 
-File::File(const char *path)
+void NestedDirectory::add(std::shared_ptr<ReccFile> file,
+                          const char *relativePath, bool checkedPrefix)
 {
-    RECC_LOG_VERBOSE("Making File object for " << path);
-    d_executable = is_executable(path);
-    d_digest = make_digest(get_file_contents(path));
-    RECC_LOG_VERBOSE("executable: " << (d_executable ? "yes" : "no"));
-    RECC_LOG_VERBOSE("digest: " << d_digest.ShortDebugString());
-    return;
-}
-
-proto::FileNode File::to_filenode(const std::string &name) const
-{
-    proto::FileNode result;
-    result.set_name(name);
-    *result.mutable_digest() = d_digest;
-    result.set_is_executable(d_executable);
-    return result;
-}
-
-void NestedDirectory::add(File file, const char *relativePath)
-{
-    const char *slash = strchr(relativePath, '/');
-    if (slash) {
-        const std::string subdirKey(relativePath, slash - relativePath);
-        if (subdirKey.empty()) {
-            this->add(file, slash + 1);
-        }
-        else {
-            (*d_subdirs)[subdirKey].add(file, slash + 1);
-        }
-    }
-    else {
-        d_files[std::string(relativePath)] = file;
-    }
-}
-
-void NestedDirectory::addDirectory(const char *directory)
-{
-    // A forward slash by itself is not a valid input directory
-    if (strcmp(directory, "/") == 0) {
+    // A forward slash by itself is not a valid input path
+    if (relativePath == nullptr || strcmp(relativePath, "/") == 0) {
         return;
     }
-    const char *slash = strchr(directory, '/');
+
+    std::string replacedDirectory(relativePath);
+    // Check if directory passed in matches any in PREFIX_REPLACEMENT_MAP. if
+    // so replace the path. Only check on the inital call, when the full
+    // directory path is avaliable.
+    if (!checkedPrefix) {
+        replacedDirectory =
+            resolve_path_from_prefix_map(std::string(relativePath));
+        checkedPrefix = true;
+    }
+    const char *slash = strchr(replacedDirectory.c_str(), '/');
     if (slash) {
-        const std::string subdirKey(directory, slash - directory);
+        const std::string subdirKey(replacedDirectory.c_str(),
+                                    slash - replacedDirectory.c_str());
         if (subdirKey.empty()) {
-            this->addDirectory(slash + 1);
+            this->add(file, slash + 1, checkedPrefix);
         }
         else {
-            (*d_subdirs)[subdirKey].addDirectory(slash + 1);
+            (*d_subdirs)[subdirKey].add(file, slash + 1, checkedPrefix);
         }
     }
     else {
-        if ((*d_subdirs).count(directory) == 0) {
-            (*d_subdirs)[directory] = NestedDirectory();
+        d_files[replacedDirectory] = file;
+    }
+}
+
+void NestedDirectory::addDirectory(const char *directory, bool checkedPrefix)
+{
+    // A forward slash by itself is not a valid input directory
+    if (directory == nullptr || strcmp(directory, "/") == 0) {
+        return;
+    }
+
+    // If an absolute path, go one past the first slash, saving an unecessary
+    // recursive call.
+    if (directory[0] == '/') {
+        directory++;
+    }
+
+    std::string replacedDirectory(directory);
+    // Check if directory passed in matches any in PREFIX_REPLACEMENT_MAP. if
+    // so replace the path. Only check on the inital call, when the full
+    // directory path is avaliable.
+    if (!checkedPrefix) {
+        replacedDirectory =
+            resolve_path_from_prefix_map(std::string(directory));
+        checkedPrefix = true;
+    }
+
+    // Find first occurrence of character in the string
+    const char *slash = strchr(replacedDirectory.c_str(), '/');
+    if (slash) {
+        // Construct string before '/' - the parent directory
+        const std::string subdirKey(replacedDirectory.c_str(),
+                                    slash - replacedDirectory.c_str());
+        // If no parent directory, add the subdirectory
+        if (subdirKey.empty()) {
+            this->addDirectory(slash + 1, checkedPrefix);
+        }
+        // If parent directory, map it to subdirectories
+        else {
+            (*d_subdirs)[subdirKey].addDirectory(slash + 1, checkedPrefix);
+        }
+    }
+    // If directory doesn't exist in our map, add mapping to a new
+    // NestedDirectory
+    else {
+        if ((*d_subdirs).count(replacedDirectory) == 0) {
+            (*d_subdirs)[replacedDirectory] = NestedDirectory();
         }
     }
 }
 
-proto::Digest NestedDirectory::to_digest(
-    std::unordered_map<proto::Digest, std::string> *digestMap) const
+proto::Digest NestedDirectory::to_digest(digest_string_umap *digestMap) const
 {
     // The 'd_files' and 'd_subdirs' maps make sure everything is sorted by
     // name thus the iterators will iterate lexicographically
@@ -101,7 +121,7 @@ proto::Digest NestedDirectory::to_digest(
     proto::Directory directoryMessage;
     for (const auto &fileIter : d_files) {
         *directoryMessage.add_files() =
-            fileIter.second.to_filenode(fileIter.first);
+            fileIter.second->getFileNode(fileIter.first);
     }
     for (const auto &subdirIter : *d_subdirs) {
         auto subdirNode = directoryMessage.add_directories();
@@ -136,12 +156,11 @@ proto::Digest make_digest(const std::string &blob)
         EVP_DigestUpdate(hashContext, &blob[0], blob.length());
 
         // Store the hash in a char array.
-
         unsigned char hash[hashSize];
         EVP_DigestFinal_ex(hashContext, hash, nullptr);
         EVP_MD_CTX_destroy(hashContext);
 
-        //  Convert the hash to hexadecimal.
+        // Convert the hash to hexadecimal.
         for (int i = 0; i < hashSize; ++i) {
             hashHex[i * 2] = HEX_DIGITS[hash[i] >> 4];
             hashHex[i * 2 + 1] = HEX_DIGITS[hash[i] & 0xF];
@@ -153,46 +172,93 @@ proto::Digest make_digest(const std::string &blob)
     return result;
 }
 
-NestedDirectory
-make_nesteddirectory(const char *path,
-                     std::unordered_map<proto::Digest, std::string> *fileMap)
+/**
+ * Helper method, iterates through local filesystem, and populates fileMap,
+ * and filePathMap.
+ */
+void make_nesteddirectoryhelper(
+    const char *path, digest_string_umap *fileMap,
+    std::unordered_map<std::shared_ptr<ReccFile>, std::string> *filePathMap)
 {
-    RECC_LOG_VERBOSE("Making NestedDirectory for " << path);
-    NestedDirectory result;
+    RECC_LOG_VERBOSE("NestedDirectoryHelper, Iterating through " << path);
+
+    // dir is used to iterate through subdirectories in path
     auto dir = opendir(path);
     if (dir == NULL) {
         throw std::system_error(errno, std::system_category());
     }
-
+    // pathString is used to keep track of the top-level directory
     std::string pathString(path);
+    // Iterate through directory entries, if a directory, recurse, otherwise
+    // (a file) store file digest -> path in fileMap passed in.
     for (auto dirent = readdir(dir); dirent != nullptr;
          dirent = readdir(dir)) {
         if (strcmp(dirent->d_name, ".") == 0 ||
             strcmp(dirent->d_name, "..") == 0) {
             continue;
         }
+
         std::string entityName(dirent->d_name);
         std::string entityPath = pathString + "/" + entityName;
-
         struct stat statResult;
         if (stat(entityPath.c_str(), &statResult) != 0) {
-            RECC_LOG_VERBOSE("Could not stat " << entityPath << ", skipping");
+            RECC_LOG_VERBOSE("Could not stat [" << entityPath
+                                                << "] skipping.");
             continue;
         }
         if (S_ISDIR(statResult.st_mode)) {
-            (*result.d_subdirs)[entityName] =
-                make_nesteddirectory(entityPath.c_str(), fileMap);
+            make_nesteddirectoryhelper(entityPath.c_str(), fileMap,
+                                       filePathMap);
         }
         else {
-            File file(entityPath.c_str());
-            result.d_files[entityName] = file;
+            std::shared_ptr<ReccFile> file =
+                ReccFileFactory::createFile(entityPath.c_str());
             if (fileMap != nullptr) {
-                (*fileMap)[file.d_digest] = entityPath;
+                // If the path matches any in RECC_PATH_PREFIX, replace it if
+                // necessary, and normalize path.
+                std::string replacedRoot =
+                    resolve_path_from_prefix_map(entityPath).c_str();
+
+                // Get the relativePath from the current PROJECT_ROOT.
+                std::string relativePath = make_path_relative(
+                    replacedRoot, RECC_PROJECT_ROOT.c_str());
+
+                // Normalize path
+                std::string normalizedReplacedRoot =
+                    normalize_path(relativePath.c_str());
+
+                RECC_LOG_VERBOSE("Mapping local file path: ["
+                                 << entityPath
+                                 << "] to normalized-relative (if)updated: ["
+                                 << normalizedReplacedRoot << "]");
+
+                // Store the digest, and the file contents.
+                (*fileMap)[file->getDigest()] = file->getFileContents();
+                // Store the updated/replaced path in the filePathMap, which
+                // will be used to construct the NestedDirectory later.
+                (*filePathMap)
+                    .insert(std::make_pair(file, normalizedReplacedRoot));
             }
         }
     }
     closedir(dir);
-    return result;
+}
+
+NestedDirectory make_nesteddirectory(const char *path,
+                                     digest_string_umap *fileMap)
+{
+    NestedDirectory nestedDir;
+    std::unordered_map<std::shared_ptr<ReccFile>, std::string> file_path_map;
+
+    // Populate both maps
+    make_nesteddirectoryhelper(path, fileMap, &file_path_map);
+
+    // Construct nestedDirectory
+    for (const auto &file : file_path_map) {
+        nestedDir.add(file.first, file.second.c_str());
+    }
+
+    return nestedDir;
 }
 
 } // namespace recc

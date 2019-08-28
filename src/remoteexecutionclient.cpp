@@ -23,6 +23,7 @@
 #include <remoteexecutionsignals.h>
 
 #include <signal.h>
+#include <utility>
 
 #include <functional>
 #include <future>
@@ -82,19 +83,18 @@ proto::ActionResult get_actionresult(Operation operation)
  * will be used to look up child directories.
  */
 void add_from_directory(
-    std::map<std::string, File> *outputFiles, proto::Directory directory,
-    std::string prefix,
-    std::unordered_map<proto::Digest, proto::Directory> digestMap)
+    FileInfoMap *outputFiles, const proto::Directory &directory,
+    const std::string &prefix,
+    const std::unordered_map<proto::Digest, proto::Directory> &digestMap)
 {
     for (int i = 0; i < directory.files_size(); ++i) {
-        File file;
-        file.d_digest = directory.files(i).digest();
-        file.d_executable = directory.files(i).is_executable();
-        (*outputFiles)[prefix + directory.files(i).name()] = file;
+        (*outputFiles)[prefix + directory.files(i).name()] =
+            std::pair<proto::Digest, bool>(directory.files(i).digest(),
+                                           directory.files(i).is_executable());
     }
 
     for (int i = 0; i < directory.directories_size(); ++i) {
-        auto subdirectory = digestMap[directory.directories(i).digest()];
+        auto subdirectory = digestMap.at(directory.directories(i).digest());
         add_from_directory(outputFiles, subdirectory,
                            prefix + directory.directories(i).name() + "/",
                            digestMap);
@@ -256,8 +256,8 @@ void RemoteExecutionClient::write_files_to_disk(const ActionResult &result,
     for (const auto &fileIter : result.d_outputFiles) {
         const std::string path = std::string(root) + "/" + fileIter.first;
         RECC_LOG_VERBOSE("Writing " << path);
-        write_file(path.c_str(), fetch_blob(fileIter.second.d_digest));
-        if (fileIter.second.d_executable) {
+        write_file(path.c_str(), fetch_blob(fileIter.second.first));
+        if (fileIter.second.second) {
             make_executable(path.c_str());
         }
     }
@@ -274,8 +274,9 @@ RemoteExecutionClient::from_proto(const proto::ActionResult &proto)
 
     for (int i = 0; i < proto.output_files_size(); ++i) {
         auto fileProto = proto.output_files(i);
-        File file(fileProto.digest(), fileProto.is_executable());
-        result.d_outputFiles[fileProto.path()] = file;
+        result.d_outputFiles[fileProto.path()] =
+            std::pair<proto::Digest, bool>(fileProto.digest(),
+                                           fileProto.is_executable());
     }
 
     for (int i = 0; i < proto.output_directories_size(); ++i) {

@@ -31,6 +31,7 @@ typedef std::shared_ptr<
     ReaderPointer;
 
 typedef std::shared_ptr<google::longrunning::Operation> OperationPointer;
+typedef std::map<std::string, std::pair<proto::Digest, bool>> FileInfoMap;
 
 /**
  * Represents a blob returned by the Remote Execution service.
@@ -60,7 +61,7 @@ struct ActionResult {
     OutputBlob d_stdOut;
     OutputBlob d_stdErr;
     int d_exitCode;
-    std::map<std::string, File> d_outputFiles;
+    FileInfoMap d_outputFiles;
 };
 
 class RemoteExecutionClient : public CASClient {
