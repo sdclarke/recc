@@ -27,20 +27,27 @@
 #include <grpcpp/security/credentials.h>
 #include <iostream>
 #include <reccdefaults.h>
+#include <sys/stat.h>
 
 using namespace BloombergLP::recc;
 
 const std::string HELP(
     "USAGE: casupload <paths>\n"
-    "Uploads the given files to CAS, then prints the digest hash and size of\n"
-    "the corresponding Directory message.\n"
+    "Uploads the given files and directories to CAS, then prints the digest "
+    "hash and size of\n"
+    "the corresponding Directory messages.\n"
     "\n"
     "The files are placed in CAS subdirectories corresponding to their\n"
     "paths. For example, 'casupload file1.txt subdir/file2.txt' would create\n"
     "a CAS directory containing file1.txt and a subdirectory called 'subdir'\n"
     "containing file2.txt.\n"
     "\n"
-    "The server and instance to write to are controlled by the RECC_SERVER\n"
+    "The directories will be uploaded individually as merkle trees.\n"
+    "The merkle tree for a directory will contain all of the content\n"
+    "within the directory.\n"
+    "\n"
+    "The server and instance to write to are controlled by the "
+    "RECC_CAS_SERVER\n"
     "and RECC_INSTANCE environment variables.");
 
 int main(int argc, char *argv[])
@@ -59,18 +66,6 @@ int main(int argc, char *argv[])
     set_config_locations();
     parse_config_variables();
 
-    NestedDirectory nestedDirectory;
-    digest_string_umap blobs;
-    digest_string_umap digest_to_filecontents;
-
-    for (int i = 1; i < argc; ++i) {
-        std::shared_ptr<ReccFile> file = ReccFileFactory::createFile(argv[i]);
-        nestedDirectory.add(file, argv[i]);
-        digest_to_filecontents[file->getDigest()] = file->getFileContents();
-    }
-
-    auto directoryDigest = nestedDirectory.to_digest(&blobs);
-
     GrpcChannels returnChannels = GrpcChannels::get_channels_from_config();
     GrpcContext grpcContext;
     std::unique_ptr<AuthSession> reccAuthSession;
@@ -79,11 +74,59 @@ int main(int argc, char *argv[])
         reccAuthSession.reset(new AuthSession(&formPostFactory));
         grpcContext.set_auth(reccAuthSession.get());
     }
-    CASClient(returnChannels.cas(), RECC_INSTANCE, &grpcContext)
-        .upload_resources(blobs, digest_to_filecontents);
 
-    RECC_LOG(directoryDigest.hash());
-    RECC_LOG(directoryDigest.size_bytes());
+    CASClient casClient(returnChannels.cas(), RECC_INSTANCE, &grpcContext);
+    NestedDirectory nestedDirectory;
+    digest_string_umap blobs;
+    digest_string_umap digest_to_filecontents;
+    // Upload directories individually, and aggregate files to upload as single
+    // merkle tree
+    for (int i = 1; i < argc; ++i) {
+        struct stat statResult;
+        if (stat(argv[i], &statResult) != 0) {
+            RECC_LOG_VERBOSE("Could not stat [" << argv[i] << "] skipping.");
+            continue;
+        }
+        if (S_ISDIR(statResult.st_mode)) {
+            digest_string_umap directory_blobs;
+            digest_string_umap directory_digest_to_filecontents;
+
+            auto singleNestedDirectory = make_nesteddirectory(
+                argv[i], &directory_digest_to_filecontents);
+            auto digest = singleNestedDirectory.to_digest(&directory_blobs);
+            try {
+                casClient.upload_resources(directory_blobs,
+                                           directory_digest_to_filecontents);
+            }
+            catch (const std::runtime_error &e) {
+                RECC_LOG_ERROR("Uploading "
+                               << argv[i]
+                               << " failed with error: " << e.what());
+                exit(1);
+            }
+            RECC_LOG("Uploaded " << argv[i] << ": " << digest.hash() << "/"
+                                 << digest.size_bytes());
+        }
+        else {
+            std::shared_ptr<ReccFile> file =
+                ReccFileFactory::createFile(argv[i]);
+            nestedDirectory.add(file, argv[i]);
+            digest_to_filecontents.emplace(file->getDigest(),
+                                           file->getFileContents());
+        }
+    }
+    if (!digest_to_filecontents.empty()) {
+        auto directoryDigest = nestedDirectory.to_digest(&blobs);
+        try {
+            casClient.upload_resources(blobs, digest_to_filecontents);
+        }
+        catch (const std::runtime_error &e) {
+            RECC_LOG_ERROR("Uploading files failed with error: " << e.what());
+            exit(1);
+        }
+        RECC_LOG("Uploaded files: " << directoryDigest.hash() << "/"
+                                    << directoryDigest.size_bytes());
+    }
 
     return 0;
 }
