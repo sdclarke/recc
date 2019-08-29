@@ -145,7 +145,7 @@ void RemoteExecutionClient::read_operation(ReaderPointer &reader_ptr,
     do {
         status = future.wait_for(DEFAULT_RECC_POLL_WAIT);
         if (RemoteExecutionClient::s_sigint_received) {
-            RECC_LOG_VERBOSE(
+            RECC_LOG_WARNING(
                 "Cancelling job, operation name: " << operation_ptr->name());
             /* Cancel the operation if the execution service gave it a name */
             if (!operation_ptr->name().empty()) {
