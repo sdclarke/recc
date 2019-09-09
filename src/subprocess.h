@@ -43,9 +43,9 @@ struct SubprocessResult {
  * If cwd is non-empty, it specifies the current working directory of the
  * subprocess.
  */
-SubprocessResult execute(std::vector<std::string> command,
+SubprocessResult execute(const std::vector<std::string> &command,
                          bool pipeStdOut = false, bool pipeStdErr = false,
-                         std::map<std::string, std::string> env = {});
+                         const std::map<std::string, std::string> &env = {});
 } // namespace recc
 } // namespace BloombergLP
 

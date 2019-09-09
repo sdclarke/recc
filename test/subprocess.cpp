@@ -14,6 +14,9 @@
 
 #include <subprocess.h>
 
+#include <fstream>
+
+#include <fileutils.h>
 #include <gtest/gtest.h>
 
 using namespace BloombergLP::recc;
@@ -29,7 +32,28 @@ TEST(SubprocessTest, False)
 {
     std::vector<std::string> command = {"false"};
     auto result = execute(command);
-    EXPECT_TRUE(result.d_exitCode != 0);
+    EXPECT_NE(result.d_exitCode, 0);
+}
+
+TEST(SubprocessTest, CommandNotFound)
+{
+    std::vector<std::string> command = {"this-command-does-not-exist-1234"};
+    auto result = execute(command);
+    EXPECT_EQ(result.d_exitCode, 127); // "command not found" error
+}
+
+TEST(SubprocessTest, CommandIsNotAnExecutable)
+{
+    // Creating an empty file, which will fail when trying to execute it:
+    TemporaryDirectory temp_dir;
+    const std::string file_path = std::string(temp_dir.name()) + "/file.txt";
+    std::ofstream file(file_path);
+    file.close();
+
+    std::vector<std::string> command = {file_path};
+    auto result = execute(command);
+    EXPECT_EQ(result.d_exitCode, 126);
+    // "Command invoked cannot execute" error
 }
 
 TEST(SubprocessTest, OutputPipes)
