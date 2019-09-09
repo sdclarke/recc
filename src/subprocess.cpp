@@ -16,6 +16,8 @@
 #include <cstring>
 #include <logging.h>
 #include <map>
+#include <memory>
+#include <sstream>
 #include <subprocess.h>
 #include <sys/select.h>
 #include <sys/time.h>
@@ -27,32 +29,40 @@
 namespace BloombergLP {
 namespace recc {
 
-SubprocessResult execute(std::vector<std::string> command, bool pipeStdOut,
-                         bool pipeStdErr,
-                         std::map<std::string, std::string> env)
+static std::array<int, 2> createPipe()
+{
+    std::array<int, 2> pipe_fds = {0, 0};
+
+    if (pipe(pipe_fds.data()) == -1) {
+        RECC_LOG_ERROR("Error calling `pipe()`: " << strerror(errno));
+        throw std::system_error(errno, std::system_category());
+    }
+    return pipe_fds;
+}
+
+SubprocessResult execute(const std::vector<std::string> &command,
+                         bool pipeStdOut, bool pipeStdErr,
+                         const std::map<std::string, std::string> &env)
 {
     // Convert the command to a char*[]
-    int argc = command.size();
-    const char *argv[argc + 1];
-    for (int i = 0; i < argc; ++i) {
+    size_t argc = command.size();
+    std::unique_ptr<const char *[]> argv(new const char *[argc + 1]);
+    for (size_t i = 0; i < argc; ++i) {
         argv[i] = command[i].c_str();
     }
     argv[argc] = nullptr;
 
     // Pipe, fork and exec
-    int stdOutPipeFDs[2] = {0};
-    if (pipeStdOut && pipe(stdOutPipeFDs) == -1) {
-        throw std::system_error(errno, std::system_category());
-    }
-    int stdErrPipeFDs[2] = {0};
-    if (pipeStdErr && pipe(stdErrPipeFDs) == -1) {
-        throw std::system_error(errno, std::system_category());
-    }
-    auto pid = fork();
+    auto stdOutPipeFDs = createPipe();
+    auto stdErrPipeFDs = createPipe();
+
+    const auto pid = fork();
     if (pid == -1) {
+        RECC_LOG_ERROR("Error calling `fork()`: " << strerror(errno));
         throw std::system_error(errno, std::system_category());
     }
-    else if (pid == 0) {
+
+    if (pid == 0) {
         // (runs only in the child)
         if (pipeStdOut) {
             close(stdOutPipeFDs[0]);
@@ -66,13 +76,30 @@ SubprocessResult execute(std::vector<std::string> command, bool pipeStdOut,
                  STDERR_FILENO); // redirect stderr to input end of pipe
             close(stdErrPipeFDs[1]);
         }
-        for (auto &envPair : env) {
+
+        for (const auto &envPair : env) {
             setenv(envPair.first.c_str(), envPair.second.c_str(), 1);
         }
-        execvp(argv[0], const_cast<char *const *>(argv));
-        RECC_LOG_PERROR(nullptr);
-        _Exit(1);
+
+        const auto exec_status =
+            execvp(argv[0], const_cast<char *const *>(argv.get()));
+
+        int exit_code = 1;
+        if (exec_status != 0) {
+            const auto exec_error = errno;
+            // Following the Bash convention for exit codes.
+            // (https://gnu.org/software/bash/manual/html_node/Exit-Status.html)
+            if (exec_error == ENOENT) {
+                exit_code = 127; // "command not found"
+            }
+            else {
+                exit_code = 126; // Command invoked cannot execute
+            }
+        }
+
+        _Exit(exit_code);
     }
+
     // (runs only in the parent)
     SubprocessResult result;
 
@@ -87,18 +114,22 @@ SubprocessResult execute(std::vector<std::string> command, bool pipeStdOut,
         FD_SET(stdErrPipeFDs[0], &fdSet);
         close(stdErrPipeFDs[1]);
     }
+
     char buffer[4096];
     while (FD_ISSET(stdOutPipeFDs[0], &fdSet) ||
            FD_ISSET(stdErrPipeFDs[0], &fdSet)) {
         fd_set readFDSet = fdSet;
+
         struct timeval timeout;
         timeout.tv_sec = 5;
         timeout.tv_usec = 0;
+
         select(FD_SETSIZE, &readFDSet, nullptr, nullptr, &timeout);
+
         if (FD_ISSET(stdOutPipeFDs[0], &readFDSet)) {
-            int bytesRead = read(stdOutPipeFDs[0], buffer, sizeof(buffer));
+            ssize_t bytesRead = read(stdOutPipeFDs[0], buffer, sizeof(buffer));
             if (bytesRead > 0) {
-                result.d_stdOut.append(buffer, bytesRead);
+                result.d_stdOut.append(buffer, static_cast<size_t>(bytesRead));
             }
             else {
                 close(stdOutPipeFDs[0]);
@@ -106,9 +137,9 @@ SubprocessResult execute(std::vector<std::string> command, bool pipeStdOut,
             }
         }
         if (FD_ISSET(stdErrPipeFDs[0], &readFDSet)) {
-            int bytesRead = read(stdErrPipeFDs[0], buffer, sizeof(buffer));
+            ssize_t bytesRead = read(stdErrPipeFDs[0], buffer, sizeof(buffer));
             if (bytesRead > 0) {
-                result.d_stdErr.append(buffer, bytesRead);
+                result.d_stdErr.append(buffer, static_cast<size_t>(bytesRead));
             }
             else {
                 close(stdErrPipeFDs[0]);
@@ -122,7 +153,32 @@ SubprocessResult execute(std::vector<std::string> command, bool pipeStdOut,
     if (waitpid(pid, &status, 0) == -1) {
         throw std::system_error(errno, std::system_category());
     }
-    result.d_exitCode = WEXITSTATUS(status);
+
+    if (WIFEXITED(status)) {
+        result.d_exitCode = WEXITSTATUS(status);
+    }
+    else if (WIFSIGNALED(status)) {
+        result.d_exitCode = 128 + WTERMSIG(status);
+        // Exit code as returned by Bash.
+        // (https://gnu.org/software/bash/manual/html_node/Exit-Status.html)
+    }
+    else {
+        /* According to the documentation for `waitpid()` we should never get
+         * here:
+         *
+         * "If the information pointed to by stat_loc was stored by a call to
+         * waitpid() that did not specify the WUNTRACED  or
+         * CONTINUED flags, or by a call to the wait() function,
+         * exactly one of the macros WIFEXITED(*stat_loc) and
+         * WIFSIGNALED(*stat_loc) shall evaluate to a non-zero value."
+         *
+         * (https://pubs.opengroup.org/onlinepubs/009695399/functions/wait.html)
+         */
+        throw std::runtime_error(
+            "`waitpid()` returned an unexpected status: " +
+            std::to_string(status));
+    }
+
     return result;
 }
 } // namespace recc
