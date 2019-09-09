@@ -27,9 +27,11 @@ Currently recc relies on:
 
 Some package managers (apt) include all these dependencies while others (brew) require manual installation of some. Please follow the relevant guides for your OS.
 
-### Installing on macOS
+<!-- # OSX -->
 
-Install [gRPC][], [Protobuf][], [OpenSSL][], [CMake][], [pkg-config][], [libcurl][] through brew:
+### Installing on OSX
+
+Install [gRPC][], [Protobuf][], [OpenSSL][], [CMake][], [pkg-config][], [libcurl][] through `brew`:
 
 ```sh
 $ brew install grpc protobuf openssl cmake pkg-config curl
@@ -40,7 +42,68 @@ $ brew install grpc protobuf openssl cmake pkg-config curl
 You can now compile `recc`.
 
 <!-- # Linux -->
-<!-- UPDATE ME -->
+
+### Installing on Debian.
+
+Install [OpenSSL][], [CMake][], [pkg-config][], [libcurl][], [googletest][] through `apt`:
+
+```sh
+$ [sudo] apt-get install cmake gcc g++ googletest libssl-dev pkg-config libcurl4-openssl-dev
+```
+
+**If not already installed**, install [gRPC][], [Protobuf][]:
+```sh
+$ [sudo] apt-get install grpc++ libprotobuf-dev
+```
+
+Install the `googletest`, and `googlemock` binaries.
+
+```sh
+$ cd /usr/src/googletest && mkdir build && cd build
+$ cmake .. && [sudo] make install
+```
+
+Inside the directory containing `recc`, build by following the instructions in the [compiling section](#compiling)
+
+### Installing on Ubuntu.
+
+**Last tested with `grpc` version: 1.20.0 and `protoc` version: 3.8.0**
+
+As of 18.04LTS, the package versions of `protobuf` and `grpc` are too old for use with recc. Therefore manual build and install is necessary.
+The instructions below for installing the `protobuf` compiler and `grpc`  are synthesized from the [grpc source](https://github.com/grpc/grpc/blob/master/BUILDING.md).
+
+Clone and install the latest release of `grpc`.
+```sh
+$ [sudo] apt-get install build-essential autoconf libtool pkg-config
+$ git clone -b $(curl -L https://grpc.io/release) https://github.com/grpc/grpc
+$ cd grpc
+$ git submodule update --init
+$ [sudo] make install
+```
+
+Check to see if `protoc` is installed by running `protoc --version`, if not found, install the protobuf compiler.
+
+Inside the above `grpc` directory run:
+```sh
+$ cd third_party/protobuf
+$[sudo] make install
+```
+
+Now you can follow the same instructions as the [Installing on Debian section](#installing-on-debian-based-linux-distributions) to install the other necessary dependencies, and build `recc`. Remember to skip the `protoc` and `grpc` install instructions!
+
+<!-- # WSL -->
+
+### Installing on WSL(Windows Subsystem for Linux).
+
+From the Microsoft Store, download and open the `Debian` or `Ubuntu` applications.
+
+Update the package lists, install the updated packages.
+
+```sh
+$ [sudo] apt-get update && [sudo] apt-get upgrade
+```
+
+Clone `recc` and follow the instructions in either the [Installing on Debian section](#installing-on-debian-based-linux-distributions) or [Installing on Ubuntu section](#installing-on-Ubuntu).
 
 <!-- Reference links -->
 [grpc]: https://grpc.io/
