@@ -50,10 +50,13 @@ void NestedDirectory::add(std::shared_ptr<ReccFile> file,
             resolve_path_from_prefix_map(std::string(relativePath));
         checkedPrefix = true;
     }
+
     const char *slash = strchr(replacedDirectory.c_str(), '/');
     if (slash) {
-        const std::string subdirKey(replacedDirectory.c_str(),
-                                    slash - replacedDirectory.c_str());
+        const std::string subdirKey(
+            replacedDirectory.c_str(),
+            static_cast<size_t>(slash - replacedDirectory.c_str()));
+
         if (subdirKey.empty()) {
             this->add(file, slash + 1, checkedPrefix);
         }
@@ -73,7 +76,7 @@ void NestedDirectory::addDirectory(const char *directory, bool checkedPrefix)
         return;
     }
 
-    // If an absolute path, go one past the first slash, saving an unecessary
+    // If an absolute path, go one past the first slash, saving an unnecessary
     // recursive call.
     if (directory[0] == '/') {
         directory++;
@@ -81,8 +84,8 @@ void NestedDirectory::addDirectory(const char *directory, bool checkedPrefix)
 
     std::string replacedDirectory(directory);
     // Check if directory passed in matches any in PREFIX_REPLACEMENT_MAP. if
-    // so replace the path. Only check on the inital call, when the full
-    // directory path is avaliable.
+    // so replace the path. Only check on the initial call, when the full
+    // directory path is available.
     if (!checkedPrefix) {
         replacedDirectory =
             resolve_path_from_prefix_map(std::string(directory));
@@ -93,8 +96,10 @@ void NestedDirectory::addDirectory(const char *directory, bool checkedPrefix)
     const char *slash = strchr(replacedDirectory.c_str(), '/');
     if (slash) {
         // Construct string before '/' - the parent directory
-        const std::string subdirKey(replacedDirectory.c_str(),
-                                    slash - replacedDirectory.c_str());
+        const std::string subdirKey(
+            replacedDirectory.c_str(),
+            static_cast<size_t>(slash - replacedDirectory.c_str()));
+
         // If no parent directory, add the subdirectory
         if (subdirKey.empty()) {
             this->addDirectory(slash + 1, checkedPrefix);
@@ -107,8 +112,8 @@ void NestedDirectory::addDirectory(const char *directory, bool checkedPrefix)
     // If directory doesn't exist in our map, add mapping to a new
     // NestedDirectory
     else {
-        if ((*d_subdirs).count(replacedDirectory) == 0) {
-            (*d_subdirs)[replacedDirectory] = NestedDirectory();
+        if (d_subdirs->count(replacedDirectory) == 0) {
+            d_subdirs->emplace(replacedDirectory, NestedDirectory());
         }
     }
 }
@@ -123,17 +128,21 @@ proto::Digest NestedDirectory::to_digest(digest_string_umap *digestMap) const
         *directoryMessage.add_files() =
             fileIter.second->getFileNode(fileIter.first);
     }
+
     for (const auto &subdirIter : *d_subdirs) {
         auto subdirNode = directoryMessage.add_directories();
         subdirNode->set_name(subdirIter.first);
         auto subdirDigest = subdirIter.second.to_digest(digestMap);
         *subdirNode->mutable_digest() = subdirDigest;
     }
-    auto blob = directoryMessage.SerializeAsString();
-    auto digest = make_digest(blob);
+
+    const auto blob = directoryMessage.SerializeAsString();
+    const auto digest = make_digest(blob);
+
     if (digestMap != nullptr) {
-        (*digestMap)[digest] = blob;
+        digestMap->emplace(digest, blob);
     }
+
     return digest;
 }
 
@@ -184,11 +193,12 @@ void make_nesteddirectoryhelper(
 
     // dir is used to iterate through subdirectories in path
     auto dir = opendir(path);
-    if (dir == NULL) {
+    if (dir == nullptr) {
         throw std::system_error(errno, std::system_category());
     }
+
     // pathString is used to keep track of the top-level directory
-    std::string pathString(path);
+    const std::string pathString(path);
     // Iterate through directory entries, if a directory, recurse, otherwise
     // (a file) store file digest -> path in fileMap passed in.
     for (auto dirent = readdir(dir); dirent != nullptr;
@@ -198,33 +208,36 @@ void make_nesteddirectoryhelper(
             continue;
         }
 
-        std::string entityName(dirent->d_name);
-        std::string entityPath = pathString + "/" + entityName;
+        const std::string entityName(dirent->d_name);
+        const std::string entityPath = pathString + "/" + entityName;
+
         struct stat statResult;
         if (stat(entityPath.c_str(), &statResult) != 0) {
             RECC_LOG_VERBOSE("Could not stat [" << entityPath
                                                 << "] skipping.");
             continue;
         }
+
         if (S_ISDIR(statResult.st_mode)) {
             make_nesteddirectoryhelper(entityPath.c_str(), fileMap,
                                        filePathMap);
         }
         else {
-            std::shared_ptr<ReccFile> file =
+            const std::shared_ptr<ReccFile> file =
                 ReccFileFactory::createFile(entityPath.c_str());
+
             if (fileMap != nullptr) {
                 // If the path matches any in RECC_PATH_PREFIX, replace it if
                 // necessary, and normalize path.
-                std::string replacedRoot =
+                const std::string replacedRoot =
                     resolve_path_from_prefix_map(entityPath).c_str();
 
                 // Get the relativePath from the current PROJECT_ROOT.
-                std::string relativePath = make_path_relative(
+                const std::string relativePath = make_path_relative(
                     replacedRoot, RECC_PROJECT_ROOT.c_str());
 
                 // Normalize path
-                std::string normalizedReplacedRoot =
+                const std::string normalizedReplacedRoot =
                     normalize_path(relativePath.c_str());
 
                 RECC_LOG_VERBOSE("Mapping local file path: ["
@@ -233,11 +246,10 @@ void make_nesteddirectoryhelper(
                                  << normalizedReplacedRoot << "]");
 
                 // Store the digest, and the file contents.
-                (*fileMap)[file->getDigest()] = file->getFileContents();
+                fileMap->emplace(file->getDigest(), file->getFileContents());
                 // Store the updated/replaced path in the filePathMap, which
                 // will be used to construct the NestedDirectory later.
-                (*filePathMap)
-                    .insert(std::make_pair(file, normalizedReplacedRoot));
+                filePathMap->emplace(file, normalizedReplacedRoot);
             }
         }
     }
