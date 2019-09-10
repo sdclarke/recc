@@ -1,4 +1,4 @@
-// Copyright 2018 Bloomberg Finance L.P
+// Copyright 2019 Bloomberg Finance L.P
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,17 +14,12 @@
 
 #include <casclient.h>
 
-#include <fileutils.h>
 #include <grpcretry.h>
-#include <logging.h>
-#include <merklize.h>
 #include <reccmetrics/durationmetrictimer.h>
 #include <reccmetrics/metricguard.h>
 
 #include <random>
 #include <sstream>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <unordered_set>
 
 #define TIMER_NAME_FIND_MISSING_BLOBS "recc.find_missing_blobs"
@@ -33,22 +28,29 @@
 namespace BloombergLP {
 namespace recc {
 
-const char HEX_CHARS[] = "0123456789abcdef";
+const std::string CASClient::s_guid = generate_guid();
+
+const int CASClient::s_byteStreamChunkSizeBytes = 1 * 1024 * 1024;
+const int CASClient::s_maxTotalBatchSizeBytes = 2 * 1024 * 1024;
+const int CASClient::s_maxMissingBlobsRequestItems = 16384;
 
 /**
  * Generate and return a random version 4 GUID.
  */
-std::string generate_guid()
+std::string CASClient::generate_guid()
 {
-    const auto GUID_LENGTH = 36;
-    std::string result(GUID_LENGTH, '0');
+    static const std::string hexChars = "0123456789abcdef";
+
+    const auto guidLength = 36;
+    std::string result(guidLength, '0');
 
     std::random_device randomDevice;
     std::default_random_engine engine(randomDevice());
     std::uniform_int_distribution<> hexDist(0, 15);
 
-    for (unsigned int i = 0; i < GUID_LENGTH; ++i) {
+    for (unsigned int i = 0; i < guidLength; ++i) {
         const int num = hexDist(engine);
+
         switch (i) {
             case 8:
             case 13:
@@ -60,60 +62,79 @@ std::string generate_guid()
                 result[i] = '4';
                 break;
             case 19:
-                result[i] = HEX_CHARS[8 | (num & 3)];
+                result[i] = hexChars[8 | (num & 3)];
                 break;
             default:
-                result[i] = HEX_CHARS[hexDist(engine)];
+                const auto char_idx = static_cast<size_t>(hexDist(engine));
+                result[i] = hexChars[char_idx];
         }
     }
     return result;
 }
 
-const std::string GUID = generate_guid();
-const int BYTESTREAM_CHUNK_SIZE = 1 << 20;
+std::string CASClient::uploadResourceName(const proto::Digest &digest) const
+{
+    std::string resourceName = this->d_instanceName;
+    if (!resourceName.empty()) {
+        resourceName += "/";
+    }
+
+    resourceName += "uploads/" + s_guid + "/blobs/" + digest.hash() + "/" +
+                    std::to_string(digest.size_bytes());
+
+    return resourceName;
+}
+
+std::string CASClient::downloadResourceName(const proto::Digest &digest) const
+{
+    std::string resourceName = this->d_instanceName;
+    if (!resourceName.empty()) {
+        resourceName += "/";
+    }
+
+    resourceName +=
+        "blobs/" + digest.hash() + "/" + std::to_string(digest.size_bytes());
+    return resourceName;
+}
 
 void CASClient::upload_blob(const proto::Digest &digest,
                             const std::string &blob) const
 {
+    const auto resourceName = uploadResourceName(digest);
+
     google::bytestream::WriteResponse response;
-
-    std::string resourceName = d_instance;
-    if (d_instance.length() > 0) {
-        resourceName += "/";
-    }
-    resourceName += "uploads/" + GUID + "/blobs/" + digest.hash() + "/" +
-                    std::to_string(digest.size_bytes());
-
     auto write_lambda = [&](grpc::ClientContext &context) {
         response.Clear();
-        auto writer = d_byteStreamStub->Write(&context, &response);
-        google::bytestream::WriteRequest initialRequest;
 
+        auto writer = d_byteStreamStub->Write(&context, &response);
+
+        google::bytestream::WriteRequest initialRequest;
         initialRequest.set_resource_name(resourceName);
         initialRequest.set_write_offset(0);
 
         if (writer->Write(initialRequest)) {
-            for (unsigned int offset = 0; offset < blob.length();
-                 offset += BYTESTREAM_CHUNK_SIZE) {
+            for (unsigned int offset = 0; offset < blob.size();
+                 offset += s_byteStreamChunkSizeBytes) {
                 google::bytestream::WriteRequest request;
-                request.set_write_offset(offset);
-                request.set_finish_write((offset + BYTESTREAM_CHUNK_SIZE) >=
-                                         blob.length());
 
-                if (request.finish_write()) {
-                    request.set_data(blob.c_str() + offset,
-                                     blob.length() - offset);
+                size_t bytesToWrite;
+                if ((offset + s_byteStreamChunkSizeBytes) >= blob.size()) {
+                    bytesToWrite = blob.size() - offset;
+                    request.set_finish_write(true);
                 }
                 else {
-                    request.set_data(blob.c_str() + offset,
-                                     BYTESTREAM_CHUNK_SIZE);
+                    bytesToWrite = s_byteStreamChunkSizeBytes;
+                    request.set_finish_write(false);
                 }
+                request.set_write_offset(offset);
+                request.set_data(blob.c_str() + offset, bytesToWrite);
 
                 if (!writer->Write(request)) {
                     break;
                 }
             }
         }
+
         writer->WritesDone();
         return writer->Finish();
     };
@@ -121,23 +142,17 @@ void CASClient::upload_blob(const proto::Digest &digest,
     grpc_retry(write_lambda, d_grpcContext);
 
     if (response.committed_size() !=
-        static_cast<google::protobuf::int64>(blob.length())) {
+        static_cast<google::protobuf::int64>(blob.size())) {
         throw std::runtime_error("ByteStream upload failed.");
     }
 }
 
 std::string CASClient::fetch_blob(const proto::Digest &digest) const
 {
-    std::string resourceName = d_instance;
-    if (!d_instance.empty()) {
-        resourceName += "/";
-    }
-    resourceName += "blobs/";
-    resourceName += digest.hash();
-    resourceName += "/";
-    resourceName += std::to_string(digest.size_bytes());
+    const auto resourceName = downloadResourceName(digest);
 
     std::string result;
+
     auto fetch_lambda = [&](grpc::ClientContext &context) {
         google::bytestream::ReadRequest request;
         request.set_resource_name(resourceName);
@@ -157,8 +172,137 @@ std::string CASClient::fetch_blob(const proto::Digest &digest) const
     return result;
 }
 
-const int MAX_TOTAL_BATCH_SIZE = 1 << 21;
-const int MAX_MISSING_BLOBS_REQUEST_ITEMS = 1 << 14;
+proto::FindMissingBlobsResponse CASClient::findMissingBlobs(
+    const proto::FindMissingBlobsRequest &request) const
+{
+    proto::FindMissingBlobsResponse response;
+
+    RECC_LOG_VERBOSE(
+        "Sending FindMissingBlobsRequest with a total number of blobs: "
+        << request.blob_digests_size());
+
+    auto missing_blobs_lambda = [&](grpc::ClientContext &context) {
+        return d_executionStub->FindMissingBlobs(&context, request, &response);
+    };
+
+    { // Timed block
+        reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+            TIMER_NAME_FIND_MISSING_BLOBS, RECC_ENABLE_METRICS);
+
+        grpc_retry(missing_blobs_lambda, d_grpcContext);
+    }
+
+    RECC_LOG_VERBOSE(
+        "Received FindMissingBlobsResponse with a total number of blobs: "
+        << response.missing_blob_digests_size());
+
+    return response;
+}
+
+std::unordered_set<proto::Digest> CASClient::findMissingBlobs(
+    const std::unordered_set<proto::Digest> &digests) const
+{
+    std::unordered_set<proto::Digest> missingDigests;
+
+    auto digestIter = digests.cbegin();
+    while (digestIter != digests.cend()) {
+        proto::FindMissingBlobsRequest missingBlobsRequest;
+        missingBlobsRequest.set_instance_name(d_instanceName);
+
+        // Filling the request with as many digests as possible...
+        while (missingBlobsRequest.blob_digests_size() <
+                   s_maxMissingBlobsRequestItems &&
+               digestIter != digests.cend()) {
+            *missingBlobsRequest.add_blob_digests() = *digestIter;
+            ++digestIter;
+        }
+
+        const proto::FindMissingBlobsResponse missingBlobsResponse =
+            findMissingBlobs(missingBlobsRequest);
+
+        missingDigests.insert(
+            missingBlobsResponse.missing_blob_digests().cbegin(),
+            missingBlobsResponse.missing_blob_digests().cend());
+    }
+
+    return missingDigests;
+}
+
+proto::BatchUpdateBlobsResponse CASClient::batchUpdateBlobs(
+    const proto::BatchUpdateBlobsRequest &request) const
+{
+    proto::BatchUpdateBlobsResponse response;
+
+    auto batch_update_lambda = [&](grpc::ClientContext &context) {
+        return d_executionStub->BatchUpdateBlobs(&context, request, &response);
+    };
+
+    grpc_retry(batch_update_lambda, d_grpcContext);
+
+    for (int j = 0; j < response.responses_size(); ++j) {
+        ensure_ok(response.responses(j).status());
+    }
+
+    return response;
+}
+
+void CASClient::batchUpdateBlobs(
+    const std::unordered_set<proto::Digest> &digests,
+    const digest_string_umap &blobs,
+    const digest_string_umap &digest_to_filecontents) const
+{
+    proto::BatchUpdateBlobsRequest batchUpdateRequest;
+    batchUpdateRequest.set_instance_name(d_instanceName);
+
+    int batchSize = 0;
+    for (const auto &digest : digests) {
+        // Finding the data in one of the source maps:
+        std::string blob;
+        if (blobs.count(digest)) {
+            blob = blobs.at(digest);
+        }
+        else if (digest_to_filecontents.count(digest)) {
+            blob = digest_to_filecontents.at(digest);
+        }
+        else {
+            throw std::runtime_error(
+                "CAS server requested non-existent digest");
+        }
+
+        // If the blob is too large to batch we must upload it individually
+        // using the ByteStream API:
+        if (digest.size_bytes() > s_maxTotalBatchSizeBytes) {
+            upload_blob(digest, blob);
+            continue;
+        }
+
+        if (digest.size_bytes() + batchSize > s_maxTotalBatchSizeBytes) {
+            // Batch is full, flushing the request:
+            RECC_LOG_VERBOSE("Sending batch update request");
+            batchUpdateBlobs(batchUpdateRequest);
+
+            batchUpdateRequest.clear_requests();
+            batchSize = 0;
+        }
+
+        proto::BatchUpdateBlobsRequest_Request *updateRequest =
+            batchUpdateRequest.add_requests();
+        *updateRequest->mutable_digest() = digest;
+        updateRequest->set_data(blob);
+
+        batchSize += digest.size_bytes();
+        batchSize += digest.hash().size();
+    }
+
+    if (!batchUpdateRequest.requests().empty()) {
+        // Timed block
+        reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+            TIMER_NAME_UPLOAD_MISSING_BLOBS, RECC_ENABLE_METRICS);
+
+        RECC_LOG_VERBOSE("Sending final update request");
+        batchUpdateBlobs(batchUpdateRequest);
+    }
+}
 
 void CASClient::upload_resources(
     const digest_string_umap &blobs,
@@ -172,117 +316,8 @@ void CASClient::upload_resources(
         digestsToUpload.insert(i.first);
     }
 
-    std::unordered_set<proto::Digest> missingDigests;
-
-    auto digestIter = digestsToUpload.cbegin();
-    while (digestIter != digestsToUpload.cend()) {
-        proto::FindMissingBlobsRequest missingBlobsRequest;
-        missingBlobsRequest.set_instance_name(d_instance);
-        while (missingBlobsRequest.blob_digests_size() <
-                   MAX_MISSING_BLOBS_REQUEST_ITEMS &&
-               digestIter != digestsToUpload.cend()) {
-            *missingBlobsRequest.add_blob_digests() = *digestIter;
-            ++digestIter;
-        }
-
-        RECC_LOG_VERBOSE(
-            "Sending FindMissingBlobsRequest with a total number of blobs: "
-            << missingBlobsRequest.blob_digests_size());
-        proto::FindMissingBlobsResponse missingBlobsResponse;
-
-        auto missing_blobs_lambda = [&](grpc::ClientContext &context) {
-            missingBlobsResponse.Clear();
-            return d_executionStub->FindMissingBlobs(
-                &context, missingBlobsRequest, &missingBlobsResponse);
-        };
-
-        { // Timed block
-            reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-                TIMER_NAME_FIND_MISSING_BLOBS, RECC_ENABLE_METRICS);
-
-            grpc_retry(missing_blobs_lambda, d_grpcContext);
-        }
-
-        RECC_LOG_VERBOSE(
-            "Received FindMissingBlobsResponse with a total number of blobs: "
-            << missingBlobsResponse.missing_blob_digests_size());
-        for (int i = 0; i < missingBlobsResponse.missing_blob_digests_size();
-             ++i) {
-            missingDigests.insert(
-                missingBlobsResponse.missing_blob_digests(i));
-        }
-    }
-
-    proto::BatchUpdateBlobsRequest batchUpdateRequest;
-    batchUpdateRequest.set_instance_name(d_instance);
-    int batchSize = 0;
-    for (const auto &digest : missingDigests) {
-        std::string blob;
-
-        if (blobs.count(digest)) {
-            blob = blobs.at(digest);
-        }
-        else if (digest_to_filecontents.count(digest)) {
-            blob = digest_to_filecontents.at(digest);
-        }
-        else {
-            throw std::runtime_error(
-                "CAS server requested non-existent digest");
-        }
-
-        if (digest.size_bytes() > MAX_TOTAL_BATCH_SIZE) {
-            upload_blob(digest, blob);
-            continue;
-        }
-        else if (digest.size_bytes() + batchSize > MAX_TOTAL_BATCH_SIZE) {
-            proto::BatchUpdateBlobsResponse response;
-
-            auto batch_update_lambda = [&](grpc::ClientContext &context) {
-                response.Clear();
-                return d_executionStub->BatchUpdateBlobs(
-                    &context, batchUpdateRequest, &response);
-            };
-
-            RECC_LOG_VERBOSE("Sending batch update request");
-            grpc_retry(batch_update_lambda, d_grpcContext);
-
-            for (int j = 0; j < response.responses_size(); ++j) {
-                ensure_ok(response.responses(j).status());
-            }
-
-            batchUpdateRequest = proto::BatchUpdateBlobsRequest();
-            batchUpdateRequest.set_instance_name(d_instance);
-            batchSize = 0;
-        }
-
-        proto::BatchUpdateBlobsRequest_Request *updateRequest =
-            batchUpdateRequest.add_requests();
-        *updateRequest->mutable_digest() = digest;
-        updateRequest->set_data(blob);
-        batchSize += digest.size_bytes();
-        batchSize += digest.hash().length();
-    }
-
-    if (batchUpdateRequest.requests_size() > 0) {
-        // Timed block
-        reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-            TIMER_NAME_UPLOAD_MISSING_BLOBS, RECC_ENABLE_METRICS);
-
-        proto::BatchUpdateBlobsResponse response;
-        RECC_LOG_VERBOSE("Sending final batch update request");
-
-        auto batch_update_lambda = [&](grpc::ClientContext &context) {
-            response.Clear();
-            return d_executionStub->BatchUpdateBlobs(
-                &context, batchUpdateRequest, &response);
-        };
-
-        grpc_retry(batch_update_lambda, d_grpcContext);
-
-        for (int i = 0; i < response.responses_size(); ++i) {
-            ensure_ok(response.responses(i).status());
-        }
-    }
+    const auto missingDigests = findMissingBlobs(digestsToUpload);
+    batchUpdateBlobs(missingDigests, blobs, digest_to_filecontents);
 }
 
 } // namespace recc
