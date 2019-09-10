@@ -22,6 +22,7 @@
 
 #include <google/bytestream/bytestream.grpc.pb.h>
 
+#include <cstdint>
 #include <exception>
 #include <memory>
 #include <stdexcept>
@@ -58,10 +59,14 @@ class CASClient {
         d_executionStub;
     std::shared_ptr<google::bytestream::ByteStream::StubInterface>
         d_byteStreamStub;
+    std::shared_ptr<proto::Capabilities::StubInterface> d_capabilitiesStub;
 
     static const int s_byteStreamChunkSizeBytes;
     static const int s_maxTotalBatchSizeBytes;
     static const int s_maxMissingBlobsRequestItems;
+
+    // Unless overridden, we'll use the default batch size.
+    int64_t d_maxTotalBatchSizeBytes = s_maxTotalBatchSizeBytes;
 
     static const std::string s_guid;
 
@@ -76,9 +81,11 @@ class CASClient {
             executionStub,
         std::shared_ptr<google::bytestream::ByteStream::StubInterface>
             byteStreamStub,
+        std::shared_ptr<proto::Capabilities::StubInterface> capabilitiesStub,
         const std::string &instanceName, GrpcContext *grpcContext)
         : d_executionStub(executionStub), d_byteStreamStub(byteStreamStub),
-          d_instanceName(instanceName), d_grpcContext(grpcContext)
+          d_capabilitiesStub(capabilitiesStub), d_instanceName(instanceName),
+          d_grpcContext(grpcContext)
     {
     }
 
@@ -87,6 +94,7 @@ class CASClient {
                        GrpcContext *grpcContext)
         : d_executionStub(proto::ContentAddressableStorage::NewStub(channel)),
           d_byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
+          d_capabilitiesStub(proto::Capabilities::NewStub(channel)),
           d_instanceName(instanceName), d_grpcContext(grpcContext)
     {
     }
@@ -125,6 +133,14 @@ class CASClient {
     upload_resources(const digest_string_umap &blobs,
                      const digest_string_umap &digest_to_filecontents) const;
 
+    int64_t maxTotalBatchSizeBytes() const;
+
+    /**
+     * Fetch the `ServerCapabilities` from the remote and configure this
+     * instance according to those values.
+     */
+    void setUpFromServerCapabilities();
+
   private:
     std::string uploadResourceName(const proto::Digest &digest) const;
     std::string downloadResourceName(const proto::Digest &digest) const;
@@ -144,6 +160,11 @@ class CASClient {
     batchUpdateBlobs(const proto::BatchUpdateBlobsRequest &request) const;
 
     static std::string generate_guid();
+
+    /**
+     * Fetch the `ServerCapabilities` from the remote and return the proto.
+     */
+    proto::ServerCapabilities fetchServerCapabilities() const;
 };
 } // namespace recc
 } // namespace BloombergLP

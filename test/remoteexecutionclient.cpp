@@ -45,6 +45,7 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
   protected:
     std::shared_ptr<proto::MockExecutionStub> executionStub;
     std::shared_ptr<proto::MockContentAddressableStorageStub> casStub;
+    std::shared_ptr<proto::MockCapabilitiesStub> casCapabilitiesStub;
     std::shared_ptr<proto::MockActionCacheStub> actionCacheStub;
     std::shared_ptr<google::longrunning::MockOperationsStub> operationsStub;
     std::shared_ptr<google::bytestream::MockByteStreamStub> byteStreamStub;
@@ -79,8 +80,8 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
               std::make_shared<google::longrunning::MockOperationsStub>()),
           byteStreamStub(
               std::make_shared<google::bytestream::MockByteStreamStub>()),
-          client(executionStub, casStub, actionCacheStub, operationsStub,
-                 byteStreamStub, instance_name, &grpcContext)
+          client(executionStub, casStub, casCapabilitiesStub, actionCacheStub,
+                 operationsStub, byteStreamStub, instance_name, &grpcContext)
     {
 
         // Construct the Digest we're passing in, and the ExecuteRequest we

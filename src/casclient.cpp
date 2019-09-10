@@ -72,6 +72,51 @@ std::string CASClient::generate_guid()
     return result;
 }
 
+int64_t CASClient::maxTotalBatchSizeBytes() const
+{
+    return d_maxTotalBatchSizeBytes;
+}
+
+void CASClient::setUpFromServerCapabilities()
+{
+    proto::ServerCapabilities serverCapabilities;
+    try {
+        serverCapabilities = fetchServerCapabilities();
+    }
+    catch (const std::runtime_error &e) {
+        RECC_LOG_DEBUG("Error: Could not fetch capabilities, using defaults: "
+                       << e.what());
+        return;
+    }
+
+    // Maximum bytes that can be batched in a request:
+    const int64_t serverMaxBatchTotalSizeBytes =
+        serverCapabilities.cache_capabilities().max_batch_total_size_bytes();
+
+    // If the server specifies a smaller limit than the one we currently have,
+    // we override it. (0 means the server does not impose any limit).
+    if (serverMaxBatchTotalSizeBytes > 0 &&
+        serverMaxBatchTotalSizeBytes < d_maxTotalBatchSizeBytes) {
+        d_maxTotalBatchSizeBytes = serverMaxBatchTotalSizeBytes;
+    }
+}
+
+proto::ServerCapabilities CASClient::fetchServerCapabilities() const
+{
+    proto::ServerCapabilities serverCapabilities;
+
+    auto getCapabilitiesLambda = [&](grpc::ClientContext &context) {
+        proto::GetCapabilitiesRequest request;
+        request.set_instance_name(d_instanceName);
+
+        return this->d_capabilitiesStub->GetCapabilities(&context, request,
+                                                         &serverCapabilities);
+    };
+
+    grpc_retry(getCapabilitiesLambda, d_grpcContext);
+    return serverCapabilities;
+}
+
 std::string CASClient::uploadResourceName(const proto::Digest &digest) const
 {
     std::string resourceName = this->d_instanceName;

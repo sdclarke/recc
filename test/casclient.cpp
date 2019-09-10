@@ -39,6 +39,7 @@ class CasClientFixture : public ::testing::Test {
 
     std::shared_ptr<proto::MockContentAddressableStorageStub> casStub;
     std::shared_ptr<google::bytestream::MockByteStreamStub> byteStreamStub;
+    std::shared_ptr<proto::MockCapabilitiesStub> capabilitiesStub;
 
     GrpcContext grpcContext;
     CASClient casClient;
@@ -49,7 +50,9 @@ class CasClientFixture : public ::testing::Test {
               std::make_shared<proto::MockContentAddressableStorageStub>()),
           byteStreamStub(
               std::make_shared<google::bytestream::MockByteStreamStub>()),
-          casClient(casStub, byteStreamStub, instanceName, &grpcContext)
+          capabilitiesStub(std::make_shared<proto::MockCapabilitiesStub>()),
+          casClient(casStub, byteStreamStub, capabilitiesStub, instanceName,
+                    &grpcContext)
     {
     }
 };
@@ -302,4 +305,36 @@ TEST_F(CasClientFixture, FetchBlobResumeDownload)
 
     auto blob = casClient.fetch_blob(digest);
     EXPECT_EQ(blob, abc);
+}
+
+TEST_F(CasClientFixture, FetchCapabilities)
+{
+    const auto maxBatchSize = 123;
+
+    proto::CacheCapabilities cacheCapabilities;
+    cacheCapabilities.set_max_batch_total_size_bytes(maxBatchSize);
+
+    proto::ServerCapabilities serverCapabilities;
+    serverCapabilities.mutable_cache_capabilities()->CopyFrom(
+        cacheCapabilities);
+
+    EXPECT_CALL(*capabilitiesStub, GetCapabilities(_, _, _))
+        .WillOnce(DoAll(SetArgPointee<2>(serverCapabilities),
+                        Return(grpc::Status::OK)));
+
+    casClient.setUpFromServerCapabilities();
+
+    ASSERT_EQ(casClient.maxTotalBatchSizeBytes(), maxBatchSize);
+}
+
+TEST_F(CasClientFixture, FetchCapabilitiesFail)
+{
+    // Failing after retries:
+    EXPECT_CALL(*capabilitiesStub, GetCapabilities(_, _, _))
+        .WillRepeatedly(Return(grpc::Status::CANCELLED));
+
+    casClient.setUpFromServerCapabilities();
+
+    // A default limit is used:
+    ASSERT_GT(casClient.maxTotalBatchSizeBytes(), 0);
 }
