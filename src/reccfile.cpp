@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <digestgenerator.h>
 #include <fileutils.h>
 #include <logging.h>
-#include <merklize.h>
 #include <reccfile.h>
 
 namespace BloombergLP {
@@ -56,7 +56,8 @@ std::shared_ptr<ReccFile> ReccFileFactory::createFile(const char *path)
         bool executable = is_executable(path);
         const std::string file_name = path_basename(path);
         const std::string file_contents = get_file_contents(path);
-        proto::Digest file_digest = make_digest(file_contents);
+        proto::Digest file_digest =
+            DigestGenerator::make_digest(file_contents);
 
         RECC_LOG_VERBOSE("Creating"
                          << (executable ? " " : " non-")

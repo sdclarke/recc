@@ -13,10 +13,10 @@
 // limitations under the License.
 
 #include <casclient.h>
+#include <digestgenerator.h>
 #include <env.h>
 #include <fileutils.h>
 #include <grpccontext.h>
-#include <merklize.h>
 
 #include <build/bazel/remote/execution/v2/remote_execution_mock.grpc.pb.h>
 #include <gmock/gmock.h>
@@ -54,6 +54,11 @@ class CasClientFixture : public ::testing::Test {
           casClient(casStub, byteStreamStub, capabilitiesStub, instanceName,
                     &grpcContext)
     {
+    }
+
+    static proto::Digest make_digest(const std::string &data)
+    {
+        return DigestGenerator::make_digest(data);
     }
 };
 
@@ -243,7 +248,7 @@ TEST_F(CasClientFixture, LargeBlobUpload)
 
 TEST_F(CasClientFixture, FetchBlob)
 {
-    auto digest = make_digest(abc);
+    const auto digest = make_digest(abc);
     google::bytestream::ReadRequest expectedRequest;
     expectedRequest.set_resource_name("blobs/" + digest.hash() + "/3");
 

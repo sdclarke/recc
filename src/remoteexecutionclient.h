@@ -17,7 +17,6 @@
 
 #include <casclient.h>
 #include <grpccontext.h>
-#include <merklize.h>
 #include <protos.h>
 
 #include <atomic>

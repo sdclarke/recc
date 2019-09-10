@@ -5,6 +5,7 @@ set(SRCS
     authsession.cpp
     casclient.cpp
     deps.cpp
+    digestgenerator.cpp
     env.cpp
     fileutils.cpp
     formpost.cpp
