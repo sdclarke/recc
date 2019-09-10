@@ -34,7 +34,7 @@ test_cover:
     - export COV_FLGS="-g -O0 -fprofile-arcs -ftest-coverage"
     - cmake -DGTEST_SOURCE_ROOT=/usr/src/googletest -DCMAKE_CXX_FLAGS="${COV_FLGS}" -DCMAKE_EXE_LINKER_FLAGS="${COV_FLGS}" -DCMAKE_SHARED_LINKER_FLAGS="${COV_FLGS}" -DCMAKE_CXX_OUTPUT_EXTENSION_REPLACE="ON" .. || exit 1
     - make || exit 1
-    - make test || exit 1
+    - ctest --verbose || exit 1
     - cd $CI_PROJECT_DIR
     - echo Generating gcov files
     - mkdir gcov && cd gcov
