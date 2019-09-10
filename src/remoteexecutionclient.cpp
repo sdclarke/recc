@@ -192,7 +192,7 @@ RemoteExecutionClient::execute_action(const proto::Digest &actionDigest,
 {
     /* Prepare an asynchronous Execute request */
     proto::ExecuteRequest executeRequest;
-    executeRequest.set_instance_name(d_instance);
+    executeRequest.set_instance_name(d_instanceName);
     *executeRequest.mutable_action_digest() = actionDigest;
     executeRequest.set_skip_cache_lookup(skipCache);
 

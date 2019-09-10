@@ -1,4 +1,4 @@
-// Copyright 2018 Bloomberg Finance L.P
+// Copyright 2019 Bloomberg Finance L.P
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@
 #define INCLUDED_CASCLIENT
 
 #include <grpccontext.h>
+#include <grpcpp/channel.h>
 #include <merklize.h>
 #include <protos.h>
 
-#include <exception>
 #include <google/bytestream/bytestream.grpc.pb.h>
-#include <grpcpp/channel.h>
+
+#include <exception>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -34,14 +35,14 @@ typedef std::shared_ptr<grpc::Channel> channel_ref;
 
 class PreconditionFail : public std::exception {
   private:
-    std::vector<std::string> d_missingFiles;
+    const std::vector<std::string> d_missingFiles;
 
   public:
     PreconditionFail(const std::vector<std::string> &missingFileList)
         : d_missingFiles(missingFileList)
     {
     }
-    const char *what() const throw()
+    const char *what() const noexcept
     {
         return "Precondition Failed: Blobs Not Found";
     }
@@ -58,30 +59,41 @@ class CASClient {
     std::unique_ptr<google::bytestream::ByteStream::StubInterface>
         d_byteStreamStub;
 
-  public:
-    std::string d_instance;
+    static const int s_byteStreamChunkSizeBytes;
+    static const int s_maxTotalBatchSizeBytes;
+    static const int s_maxMissingBlobsRequestItems;
+
+    static const std::string s_guid;
+
+  protected:
+    // Accessed by child class `RemoteExecutionClient`
+    const std::string d_instanceName;
     GrpcContext *d_grpcContext;
 
-    CASClient(proto::ContentAddressableStorage::StubInterface *executionStub,
-              google::bytestream::ByteStream::StubInterface *byteStreamStub,
-              std::string instance, GrpcContext *grpcContext)
+  public:
+    explicit CASClient(
+        proto::ContentAddressableStorage::StubInterface *executionStub,
+        google::bytestream::ByteStream::StubInterface *byteStreamStub,
+        const std::string &instance_name, GrpcContext *grpcContext)
         : d_executionStub(executionStub), d_byteStreamStub(byteStreamStub),
-          d_instance(instance), d_grpcContext(grpcContext)
+          d_instanceName(instance_name), d_grpcContext(grpcContext)
     {
     }
 
-    CASClient(std::shared_ptr<grpc::Channel> channel, std::string instance,
-              GrpcContext *grpcContext)
+    explicit CASClient(std::shared_ptr<grpc::Channel> channel,
+                       const std::string &instance_name,
+                       GrpcContext *grpcContext)
         : d_executionStub(proto::ContentAddressableStorage::NewStub(channel)),
           d_byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
-          d_instance(instance), d_grpcContext(grpcContext)
+          d_instanceName(instance_name), d_grpcContext(grpcContext)
     {
     }
 
-    CASClient(std::shared_ptr<grpc::Channel> channel, GrpcContext *grpcContext)
+    explicit CASClient(std::shared_ptr<grpc::Channel> channel,
+                       GrpcContext *grpcContext)
         : d_executionStub(proto::ContentAddressableStorage::NewStub(channel)),
           d_byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
-          d_instance(), d_grpcContext(grpcContext)
+          d_instanceName(), d_grpcContext(grpcContext)
     {
     }
 
@@ -118,6 +130,26 @@ class CASClient {
     void
     upload_resources(const digest_string_umap &blobs,
                      const digest_string_umap &digest_to_filecontents) const;
+
+  private:
+    std::string uploadResourceName(const proto::Digest &digest) const;
+    std::string downloadResourceName(const proto::Digest &digest) const;
+
+    std::unordered_set<proto::Digest>
+    findMissingBlobs(const std::unordered_set<proto::Digest> &digests) const;
+
+    proto::FindMissingBlobsResponse
+    findMissingBlobs(const proto::FindMissingBlobsRequest &request) const;
+
+    void
+    batchUpdateBlobs(const std::unordered_set<proto::Digest> &digests,
+                     const digest_string_umap &blobs,
+                     const digest_string_umap &digest_to_filecontents) const;
+
+    proto::BatchUpdateBlobsResponse
+    batchUpdateBlobs(const proto::BatchUpdateBlobsRequest &request) const;
+
+    static std::string generate_guid();
 };
 } // namespace recc
 } // namespace BloombergLP
