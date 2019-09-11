@@ -43,13 +43,17 @@ using namespace testing;
  */
 class RemoteExecutionClientTestFixture : public ::testing::Test {
   protected:
-    proto::MockExecutionStub *executionStub;
-    proto::MockContentAddressableStorageStub *casStub;
-    proto::MockActionCacheStub *actionCacheStub;
-    google::longrunning::MockOperationsStub *operationsStub;
-    google::bytestream::MockByteStreamStub *byteStreamStub;
-    RemoteExecutionClient *client;
-    GrpcContext *grpcContext;
+    std::shared_ptr<proto::MockExecutionStub> executionStub;
+    std::shared_ptr<proto::MockContentAddressableStorageStub> casStub;
+    std::shared_ptr<proto::MockActionCacheStub> actionCacheStub;
+    std::shared_ptr<google::longrunning::MockOperationsStub> operationsStub;
+    std::shared_ptr<google::bytestream::MockByteStreamStub> byteStreamStub;
+
+    const std::string instance_name = "";
+
+    GrpcContext grpcContext;
+
+    RemoteExecutionClient client;
 
     proto::Digest actionDigest;
     proto::ExecuteRequest expectedExecuteRequest;
@@ -67,18 +71,17 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
     google::bytestream::ReadResponse readResponse;
 
     RemoteExecutionClientTestFixture()
+        : executionStub(std::make_shared<proto::MockExecutionStub>()),
+          casStub(
+              std::make_shared<proto::MockContentAddressableStorageStub>()),
+          actionCacheStub(std::make_shared<proto::MockActionCacheStub>()),
+          operationsStub(
+              std::make_shared<google::longrunning::MockOperationsStub>()),
+          byteStreamStub(
+              std::make_shared<google::bytestream::MockByteStreamStub>()),
+          client(executionStub, casStub, actionCacheStub, operationsStub,
+                 byteStreamStub, instance_name, &grpcContext)
     {
-        // Construct the mock stubs
-        executionStub = new proto::MockExecutionStub();
-        casStub = new proto::MockContentAddressableStorageStub();
-        actionCacheStub = new proto::MockActionCacheStub();
-        operationsStub = new google::longrunning::MockOperationsStub();
-        byteStreamStub = new google::bytestream::MockByteStreamStub;
-
-        grpcContext = new GrpcContext();
-        client = new RemoteExecutionClient(
-            executionStub, casStub, actionCacheStub, operationsStub,
-            byteStreamStub, std::string(), grpcContext);
 
         // Construct the Digest we're passing in, and the ExecuteRequest we
         // expect the RemoteExecutionClient to send as a result.
@@ -147,10 +150,7 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
         readResponse.set_data(tree.SerializeAsString());
     }
 
-    ~RemoteExecutionClientTestFixture()
-    {
-        delete client; // deletes stubs internally
-    }
+    ~RemoteExecutionClientTestFixture() {}
 };
 
 MATCHER_P(MessageEq, expected, "")
@@ -178,7 +178,7 @@ TEST_F(RemoteExecutionClientTestFixture, ExecuteActionTest)
 
     // Ask the client to execute the action, and make sure the result is
     // correct.
-    const auto actionResult = client->execute_action(actionDigest);
+    const auto actionResult = client.execute_action(actionDigest);
 
     EXPECT_EQ(actionResult.d_exitCode, 123);
     EXPECT_TRUE(actionResult.d_stdOut.d_inlined);
@@ -240,7 +240,7 @@ TEST_F(RemoteExecutionClientTestFixture, RpcRetryTest)
 
     // Ask the client to execute the action, and make sure the result is
     // correct.
-    const auto actionResult = client->execute_action(actionDigest);
+    const auto actionResult = client.execute_action(actionDigest);
 
     RECC_RETRY_LIMIT = old_retry_limit;
 }
@@ -271,7 +271,7 @@ TEST_F(RemoteExecutionClientTestFixture, WriteFilesToDisk)
         .WillOnce(Return(false));
     EXPECT_CALL(*reader, Finish()).WillOnce(Return(grpc::Status::OK));
 
-    client->write_files_to_disk(testResult, tempDir.name());
+    client.write_files_to_disk(testResult, tempDir.name());
 
     const std::string expectedPath = std::string(tempDir.name()) + "/test.txt";
     EXPECT_TRUE(is_executable(expectedPath.c_str()));
@@ -374,11 +374,11 @@ TEST_F(RemoteExecutionClientTestFixture, CancelOperation)
                  * unhappy. We need to tell GTest to ignore these leaks during
                  * the memory check.
                  */
-                Mock::AllowLeak(executionStub);
+                Mock::AllowLeak(executionStub.get());
                 Mock::AllowLeak(operationReader);
-                Mock::AllowLeak(operationsStub);
+                Mock::AllowLeak(operationsStub.get());
 
-                client->execute_action(actionDigest);
+                client.execute_action(actionDigest);
             },
             ::testing::ExitedWithCode(130), ".*");
     }
@@ -396,7 +396,7 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestMiss)
 
     ActionResult actionResultOut = actionResult;
 
-    const bool in_cache = client->fetch_from_action_cache(
+    const bool in_cache = client.fetch_from_action_cache(
         actionDigest, std::string(), &actionResultOut);
 
     EXPECT_FALSE(in_cache);
@@ -414,7 +414,7 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestHit)
 
     ActionResult actionResultOut = actionResult;
 
-    const bool in_cache = client->fetch_from_action_cache(
+    const bool in_cache = client.fetch_from_action_cache(
         actionDigest, std::string(), &actionResultOut);
 
     EXPECT_TRUE(in_cache);
@@ -429,8 +429,8 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestServerError)
     // All other server errors other than `NOT_FOUND` are thrown.
 
     ActionResult actionResultOut;
-    ASSERT_THROW(client->fetch_from_action_cache(actionDigest, std::string(),
-                                                 &actionResultOut),
+    ASSERT_THROW(client.fetch_from_action_cache(actionDigest, std::string(),
+                                                &actionResultOut),
                  std::runtime_error);
 }
 
@@ -441,7 +441,7 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestMissNoActionResult)
     // `NOT_FOUND` => return false and do not write the ActionResult parameter.
 
     const bool in_cache =
-        client->fetch_from_action_cache(actionDigest, std::string(), nullptr);
+        client.fetch_from_action_cache(actionDigest, std::string(), nullptr);
 
     EXPECT_FALSE(in_cache);
 }
@@ -452,7 +452,7 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheHitNoActionResult)
         .WillOnce(Return(grpc::Status::OK));
 
     const bool in_cache =
-        client->fetch_from_action_cache(actionDigest, std::string(), nullptr);
+        client.fetch_from_action_cache(actionDigest, std::string(), nullptr);
 
     EXPECT_TRUE(in_cache);
 }
