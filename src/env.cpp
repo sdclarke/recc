@@ -100,6 +100,18 @@ std::map<std::string, std::string> RECC_REMOTE_PLATFORM =
 std::deque<std::string> RECC_CONFIG_LOCATIONS = {};
 
 /**
+ * Convert each string character to uppercase until equal_pos length.
+ */
+void to_upper(std::string *const value,
+              const std::string::size_type &equal_pos)
+{
+    transform(value->cbegin(),
+              value->cbegin() +
+                  static_cast<std::string::difference_type>(equal_pos),
+              value->begin(), ::toupper);
+}
+
+/**
  * Parse a comma-separated list, storing its items in the given set.
  */
 void parse_set(const char *str, std::set<std::string> *result)
@@ -119,16 +131,24 @@ void parse_set(const char *str, std::set<std::string> *result)
 
 /**
  * Formats line to be used in parse_config_variables.
- * Modifies parameter passed to it by pointer
+ * Modifies parameter passed to it by pointer.
  */
-void format_config_string(std::string *line)
+void format_config_string(std::string *const line)
 {
-    // converts only the KEY to uppercase
-    transform(line->cbegin(),
-              line->cbegin() +
-                  static_cast<std::string::difference_type>(line->find('=')),
-              line->begin(), ::toupper);
+    const std::string::size_type equal_pos = line->find('=');
+    const std::string key = line->substr(0, equal_pos);
+    std::string map_key = key.substr(0, key.rfind('_'));
 
+    // Handle map configuration variables. Only convert keys, not value.
+    if (map_key == "remote_platform" || map_key == "deps_env" ||
+        map_key == "remote_env") {
+        const std::string map_value = line->substr(key.rfind('_') + 1);
+        to_upper(&map_key, map_key.size());
+        *line = map_key + "_" + map_value;
+    }
+    else {
+        to_upper(line, equal_pos);
+    }
     const std::string tmpdirConfig = "TMPDIR";
 
     // prefix "RECC_" to name, unless name is TMPDIR
@@ -363,6 +383,10 @@ void handle_special_defaults()
                          "path. "
                          << "Rewriting to absolute path "
                          << RECC_PROJECT_ROOT);
+    }
+
+    if (RECC_REMOTE_PLATFORM.empty()) {
+        RECC_LOG_WARNING("Warning: RECC_REMOTE_PLATFORM has no values.");
     }
 
     if (RECC_METRICS_FILE.size() && RECC_METRICS_UDP_SERVER.size()) {
