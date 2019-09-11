@@ -53,7 +53,7 @@ struct CommandFileInfo {
  *
  * Only paths local to the build directory are returned.
  */
-CommandFileInfo get_file_info(ParsedCommand command);
+CommandFileInfo get_file_info(const ParsedCommand &command);
 
 /**
  * Parse the given Make rules and return a set containing their dependencies.
@@ -66,7 +66,8 @@ dependencies_from_make_rules(const std::string &rules,
 /**
  * Given a set of dependencies, return a set of possible compilation outputs.
  */
-std::set<std::string> guess_products(std::set<std::string> dependencies);
+std::set<std::string>
+guess_products(const std::set<std::string> &dependencies);
 } // namespace recc
 } // namespace BloombergLP
 
