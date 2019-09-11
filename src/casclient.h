@@ -54,9 +54,9 @@ class PreconditionFail : public std::exception {
 
 class CASClient {
   private:
-    std::unique_ptr<proto::ContentAddressableStorage::StubInterface>
+    std::shared_ptr<proto::ContentAddressableStorage::StubInterface>
         d_executionStub;
-    std::unique_ptr<google::bytestream::ByteStream::StubInterface>
+    std::shared_ptr<google::bytestream::ByteStream::StubInterface>
         d_byteStreamStub;
 
     static const int s_byteStreamChunkSizeBytes;
@@ -72,28 +72,22 @@ class CASClient {
 
   public:
     explicit CASClient(
-        proto::ContentAddressableStorage::StubInterface *executionStub,
-        google::bytestream::ByteStream::StubInterface *byteStreamStub,
-        const std::string &instance_name, GrpcContext *grpcContext)
+        std::shared_ptr<proto::ContentAddressableStorage::StubInterface>
+            executionStub,
+        std::shared_ptr<google::bytestream::ByteStream::StubInterface>
+            byteStreamStub,
+        const std::string &instanceName, GrpcContext *grpcContext)
         : d_executionStub(executionStub), d_byteStreamStub(byteStreamStub),
-          d_instanceName(instance_name), d_grpcContext(grpcContext)
+          d_instanceName(instanceName), d_grpcContext(grpcContext)
     {
     }
 
     explicit CASClient(std::shared_ptr<grpc::Channel> channel,
-                       const std::string &instance_name,
+                       const std::string &instanceName,
                        GrpcContext *grpcContext)
         : d_executionStub(proto::ContentAddressableStorage::NewStub(channel)),
           d_byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
-          d_instanceName(instance_name), d_grpcContext(grpcContext)
-    {
-    }
-
-    explicit CASClient(std::shared_ptr<grpc::Channel> channel,
-                       GrpcContext *grpcContext)
-        : d_executionStub(proto::ContentAddressableStorage::NewStub(channel)),
-          d_byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
-          d_instanceName(), d_grpcContext(grpcContext)
+          d_instanceName(instanceName), d_grpcContext(grpcContext)
     {
     }
 

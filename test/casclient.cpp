@@ -32,8 +32,27 @@ using namespace testing;
 
 const std::string abc("abc");
 const std::string defg("defg");
-const std::string emptyString;
-const digest_string_umap emptyMap;
+
+class CasClientFixture : public ::testing::Test {
+  protected:
+    const std::string instanceName;
+
+    std::shared_ptr<proto::MockContentAddressableStorageStub> casStub;
+    std::shared_ptr<google::bytestream::MockByteStreamStub> byteStreamStub;
+
+    GrpcContext grpcContext;
+    CASClient casClient;
+
+    CasClientFixture()
+        : instanceName(""),
+          casStub(
+              std::make_shared<proto::MockContentAddressableStorageStub>()),
+          byteStreamStub(
+              std::make_shared<google::bytestream::MockByteStreamStub>()),
+          casClient(casStub, byteStreamStub, instanceName, &grpcContext)
+    {
+    }
+};
 
 MATCHER_P(MessageEq, expected, "")
 {
@@ -63,77 +82,59 @@ MATCHER_P2(HasUpdateBlobRequest, digest, data, "")
     return false;
 }
 
-TEST(CASClientTest, EmptyUpload)
+TEST_F(CasClientFixture, EmptyUpload)
 {
-    auto stub = new proto::MockContentAddressableStorageStub();
-    auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    GrpcContext grpcContext;
-    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
-
     proto::FindMissingBlobsResponse response;
 
-    EXPECT_CALL(*stub, FindMissingBlobs(_, HasNoBlobDigests(), _))
+    EXPECT_CALL(*casStub, FindMissingBlobs(_, HasNoBlobDigests(), _))
         .Times(AtMost(1))
         .WillOnce(DoAll(SetArgPointee<2>(response), Return(grpc::Status::OK)));
-    EXPECT_CALL(*stub, BatchUpdateBlobs(_, _, _)).Times(0);
+    EXPECT_CALL(*casStub, BatchUpdateBlobs(_, _, _)).Times(0);
 
-    cas.upload_resources(emptyMap, emptyMap);
+    casClient.upload_resources({}, {});
 }
 
-TEST(CASClientTest, AlreadyUploadedBlob)
+TEST_F(CasClientFixture, AlreadyUploadedBlob)
 {
-    auto stub = new proto::MockContentAddressableStorageStub();
-    auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    GrpcContext grpcContext;
-    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
-
     digest_string_umap blobs;
     blobs[make_digest(abc)] = abc;
     proto::FindMissingBlobsResponse response;
 
-    EXPECT_CALL(*stub, FindMissingBlobs(_, HasBlobDigest(make_digest(abc)), _))
+    EXPECT_CALL(*casStub,
+                FindMissingBlobs(_, HasBlobDigest(make_digest(abc)), _))
         .WillOnce(DoAll(SetArgPointee<2>(response), Return(grpc::Status::OK)));
-    EXPECT_CALL(*stub, BatchUpdateBlobs(_, _, _)).Times(0);
+    EXPECT_CALL(*casStub, BatchUpdateBlobs(_, _, _)).Times(0);
 
-    cas.upload_resources(blobs, emptyMap);
+    casClient.upload_resources(blobs, {});
 }
 
-TEST(CASClientTest, AlreadyUploadedFile)
+TEST_F(CasClientFixture, AlreadyUploadedFile)
 {
     TemporaryDirectory tmpdir;
     std::string path = tmpdir.name() + std::string("/abc.txt");
     write_file(path.c_str(), "abc");
 
-    auto stub = new proto::MockContentAddressableStorageStub();
-    auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    GrpcContext grpcContext;
-    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
-
     digest_string_umap digest_to_filecontents;
     digest_to_filecontents[make_digest(abc)] = path;
     proto::FindMissingBlobsResponse response;
 
-    EXPECT_CALL(*stub, FindMissingBlobs(_, HasBlobDigest(make_digest(abc)), _))
+    EXPECT_CALL(*casStub,
+                FindMissingBlobs(_, HasBlobDigest(make_digest(abc)), _))
         .WillOnce(DoAll(SetArgPointee<2>(response), Return(grpc::Status::OK)));
-    EXPECT_CALL(*stub, BatchUpdateBlobs(_, _, _)).Times(0);
+    EXPECT_CALL(*casStub, BatchUpdateBlobs(_, _, _)).Times(0);
 
-    cas.upload_resources(emptyMap, digest_to_filecontents);
+    casClient.upload_resources({}, digest_to_filecontents);
 }
 
-TEST(CASClientTest, NewBlobUpload)
+TEST_F(CasClientFixture, NewBlobUpload)
 {
-    auto stub = new proto::MockContentAddressableStorageStub();
-    auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    GrpcContext grpcContext;
-    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
-
     digest_string_umap blobs;
     blobs[make_digest(abc)] = abc;
     blobs[make_digest(defg)] = defg;
     proto::FindMissingBlobsResponse response;
     *response.add_missing_blob_digests() = make_digest(defg);
 
-    EXPECT_CALL(*stub,
+    EXPECT_CALL(*casStub,
                 FindMissingBlobs(_,
                                  AllOf(HasBlobDigest(make_digest(abc)),
                                        HasBlobDigest(make_digest(defg))),
@@ -143,41 +144,38 @@ TEST(CASClientTest, NewBlobUpload)
     proto::BatchUpdateBlobsResponse updateBlobsResponse;
     *updateBlobsResponse.add_responses()->mutable_digest() = make_digest(defg);
     EXPECT_CALL(
-        *stub,
+        *casStub,
         BatchUpdateBlobs(_, HasUpdateBlobRequest(make_digest(defg), defg), _))
         .WillOnce(DoAll(SetArgPointee<2>(updateBlobsResponse),
                         Return(grpc::Status::OK)));
 
-    cas.upload_resources(blobs, emptyMap);
+    casClient.upload_resources(blobs, {});
 }
 
-TEST(CASClientTest, NewFileUpload)
+TEST_F(CasClientFixture, NewFileUpload)
 {
     TemporaryDirectory tmpdir;
     std::string path = tmpdir.name() + std::string("/abc.txt");
     write_file(path.c_str(), "abc");
-
-    auto stub = new proto::MockContentAddressableStorageStub();
-    auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    GrpcContext grpcContext;
-    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
     digest_string_umap digest_to_filecontents;
     digest_to_filecontents[make_digest(abc)] = get_file_contents(path.c_str());
     proto::FindMissingBlobsResponse response;
     *response.add_missing_blob_digests() = make_digest(abc);
 
-    EXPECT_CALL(*stub, FindMissingBlobs(_, HasBlobDigest(make_digest(abc)), _))
+    EXPECT_CALL(*casStub,
+                FindMissingBlobs(_, HasBlobDigest(make_digest(abc)), _))
         .WillOnce(DoAll(SetArgPointee<2>(response), Return(grpc::Status::OK)));
 
     proto::BatchUpdateBlobsResponse updateBlobsResponse;
     *updateBlobsResponse.add_responses()->mutable_digest() = make_digest(abc);
-    EXPECT_CALL(*stub, BatchUpdateBlobs(
-                           _, HasUpdateBlobRequest(make_digest(abc), abc), _))
+    EXPECT_CALL(
+        *casStub,
+        BatchUpdateBlobs(_, HasUpdateBlobRequest(make_digest(abc), abc), _))
         .WillOnce(DoAll(SetArgPointee<2>(updateBlobsResponse),
                         Return(grpc::Status::OK)));
 
-    cas.upload_resources(emptyMap, digest_to_filecontents);
+    casClient.upload_resources({}, digest_to_filecontents);
 }
 
 ACTION_P3(AddWriteRequestData, blob, name, isComplete)
@@ -195,13 +193,8 @@ ACTION_P3(AddWriteRequestData, blob, name, isComplete)
     *isComplete = arg0.finish_write();
 }
 
-TEST(CASClientTest, LargeBlobUpload)
+TEST_F(CasClientFixture, LargeBlobUpload)
 {
-    auto stub = new proto::MockContentAddressableStorageStub();
-    auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    GrpcContext grpcContext;
-    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
-
     auto writer = new grpc::testing::MockClientWriter<
         google::bytestream::WriteRequest>();
 
@@ -212,11 +205,12 @@ TEST(CASClientTest, LargeBlobUpload)
     proto::FindMissingBlobsResponse response;
     *response.add_missing_blob_digests() = bigBlobDigest;
 
-    EXPECT_CALL(*stub, FindMissingBlobs(_, HasBlobDigest(bigBlobDigest), _))
+    EXPECT_CALL(*casStub, FindMissingBlobs(_, HasBlobDigest(bigBlobDigest), _))
         .WillOnce(DoAll(SetArgPointee<2>(response), Return(grpc::Status::OK)));
 
     google::bytestream::WriteResponse writeResponse;
-    writeResponse.set_committed_size(bigBlob.length());
+    writeResponse.set_committed_size(
+        static_cast<google::protobuf::int64>(bigBlob.length()));
 
     EXPECT_CALL(*byteStreamStub, WriteRaw(_, _))
         .WillOnce(DoAll(SetArgPointee<1>(writeResponse), Return(writer)));
@@ -231,7 +225,7 @@ TEST(CASClientTest, LargeBlobUpload)
     EXPECT_CALL(*writer, WritesDone()).WillOnce(Return(true));
     EXPECT_CALL(*writer, Finish()).WillOnce(Return(grpc::Status::OK));
 
-    cas.upload_resources(blobs, emptyMap);
+    casClient.upload_resources(blobs, {});
 
     EXPECT_EQ(storedBlob, bigBlob);
 
@@ -244,13 +238,8 @@ TEST(CASClientTest, LargeBlobUpload)
     EXPECT_TRUE(regex_match(name, std::regex(uploadNameRegex)));
 }
 
-TEST(CASClientTest, FetchBlob)
+TEST_F(CasClientFixture, FetchBlob)
 {
-    auto stub = new proto::MockContentAddressableStorageStub();
-    auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    GrpcContext grpcContext;
-    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
-
     auto digest = make_digest(abc);
     google::bytestream::ReadRequest expectedRequest;
     expectedRequest.set_resource_name("blobs/" + digest.hash() + "/3");
@@ -268,17 +257,13 @@ TEST(CASClientTest, FetchBlob)
         .WillOnce(Return(false));
     EXPECT_CALL(*reader, Finish()).WillOnce(Return(grpc::Status::OK));
 
-    auto blob = cas.fetch_blob(digest);
+    auto blob = casClient.fetch_blob(digest);
     EXPECT_EQ(blob, abc);
 }
 
-TEST(CASClientTest, FetchBlobResumeDownload)
+TEST_F(CasClientFixture, FetchBlobResumeDownload)
 {
     RECC_RETRY_LIMIT = 1;
-    auto stub = new proto::MockContentAddressableStorageStub();
-    auto byteStreamStub = new google::bytestream::MockByteStreamStub();
-    GrpcContext grpcContext;
-    CASClient cas(stub, byteStreamStub, emptyString, &grpcContext);
 
     auto digest = make_digest(abc);
     google::bytestream::ReadRequest firstRequest;
@@ -315,6 +300,6 @@ TEST(CASClientTest, FetchBlobResumeDownload)
     EXPECT_CALL(*byteStreamStub, ReadRaw(_, MessageEq(secondRequest)))
         .WillOnce(Return(reader));
 
-    auto blob = cas.fetch_blob(digest);
+    auto blob = casClient.fetch_blob(digest);
     EXPECT_EQ(blob, abc);
 }
