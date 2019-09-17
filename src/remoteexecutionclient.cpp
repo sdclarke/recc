@@ -36,45 +36,7 @@ using namespace google::longrunning;
 namespace BloombergLP {
 namespace recc {
 
-std::atomic_bool RemoteExecutionClient::s_sigint_received(false);
-
-/**
- * Return the ActionResult for the given Operation. Throws an exception
- * if the Operation finished with an error, or if the Operation hasn't
- * finished yet.
- */
-proto::ActionResult get_actionresult(Operation operation)
-{
-    if (!operation.done()) {
-        throw std::logic_error(
-            "Called get_actionresult on an unfinished Operation");
-    }
-    else if (operation.has_error()) {
-        ensure_ok(operation.error());
-    }
-    else if (!operation.response().Is<proto::ExecuteResponse>()) {
-        throw std::runtime_error("Server returned invalid Operation result");
-    }
-
-    proto::ExecuteResponse executeResponse;
-    if (!operation.response().UnpackTo(&executeResponse)) {
-        throw std::runtime_error("Operation response unpacking failed");
-    }
-
-    ensure_ok(executeResponse.status());
-
-    const proto::ActionResult actionResult = executeResponse.result();
-    if (actionResult.exit_code() == 0) {
-        RECC_LOG_VERBOSE("Execute response message: " +
-                         executeResponse.message());
-    }
-    else if (!executeResponse.message().empty()) {
-        RECC_LOG("Remote execution message: " + executeResponse.message());
-    }
-
-    return actionResult;
-}
-
+namespace { // Helper functions used by `RemoteExecutionClient`.
 /**
  * Add the files from the given directory (and its subdirectories, recursively)
  * to the given outputFiles map.
@@ -115,6 +77,46 @@ void read_operation_async(ReaderPointer reader_ptr,
             break;
         }
     }
+}
+} // namespace
+
+std::atomic_bool RemoteExecutionClient::s_sigint_received(false);
+
+/**
+ * Return the ActionResult for the given Operation. Throws an exception
+ * if the Operation finished with an error, or if the Operation hasn't
+ * finished yet.
+ */
+proto::ActionResult get_actionresult(const Operation &operation)
+{
+    if (!operation.done()) {
+        throw std::logic_error(
+            "Called get_actionresult on an unfinished Operation");
+    }
+    else if (operation.has_error()) {
+        ensure_ok(operation.error());
+    }
+    else if (!operation.response().Is<proto::ExecuteResponse>()) {
+        throw std::runtime_error("Server returned invalid Operation result");
+    }
+
+    proto::ExecuteResponse executeResponse;
+    if (!operation.response().UnpackTo(&executeResponse)) {
+        throw std::runtime_error("Operation response unpacking failed");
+    }
+
+    ensure_ok(executeResponse.status());
+
+    const proto::ActionResult actionResult = executeResponse.result();
+    if (actionResult.exit_code() == 0) {
+        RECC_LOG_VERBOSE("Execute response message: " +
+                         executeResponse.message());
+    }
+    else if (!executeResponse.message().empty()) {
+        RECC_LOG("Remote execution message: " + executeResponse.message());
+    }
+
+    return actionResult;
 }
 
 /**
