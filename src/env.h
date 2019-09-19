@@ -35,8 +35,13 @@ extern std::string RECC_SERVER;
 extern std::string RECC_CAS_SERVER;
 
 /**
- * The URI of the action cache server to use. By default, uses RECC_CAS_SERVER
- * if set or RECC_SERVER if not.
+ * Whether to issue a `GetCapabilities()` request to the CAS server.
+ */
+extern bool RECC_CAS_GET_CAPABILITIES;
+
+/**
+ * The URI of the action cache server to use. By default, uses
+ * RECC_CAS_SERVER if set or RECC_SERVER if not.
  */
 extern std::string RECC_ACTION_CACHE_SERVER;
 

@@ -82,23 +82,11 @@ class CASClient {
         std::shared_ptr<google::bytestream::ByteStream::StubInterface>
             byteStreamStub,
         std::shared_ptr<proto::Capabilities::StubInterface> capabilitiesStub,
-        const std::string &instanceName, GrpcContext *grpcContext)
-        : d_executionStub(executionStub), d_byteStreamStub(byteStreamStub),
-          d_capabilitiesStub(capabilitiesStub), d_instanceName(instanceName),
-          d_grpcContext(grpcContext)
-    {
-    }
+        const std::string &instanceName, GrpcContext *grpcContext);
 
     explicit CASClient(std::shared_ptr<grpc::Channel> channel,
                        const std::string &instanceName,
-                       GrpcContext *grpcContext)
-        : d_executionStub(proto::ContentAddressableStorage::NewStub(channel)),
-          d_byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
-          d_capabilitiesStub(proto::Capabilities::NewStub(channel)),
-          d_instanceName(instanceName), d_grpcContext(grpcContext)
-    {
-    }
-
+                       GrpcContext *grpcContext);
     /**
      * Unconditionally upload a blob using the ByteStream API.
      */

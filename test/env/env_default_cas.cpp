@@ -31,3 +31,15 @@ TEST(EnvTest, CasDefaultsToServerTest)
     EXPECT_EQ(expectedReccServer, RECC_SERVER);
     EXPECT_EQ(expectedReccServer, RECC_CAS_SERVER);
 }
+
+TEST(EnvTest, CasDoNotGetCapabilitiesByDefault)
+{
+    const char *testEnviron[] = {"RECC_SERVER=somehost:1234", nullptr};
+
+    parse_config_variables(testEnviron);
+    // need this for testing, since we are calling parse_config_variables
+    // directly.
+    handle_special_defaults();
+
+    EXPECT_FALSE(RECC_CAS_GET_CAPABILITIES);
+}

@@ -76,6 +76,10 @@ int main(int argc, char *argv[])
     }
 
     CASClient casClient(returnChannels.cas(), RECC_INSTANCE, &grpcContext);
+    if (RECC_CAS_GET_CAPABILITIES) {
+        casClient.setUpFromServerCapabilities();
+    }
+
     NestedDirectory nestedDirectory;
     digest_string_umap blobs;
     digest_string_umap digest_to_filecontents;
