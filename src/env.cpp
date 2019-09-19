@@ -103,12 +103,14 @@ std::deque<std::string> RECC_CONFIG_LOCATIONS = {};
  * Convert each string character to uppercase until equal_pos length.
  */
 void to_upper(std::string *const value,
-              const std::string::size_type &equal_pos)
+              const std::string::size_type &start_pos,
+              const std::string::size_type &end_pos)
 {
-    transform(value->cbegin(),
-              value->cbegin() +
-                  static_cast<std::string::difference_type>(equal_pos),
-              value->begin(), ::toupper);
+
+    transform(
+        value->cbegin() + static_cast<std::string::difference_type>(start_pos),
+        value->cbegin() + static_cast<std::string::difference_type>(end_pos),
+        value->begin(), ::toupper);
 }
 
 /**
@@ -135,20 +137,17 @@ void parse_set(const char *str, std::set<std::string> *result)
  */
 void format_config_string(std::string *const line)
 {
-    const std::string::size_type equal_pos = line->find('=');
-    const std::string key = line->substr(0, equal_pos);
-    std::string map_key = key.substr(0, key.rfind('_'));
+    std::string::size_type start_pos = 0;
+    std::string::size_type end_pos = line->find('=');
+    const std::string map_key = substring_until_nth_token(*line, "_", 2);
 
     // Handle map configuration variables. Only convert keys, not value.
     if (map_key == "remote_platform" || map_key == "deps_env" ||
         map_key == "remote_env") {
-        const std::string map_value = line->substr(key.rfind('_') + 1);
-        to_upper(&map_key, map_key.size());
-        *line = map_key + "_" + map_value;
+        end_pos = map_key.size();
     }
-    else {
-        to_upper(line, equal_pos);
-    }
+
+    to_upper(line, start_pos, end_pos);
     const std::string tmpdirConfig = "TMPDIR";
 
     // prefix "RECC_" to name, unless name is TMPDIR
@@ -490,6 +489,27 @@ void parse_host_port_string(const std::string &inputString,
         serverRet =
             inputString.substr(0, std::min(split_at, inputString.size()));
     }
+}
+
+std::string substring_until_nth_token(const std::string &value,
+                                      const std::string &character,
+                                      const std::string::size_type &pos)
+{
+    std::size_t i = 0;
+    std::string result, next_string = value;
+    while (i < pos) {
+        auto position = next_string.find(character);
+        if (position == std::string::npos ||
+            position + character.size() > next_string.size()) {
+            return std::string();
+        }
+        if (!result.empty())
+            result += character;
+        result += next_string.substr(0, position);
+        next_string = next_string.substr(position + character.size());
+        ++i;
+    }
+    return result;
 }
 
 } // namespace recc

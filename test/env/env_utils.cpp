@@ -45,3 +45,32 @@ TEST(EnvUtilsTest, ParseHostPortFromStringTest)
     EXPECT_EQ("example.org", host);
     EXPECT_EQ(6789, port);
 }
+
+TEST(EnvUtilsTest, SubstringAtNthTest)
+{
+    auto test_string = "HELLO_WORLD";
+    ASSERT_EQ("HELLO", substring_until_nth_token(test_string, "_", 1));
+    ASSERT_EQ("", substring_until_nth_token(test_string, "_", 2));
+    ASSERT_EQ("", substring_until_nth_token(test_string, "_", 5));
+
+    test_string = "WEST/WORLD/HI";
+    ASSERT_EQ("WEST", substring_until_nth_token(test_string, "/", 1));
+    ASSERT_EQ("", substring_until_nth_token(test_string, "_", 1));
+    ASSERT_EQ("WEST/WORLD", substring_until_nth_token(test_string, "/", 2));
+
+    test_string = "HELLO_";
+    ASSERT_EQ("HELLO", substring_until_nth_token(test_string, "_", 1));
+    ASSERT_EQ("", substring_until_nth_token(test_string, "_", 3));
+    ASSERT_EQ("", substring_until_nth_token(test_string, "_", 4));
+
+    test_string = "HELLO_WORLD_HELLO";
+    ASSERT_EQ("HELLO", substring_until_nth_token(test_string, "_", 1));
+    ASSERT_EQ("HELLO_WORLD", substring_until_nth_token(test_string, "_", 2));
+    ASSERT_EQ("", substring_until_nth_token(test_string, "_", 3));
+
+    test_string = "HELLO_WORLD_HELLO_WORLD";
+    ASSERT_EQ("HELLO", substring_until_nth_token(test_string, "_", 1));
+    ASSERT_EQ("HELLO_WORLD", substring_until_nth_token(test_string, "_", 2));
+    ASSERT_EQ("HELLO_WORLD_HELLO",
+              substring_until_nth_token(test_string, "_", 3));
+}
