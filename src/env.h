@@ -303,6 +303,14 @@ void parse_host_port_string(const std::string &inputString,
                             std::string &serverRet, int *portRet);
 
 /**
+ * Return a substring ending at the nth occurrence of a character. If a nth
+ * occurrence isn't found, return empty string.
+ */
+std::string substring_until_nth_token(const std::string &value,
+                                      const std::string &character,
+                                      const std::string::size_type &pos);
+
+/**
  * The process environment.
  */
 extern "C" char **environ;
