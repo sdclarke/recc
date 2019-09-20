@@ -68,6 +68,14 @@ dependencies_from_make_rules(const std::string &rules,
  */
 std::set<std::string>
 guess_products(const std::set<std::string> &dependencies);
+
+/**
+ * Determine the location of crtbegin.o that Clang has selected as its
+ * GCC installation marker, from the stderr output of `clang -v`.
+ * Returns an empty string if something went wrong.
+ */
+std::string crtbegin_from_clang_v(const std::string &str);
+
 } // namespace recc
 } // namespace BloombergLP
 
