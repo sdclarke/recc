@@ -55,14 +55,18 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
         if (RECC_DEPS_OVERRIDE.empty() && !RECC_FORCE_REMOTE) {
             RECC_LOG_VERBOSE("Getting dependencies");
 
-            /* Can throw subprocess_failed_error */
             CommandFileInfo fileInfo;
-            { // Timed block
+
+            try { // Timed block
                 reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
                     TIMER_NAME_COMPILER_DEPS, RECC_ENABLE_METRICS);
-
                 fileInfo = get_file_info(command);
             }
+            catch (const subprocess_failed_error &e) {
+                RECC_LOG_VERBOSE("Running locally, to display the error.");
+                return nullptr;
+            }
+
             deps = fileInfo.d_dependencies;
 
             if (RECC_OUTPUT_DIRECTORIES_OVERRIDE.empty() &&

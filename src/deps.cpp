@@ -107,6 +107,9 @@ CommandFileInfo get_file_info(const ParsedCommand &parsedCommand)
             errorMsg += (token + " ");
         }
         RECC_LOG_ERROR(errorMsg);
+        RECC_LOG_ERROR("Exit status: " << subprocessResult.d_exitCode);
+        RECC_LOG_VERBOSE("stdout: " << subprocessResult.d_stdOut);
+        RECC_LOG_VERBOSE("stderr: " << subprocessResult.d_stdErr);
         throw subprocess_failed_error(subprocessResult.d_exitCode);
     }
 
