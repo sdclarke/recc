@@ -190,7 +190,7 @@ std::map<std::string, command_parser> make_command_parser_map(
 
 // clang-format off
 const std::map<std::string, command_parser> commandParsers = make_command_parser_map({
-    {{"gcc", "g++", "c++"}, COMMAND_PARSER_LAMBDA {
+    {{"gcc", "g++", "c++", "clang", "clang++"}, COMMAND_PARSER_LAMBDA {
             std::vector<std::string> preproOptions;
 
         OPTIONS_START()
@@ -243,7 +243,10 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
             }
         }
 
-        depsCommand->push_back("-M");
+        depsCommand->push_back("-M"); // Print make rule to stdout.
+        depsCommand->push_back("-v"); // Prints a bunch of stuff to stderr.
+                                      // For Clang, this also mentions where
+                                      // it found crtbegin.o.
         return isCompileCommand;
     }},
     {{"gcc-preprocessor"}, COMMAND_PARSER_LAMBDA {
@@ -336,12 +339,16 @@ ParsedCommand::ParsedCommand(std::vector<std::string> command,
 {
     d_compilerCommand = false;
     d_producesSunMakeRules = false;
+    d_isClang = false;
     if (command.size() > 0) {
         auto basename = command_basename(command[0]);
         if (commandParsers.count(basename) > 0) {
             d_compilerCommand = commandParsers.at(basename)(
                 &command, workingDirectory, &d_dependenciesCommand,
                 &d_commandProducts, &d_producesSunMakeRules);
+        }
+        if (basename == "clang" || basename == "clang++") {
+            d_isClang = true;
         }
     }
     this->d_command = command;

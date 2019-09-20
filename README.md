@@ -7,8 +7,8 @@ the build to be executed remotely using the same execution service which will th
 
 More information about `recc` and `BuildGrid` can be found in the [presentation][] we gave at Bazelcon 2018, and on this [blog post][].
 
-`recc` is in active development and in use at [Bloomberg](techat). On Linux it primarily supports gcc; and on Solaris/Aix it supports vendor compilers. We
-would like add support for clang in the future.
+`recc` is in active development and in use at [Bloomberg](techat). On Linux it primarily supports gcc; and on Solaris/Aix it supports vendor compilers.
+Clang support is currently (very) experimental.
 
 For information regarding contributing to this project, please read the [Contribution guide](CONTRIBUTING.md).
 

@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -95,11 +96,46 @@ std::set<std::string> dependencies_from_make_rules(const std::string &rules,
     return result;
 }
 
+std::string crtbegin_from_clang_v(const std::string &str)
+{
+    // Look for lines of the form:
+    // ^Selected GCC installation: <path>$
+    // and
+    // ^Selected multilib: <path>;.*$
+    // Then return these two paths joined (in order) with crtbegin.o appended.
+    //
+    // Reference:
+    // https://github.com/llvm-mirror/clang/blob/69f63a0cc21da9f587125760f10610146c8c47c3/lib/Driver/ToolChains/Gnu.cpp#L1747
+
+    std::regex re(
+        "Selected GCC installation: ([^\n]*).*Selected multilib: ([^;\n]*)",
+        std::regex::extended);
+    std::smatch m;
+    if (!std::regex_search(str, m, re)) {
+        RECC_LOG_VERBOSE("Failed to locate crtbegin.o for clang");
+        return "";
+    }
+
+    std::ostringstream s;
+    s << m[1];
+    if (m[2] != ".") {
+        // Avoid redundant .'s in the path.
+        s << "/" << m[2];
+    }
+    s << "/crtbegin.o";
+
+    std::string crtbegin_file = s.str();
+    RECC_LOG_VERBOSE("Found crtbegin.o for clang: " << crtbegin_file);
+
+    return crtbegin_file;
+}
+
 CommandFileInfo get_file_info(const ParsedCommand &parsedCommand)
 {
     CommandFileInfo result;
+    bool is_clang = parsedCommand.is_clang();
     auto subprocessResult = execute(parsedCommand.get_dependencies_command(),
-                                    true, false, RECC_DEPS_ENV);
+                                    true, is_clang, RECC_DEPS_ENV);
 
     if (subprocessResult.d_exitCode != 0) {
         std::string errorMsg = "Failed to execute get dependencies command: ";
@@ -116,6 +152,17 @@ CommandFileInfo get_file_info(const ParsedCommand &parsedCommand)
     result.d_dependencies = dependencies_from_make_rules(
         subprocessResult.d_stdOut, parsedCommand.produces_sun_make_rules(),
         RECC_DEPS_GLOBAL_PATHS);
+
+    if (RECC_DEPS_GLOBAL_PATHS && is_clang) {
+        // Clang tries to locate GCC installations by looking for crtbegin.o
+        // and then adjusts its system include paths. We need to upload this
+        // file as if it were an input.
+        std::string crtbegin =
+            crtbegin_from_clang_v(subprocessResult.d_stdErr);
+        if (crtbegin != "") {
+            result.d_dependencies.insert(crtbegin);
+        }
+    }
 
     std::set<std::string> products;
     if (parsedCommand.get_products().size() > 0) {

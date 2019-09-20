@@ -71,6 +71,11 @@ class ParsedCommand {
     bool is_compiler_command() const { return d_compilerCommand; }
 
     /**
+     * Returns true if this is a clang command.
+     */
+    bool is_clang() const { return d_isClang; }
+
+    /**
      * Returns the original command that was passed to the constructor, with
      * absolute paths replaced with equivalent relative paths.
      */
@@ -104,6 +109,7 @@ class ParsedCommand {
 
   private:
     bool d_compilerCommand;
+    bool d_isClang;
     std::vector<std::string> d_command;
     std::vector<std::string> d_dependenciesCommand;
     std::set<std::string> d_commandProducts;

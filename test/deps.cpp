@@ -172,6 +172,43 @@ TEST(DepsTest, GlobalPathsAllowed)
     RECC_DEPS_GLOBAL_PATHS = 1;
     EXPECT_NE(expected, normalize_all(get_file_info(command).d_dependencies));
 }
+
+TEST(DepsTest, ClangCrtbegin)
+{
+    // clang-format off
+    std::string clang_v_common =
+        "clang version 9.0.0 (https://github.com/llvm/llvm-project/ 67510fac36d27b2e22c7cd955fc167136b737b93)\n"
+        "Target: x86_64-unknown-linux-gnu\n"
+        "Thread model: posix\n"
+        "InstalledDir: /home/user/clang/bin\n"
+        "Found candidate GCC installation: /usr/lib/gcc/i686-linux-gnu/5\n"
+        "Found candidate GCC installation: /usr/lib/gcc/i686-linux-gnu/5.4.0\n"
+        "Found candidate GCC installation: /usr/lib/gcc/i686-linux-gnu/6\n"
+        "Found candidate GCC installation: /usr/lib/gcc/i686-linux-gnu/6.0.0\n"
+        "Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/5\n"
+        "Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/5.4.0\n"
+        "Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/6\n"
+        "Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/6.0.0\n"
+        "Selected GCC installation: /usr/lib/gcc/x86_64-linux-gnu/5.4.0\n"
+        "Candidate multilib: .;@m64\n"
+        "Candidate multilib: 32;@m32\n"
+        "Candidate multilib: x32;@mx32\n";
+    // clang-format on
+
+    std::string clang_v_dot = clang_v_common + "Selected multilib: .;@m64\n";
+    std::string clang_v_foo = clang_v_common + "Selected multilib: foo;@m64\n";
+
+    std::string expected_dot =
+        "/usr/lib/gcc/x86_64-linux-gnu/5.4.0/crtbegin.o";
+    std::string found = crtbegin_from_clang_v(clang_v_dot);
+    EXPECT_EQ(expected_dot, found);
+
+    std::string expected_foo =
+        "/usr/lib/gcc/x86_64-linux-gnu/5.4.0/foo/crtbegin.o";
+    found = crtbegin_from_clang_v(clang_v_foo);
+    EXPECT_EQ(expected_foo, found);
+}
+
 TEST(ProductsTest, OutputArgument)
 {
     parse_config_variables();

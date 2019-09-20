@@ -46,19 +46,27 @@ TEST(CommandBasenameTest, EmptyString) { EXPECT_EQ(command_basename(""), ""); }
 TEST(CommandBasenameTest, TrivialCommands)
 {
     EXPECT_EQ(command_basename("gcc"), "gcc");
+    EXPECT_EQ(command_basename("g++"), "g++");
     EXPECT_EQ(command_basename("CC"), "CC");
+    EXPECT_EQ(command_basename("clang"), "clang");
+    EXPECT_EQ(command_basename("clang++"), "clang++");
 }
 
 TEST(CommandBasenameTest, CommandsWithVersions)
 {
     EXPECT_EQ(command_basename("gcc-4.7"), "gcc");
     EXPECT_EQ(command_basename("CC++-99"), "CC++");
+    EXPECT_EQ(command_basename("clang-6.0"), "clang");
+    EXPECT_EQ(command_basename("clang++-6.0"), "clang++");
 }
 
 TEST(CommandBasenameTest, CommandsAtPaths)
 {
     EXPECT_EQ(command_basename("/usr/bin/gcc"), "gcc");
+    EXPECT_EQ(command_basename("/usr/bin/g++"), "g++");
     EXPECT_EQ(command_basename("/CC++-99"), "CC++");
+    EXPECT_EQ(command_basename("/usr/bin/clang"), "clang");
+    EXPECT_EQ(command_basename("/usr/bin/clang++"), "clang++");
 }
 
 TEST(CommandBasenameTest, XlcVersions)
@@ -77,11 +85,17 @@ TEST(IsCompilerTest, CompilerParsedCommandPath)
 {
     ParsedCommand command = {"/usr/local/bin/gcc", "-c", "test/file.cpp"};
     EXPECT_TRUE(command.is_compiler_command());
+
+    command = {"/usr/local/bin/clang", "-c", "test/file.cpp"};
+    EXPECT_TRUE(command.is_compiler_command());
 }
 
 TEST(IsCompilerTest, NotCompiler)
 {
     ParsedCommand command = {"cat", "something.c"};
+    EXPECT_FALSE(command.is_compiler_command());
+
+    command = {"clang-format", "something.c"};
     EXPECT_FALSE(command.is_compiler_command());
 }
 
@@ -91,20 +105,29 @@ TEST(IsCompilerTest, EmptyString)
     EXPECT_FALSE(command.is_compiler_command());
 }
 
-TEST(GccTest, NonCompilerCommands)
+void nonCompilerCommands(const char *gcc_or_clang)
 {
-    EXPECT_FALSE(ParsedCommand({"gcc"}).is_compiler_command());
-    EXPECT_FALSE(ParsedCommand({"gcc", "-version"}).is_compiler_command());
-    EXPECT_FALSE(ParsedCommand({"gcc", "hello.c", "-o", "hello"})
+    EXPECT_FALSE(ParsedCommand({gcc_or_clang}).is_compiler_command());
+    EXPECT_FALSE(
+        ParsedCommand({gcc_or_clang, "-version"}).is_compiler_command());
+    EXPECT_FALSE(
+        ParsedCommand({gcc_or_clang, "-dumpmachine"}).is_compiler_command());
+    EXPECT_FALSE(ParsedCommand({gcc_or_clang, "hello.c", "-o", "hello"})
                      .is_compiler_command());
 }
 
-TEST(GccTest, SimpleCommand)
+TEST(GccClangTest, NonCompilerCommands)
 {
-    ParsedCommand command = {"gcc", "-c", "hello.c"};
-    std::vector<std::string> expectedCommand = {"gcc", "-c", "hello.c"};
-    std::vector<std::string> expectedDepsCommand = {"gcc", "-c", "hello.c",
-                                                    "-M"};
+    nonCompilerCommands("gcc");
+    nonCompilerCommands("clang");
+}
+
+void simpleCommand(const char *gcc_or_clang)
+{
+    ParsedCommand command = {gcc_or_clang, "-c", "hello.c"};
+    std::vector<std::string> expectedCommand = {gcc_or_clang, "-c", "hello.c"};
+    std::vector<std::string> expectedDepsCommand = {gcc_or_clang, "-c",
+                                                    "hello.c", "-M", "-v"};
     std::set<std::string> expectedProducts = {};
 
     ASSERT_TRUE(command.is_compiler_command());
@@ -114,13 +137,19 @@ TEST(GccTest, SimpleCommand)
     EXPECT_FALSE(command.produces_sun_make_rules());
 }
 
-TEST(GccTest, OutputArgument)
+TEST(GccClangTest, SimpleCommand)
 {
-    ParsedCommand command = {"gcc", "-c", "hello.c", "-o", "hello.o"};
-    std::vector<std::string> expectedCommand = {"gcc", "-c", "hello.c", "-o",
-                                                "hello.o"};
-    std::vector<std::string> expectedDepsCommand = {"gcc", "-c", "hello.c",
-                                                    "-M"};
+    simpleCommand("gcc");
+    simpleCommand("clang");
+}
+
+void outputArgument(const char *gcc_or_clang)
+{
+    ParsedCommand command = {gcc_or_clang, "-c", "hello.c", "-o", "hello.o"};
+    std::vector<std::string> expectedCommand = {gcc_or_clang, "-c", "hello.c",
+                                                "-o", "hello.o"};
+    std::vector<std::string> expectedDepsCommand = {gcc_or_clang, "-c",
+                                                    "hello.c", "-M", "-v"};
     std::set<std::string> expectedProducts = {"hello.o"};
 
     ASSERT_TRUE(command.is_compiler_command());
@@ -130,13 +159,19 @@ TEST(GccTest, OutputArgument)
     EXPECT_FALSE(command.produces_sun_make_rules());
 }
 
-TEST(GccTest, OutputArgumentNoSpace)
+TEST(GccClangTest, OutputArgument)
 {
-    ParsedCommand command = {"gcc", "-c", "-ohello.o", "hello.c"};
-    std::vector<std::string> expectedCommand = {"gcc", "-c", "-ohello.o",
-                                                "hello.c"};
-    std::vector<std::string> expectedDepsCommand = {"gcc", "-c", "hello.c",
-                                                    "-M"};
+    outputArgument("gcc");
+    outputArgument("clang");
+}
+
+void outputArgumentNoSpace(const char *gcc_or_clang)
+{
+    ParsedCommand command = {gcc_or_clang, "-c", "-ohello.o", "hello.c"};
+    std::vector<std::string> expectedCommand = {gcc_or_clang, "-c",
+                                                "-ohello.o", "hello.c"};
+    std::vector<std::string> expectedDepsCommand = {gcc_or_clang, "-c",
+                                                    "hello.c", "-M", "-v"};
     std::set<std::string> expectedProducts = {"hello.o"};
 
     ASSERT_TRUE(command.is_compiler_command());
@@ -146,19 +181,42 @@ TEST(GccTest, OutputArgumentNoSpace)
     EXPECT_FALSE(command.produces_sun_make_rules());
 }
 
-TEST(GccTest, PreprocessorArguments)
+TEST(GccClangTest, OutputArgumentNoSpace)
 {
-    ParsedCommand command = {"gcc",      "-c",      "-Xpreprocessor",
-                             "-MMD",     "hello.c", "-Wp,hello.d,-MV,-valid",
+    outputArgumentNoSpace("gcc");
+    outputArgumentNoSpace("clang");
+}
+
+void preprocessorArguments(const char *gcc_or_clang)
+{
+    ParsedCommand command = {gcc_or_clang, "-c",      "-Xpreprocessor",
+                             "-MMD",       "hello.c", "-Wp,hello.d,-MV,-valid",
                              "-ohello.o"};
     std::vector<std::string> expectedDepsCommand = {
-        "gcc", "-c", "hello.c", "-Xpreprocessor", "-valid", "-M"};
+        gcc_or_clang, "-c", "hello.c", "-Xpreprocessor", "-valid", "-M", "-v"};
     std::set<std::string> expectedProducts = {"hello.o", "hello.d"};
 
     ASSERT_TRUE(command.is_compiler_command());
     EXPECT_EQ(command.get_dependencies_command(), expectedDepsCommand);
     EXPECT_EQ(command.get_products(), expectedProducts);
     EXPECT_FALSE(command.produces_sun_make_rules());
+}
+
+TEST(GccClangTest, PreprocessorArguments)
+{
+    preprocessorArguments("gcc");
+    preprocessorArguments("clang");
+}
+
+TEST(GccClangTest, RecogniseClang)
+{
+    EXPECT_FALSE(ParsedCommand({"gcc"}).is_clang());
+    EXPECT_FALSE(ParsedCommand({"g++"}).is_clang());
+
+    EXPECT_TRUE(ParsedCommand({"clang"}).is_clang());
+    EXPECT_TRUE(ParsedCommand({"clang++"}).is_clang());
+    EXPECT_TRUE(ParsedCommand({"clang-6.0"}).is_clang());
+    EXPECT_TRUE(ParsedCommand({"clang++-6.0"}).is_clang());
 }
 
 TEST(SolarisCCTest, NonCompilerCommands)
@@ -221,8 +279,8 @@ TEST(RewriteAbsolutePathsTest, SimpleCompileCommand)
 
     const std::vector<std::string> expectedCommand = {"gcc", "-c", "hello.c",
                                                       "-o", "hello.o"};
-    const std::vector<std::string> expectedDepsCommand = {"gcc", "-c",
-                                                          "hello.c", "-M"};
+    const std::vector<std::string> expectedDepsCommand = {
+        "gcc", "-c", "hello.c", "-M", "-v"};
     const std::set<std::string> expectedProducts = {"hello.o"};
 
     ASSERT_TRUE(parsedCommand.is_compiler_command());
@@ -282,7 +340,8 @@ TEST(RewriteAbsolutePathsTest, ComplexOptions)
         "-I",
         "-Xpreprocessor",
         "/usr/include/something",
-        "-M"};
+        "-M",
+        "-v"};
     const std::set<std::string> expectedProducts = {"hello.o"};
 
     ASSERT_TRUE(parsedCommand.is_compiler_command());
@@ -307,7 +366,7 @@ TEST(ReplacePathTest, SimpleRewrite)
 
     // Deps command shouldn't be rewritten.
     const std::vector<std::string> expectedDepsCommand = {
-        "gcc", "-c", "hello.c", "-I/usr/bin/include/headers", "-M"};
+        "gcc", "-c", "hello.c", "-I/usr/bin/include/headers", "-M", "-v"};
 
     const std::set<std::string> expectedProducts = {"hello.o"};
 
@@ -333,7 +392,7 @@ TEST(ReplacePathTest, PathInProjectRoot)
 
     // Deps command shouldn't be rewritten.
     const std::vector<std::string> expectedDepsCommand = {
-        "gcc", "-c", "hello.c", "-Iusr/bin/include/headers", "-M"};
+        "gcc", "-c", "hello.c", "-Iusr/bin/include/headers", "-M", "-v"};
 
     // -I should be replaced, and made relative
     const std::vector<std::string> expectedCommand = {
