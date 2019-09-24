@@ -91,12 +91,15 @@ class RemoteExecutionClient final : public CASClient {
         std::shared_ptr<proto::Execution::StubInterface> executionStub,
         std::shared_ptr<proto::ContentAddressableStorage::StubInterface>
             casStub,
+        std::shared_ptr<proto::Capabilities::StubInterface>
+            casCapabilitiesStub,
         std::shared_ptr<proto::ActionCache::StubInterface> actionCacheStub,
         std::shared_ptr<proto::Operations::StubInterface> operationsStub,
         std::shared_ptr<google::bytestream::ByteStream::StubInterface>
             byteStreamStub,
         const std::string &instanceName, GrpcContext *grpcContext)
-        : CASClient(casStub, byteStreamStub, instanceName, grpcContext),
+        : CASClient(casStub, byteStreamStub, casCapabilitiesStub, instanceName,
+                    grpcContext),
           d_executionStub(executionStub), d_operationsStub(operationsStub),
           d_actionCacheStub(actionCacheStub), d_grpcContext(grpcContext)
     {
