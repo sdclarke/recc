@@ -244,9 +244,6 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
         }
 
         depsCommand->push_back("-M"); // Print make rule to stdout.
-        depsCommand->push_back("-v"); // Prints a bunch of stuff to stderr.
-                                      // For Clang, this also mentions where
-                                      // it found crtbegin.o.
         return isCompileCommand;
     }},
     {{"gcc-preprocessor"}, COMMAND_PARSER_LAMBDA {
@@ -349,6 +346,12 @@ ParsedCommand::ParsedCommand(std::vector<std::string> command,
         }
         if (basename == "clang" || basename == "clang++") {
             d_isClang = true;
+
+            if (RECC_DEPS_GLOBAL_PATHS) {
+                // Clang mentions where it found crtbegin.o in
+                // stderr with this flag.
+                d_dependenciesCommand.push_back("-v");
+            }
         }
     }
     this->d_command = command;
