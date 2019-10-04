@@ -270,8 +270,15 @@ int main(int argc, char *argv[])
 
         if (!action_in_cache) {
             blobs[actionDigest] = action.SerializeAsString();
+
             RECC_LOG_VERBOSE("Uploading resources...");
+            // We are going to make a batch request to the CAS, setting up the
+            // client's max. batch size according to what the server supports:
+            if (RECC_CAS_GET_CAPABILITIES) {
+                client.setUpFromServerCapabilities();
+            }
             client.upload_resources(blobs, digest_to_filecontents);
+
             RECC_LOG_VERBOSE(
                 "Executing action... actionDigest: " << actionDigest.hash());
             { // Timed block

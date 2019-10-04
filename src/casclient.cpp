@@ -34,6 +34,28 @@ const int CASClient::s_byteStreamChunkSizeBytes = 1 * 1024 * 1024;
 const int CASClient::s_maxTotalBatchSizeBytes = 2 * 1024 * 1024;
 const int CASClient::s_maxMissingBlobsRequestItems = 16384;
 
+CASClient::CASClient(
+    std::shared_ptr<proto::ContentAddressableStorage::StubInterface>
+        executionStub,
+    std::shared_ptr<google::bytestream::ByteStream::StubInterface>
+        byteStreamStub,
+    std::shared_ptr<proto::Capabilities::StubInterface> capabilitiesStub,
+    const std::string &instanceName, GrpcContext *grpcContext)
+    : d_executionStub(executionStub), d_byteStreamStub(byteStreamStub),
+      d_capabilitiesStub(capabilitiesStub), d_instanceName(instanceName),
+      d_grpcContext(grpcContext)
+{
+}
+
+CASClient::CASClient(std::shared_ptr<grpc::Channel> channel,
+                     const std::string &instanceName, GrpcContext *grpcContext)
+    : d_executionStub(new proto::ContentAddressableStorage::Stub(channel)),
+      d_byteStreamStub(new google::bytestream::ByteStream::Stub(channel)),
+      d_capabilitiesStub(new proto::Capabilities::Stub(channel)),
+      d_instanceName(instanceName), d_grpcContext(grpcContext)
+{
+}
+
 /**
  * Generate and return a random version 4 GUID.
  */

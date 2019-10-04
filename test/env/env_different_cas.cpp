@@ -32,3 +32,19 @@ TEST(EnvTest, DifferentCASServerTest)
     EXPECT_EQ(expectedReccServer, RECC_SERVER);
     EXPECT_EQ(expectedCasServer, RECC_CAS_SERVER);
 }
+
+TEST(EnvTest, EnableCasGetCapabilitiesTest)
+{
+    const char *testEnviron[] = {"RECC_SERVER=somehost:1234",
+                                 "RECC_CAS_SERVER=someotherhost:5678",
+                                 "RECC_CAS_GET_CAPABILITIES=true", nullptr};
+
+    std::string expectedReccServer = "somehost:1234";
+    std::string expectedCasServer = "someotherhost:5678";
+
+    parse_config_variables(testEnviron);
+
+    EXPECT_EQ(expectedReccServer, RECC_SERVER);
+    EXPECT_EQ(expectedCasServer, RECC_CAS_SERVER);
+    EXPECT_TRUE(RECC_CAS_GET_CAPABILITIES);
+}
