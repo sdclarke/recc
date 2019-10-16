@@ -19,6 +19,10 @@ add_executable(parsedcommand_tests parsedcommand.cpp main.cpp)
 target_link_libraries(parsedcommand_tests ${GTEST_TARGET} remoteexecution)
 add_test(NAME parsedcommand_tests COMMAND parsedcommand_tests)
 
+add_executable(digestgenerator_tests digestgenerator.cpp main.cpp)
+target_link_libraries(digestgenerator_tests ${GTEST_TARGET} remoteexecution)
+add_test(NAME digestgenerator_tests COMMAND digestgenerator_tests)
+
 add_executable(deps_tests deps.cpp main.cpp)
 target_link_libraries(deps_tests ${GTEST_TARGET} remoteexecution)
 add_test(NAME deps_tests

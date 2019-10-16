@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <remoteexecutionclient.h>
+
+#include <digestgenerator.h>
 #include <fileutils.h>
 #include <grpcretry.h>
 #include <logging.h>
-#include <merklize.h>
 #include <reccdefaults.h>
 #include <reccmetrics/durationmetrictimer.h>
 #include <reccmetrics/metricguard.h>
-#include <remoteexecutionclient.h>
 #include <remoteexecutionsignals.h>
 
 #include <signal.h>
@@ -288,7 +289,8 @@ RemoteExecutionClient::from_proto(const proto::ActionResult &proto)
 
         std::unordered_map<proto::Digest, proto::Directory> digestMap;
         for (int j = 0; j < tree.children_size(); ++j) {
-            digestMap[make_digest(tree.children(j))] = tree.children(j);
+            digestMap[DigestGenerator::make_digest(tree.children(j))] =
+                tree.children(j);
         }
         add_from_directory(&result.d_outputFiles, tree.root(),
                            outputDirectoryProto.path() + "/", digestMap);

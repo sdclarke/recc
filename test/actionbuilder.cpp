@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include <actionbuilder.h>
+#include <digestgenerator.h>
 #include <env.h>
 #include <fileutils.h>
-#include <merklize.h>
 #include <protos.h>
 
 #include <gtest/gtest.h>
@@ -135,7 +135,7 @@ TEST_F(ActionBuilderTestFixture, ActionBuilt)
         "05a73e8a93752c197cb58e4bdb43bd1d696fa02ecff899a339c4ecacbab2c14b",
         actionPtr->input_root_digest().hash());
 
-    auto digest = make_digest(*actionPtr);
+    auto digest = DigestGenerator::make_digest(*actionPtr);
     EXPECT_EQ(140, digest.size_bytes());
     EXPECT_EQ(
         "4137c380ea4c2ccf8aba9a252926bdb884d16185506e644e1df0e8a76dbd3d94",
@@ -180,7 +180,7 @@ TEST_F(ActionBuilderTestFixture, NonCompileCommandForceRemote)
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         actionPtr->input_root_digest().hash());
 
-    auto digest = make_digest(*actionPtr);
+    auto digest = DigestGenerator::make_digest(*actionPtr);
 
     EXPECT_EQ(138, digest.size_bytes());
     EXPECT_EQ(

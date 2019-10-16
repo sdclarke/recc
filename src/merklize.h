@@ -76,24 +76,12 @@ struct NestedDirectory {
 };
 
 /**
- * Create a Digest message from the given blob.
- */
-proto::Digest make_digest(const std::string &blob);
-
-/**
- * Create a Digest message from the given proto message.
- */
-inline proto::Digest make_digest(const google::protobuf::MessageLite &message)
-{
-    return make_digest(message.SerializeAsString());
-}
-
-/**
- * Create a NestedDirectory containing the contents of the given path and its
- * subdirectories.
+ * Create a NestedDirectory containing the contents of the given path and
+ * its subdirectories.
  *
- * If a fileMap is passed, paths to all files referenced by the NestedDirectory
- * will be stored in it using their Digest messages as the keys.
+ * If a fileMap is passed, paths to all files referenced by the
+ * NestedDirectory will be stored in it using their Digest messages as the
+ * keys.
  *
  * CheckedPrefix is used to test whether this is the first recursive
  * call, and if so check the prefix.

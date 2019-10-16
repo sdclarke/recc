@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <digestgenerator.h>
+#include <env.h>
 #include <fileutils.h>
 #include <grpccontext.h>
 #include <logging.h>
-#include <merklize.h>
 #include <remoteexecutionclient.h>
 
 #include <build/bazel/remote/execution/v2/remote_execution_mock.grpc.pb.h>
@@ -27,7 +28,6 @@
 #include <gtest/gtest.h>
 #include <unistd.h>
 
-#include <env.h>
 #include <fstream>
 #include <iostream>
 #include <signal.h>
@@ -94,7 +94,7 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
         const auto actionResultProto = executeResponse.mutable_result();
         actionResultProto->set_stdout_raw("Raw stdout.");
         std::string stdErr("Stderr, which will be sent as a digest.");
-        stdErrDigest = make_digest(stdErr);
+        stdErrDigest = DigestGenerator::make_digest(stdErr);
         *actionResultProto->mutable_stderr_digest() = stdErrDigest;
         actionResultProto->set_exit_code(123);
 
@@ -123,12 +123,12 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
         nestedChildDirectoryFile->mutable_digest()->set_hash("q.mk file hash");
         nestedChildDirectoryFile->mutable_digest()->set_size_bytes(1);
         *childDirectory->add_directories()->mutable_digest() =
-            make_digest(*nestedChildDirectory);
+            DigestGenerator::make_digest(*nestedChildDirectory);
         childDirectory->mutable_directories(0)->set_name("nested");
         *tree.mutable_root()->add_directories()->mutable_digest() =
-            make_digest(*childDirectory);
+            DigestGenerator::make_digest(*childDirectory);
         tree.mutable_root()->mutable_directories(0)->set_name("subdirectory");
-        const auto treeDigest = make_digest(tree);
+        const auto treeDigest = DigestGenerator::make_digest(tree);
         *actionResultProto->add_output_directories()->mutable_tree_digest() =
             treeDigest;
         actionResultProto->mutable_output_directories(0)->set_path(

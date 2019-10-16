@@ -20,13 +20,13 @@
 #include <actionbuilder.h>
 #include <authsession.h>
 #include <deps.h>
+#include <digestgenerator.h>
 #include <env.h>
 #include <fileutils.h>
 #include <formpost.h>
 #include <grpcchannels.h>
 #include <grpccontext.h>
 #include <logging.h>
-#include <merklize.h>
 #include <metricsconfig.h>
 #include <reccdefaults.h>
 #include <remoteexecutionclient.h>
@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
     auto action = *actionPtr;
-    auto actionDigest = make_digest(action);
+    auto actionDigest = DigestGenerator::make_digest(action);
     RECC_LOG_VERBOSE("Action Digest: " << actionDigest.ShortDebugString()
                                        << " Action Contents: "
                                        << action.ShortDebugString());

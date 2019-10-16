@@ -13,10 +13,10 @@
 // limitations under the License.
 
 #include <actionbuilder.h>
+#include <digestgenerator.h>
 #include <env.h>
 #include <fileutils.h>
 #include <logging.h>
-#include <merklize.h>
 #include <reccdefaults.h>
 #include <reccmetrics/durationmetrictimer.h>
 #include <reccmetrics/metricguard.h>
@@ -157,7 +157,7 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
     *commandProto.mutable_working_directory() =
         resolve_path_from_prefix_map(commandWorkingDirectory);
     RECC_LOG_VERBOSE("Command: " << commandProto.ShortDebugString());
-    const auto commandDigest = make_digest(commandProto);
+    const auto commandDigest = DigestGenerator::make_digest(commandProto);
     (*blobs)[commandDigest] = commandProto.SerializeAsString();
 
     proto::Action action;

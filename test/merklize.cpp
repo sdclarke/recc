@@ -21,24 +21,6 @@
 
 using namespace BloombergLP::recc;
 
-TEST(DigestTest, EmptyDigest)
-{
-    auto digest = make_digest(std::string(""));
-    EXPECT_EQ(0, digest.size_bytes());
-    EXPECT_EQ(
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        digest.hash());
-}
-
-TEST(DigestTest, TrivialDigest)
-{
-    auto digest = make_digest(std::string("abc"));
-    EXPECT_EQ(3, digest.size_bytes());
-    EXPECT_EQ(
-        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-        digest.hash());
-}
-
 TEST(FileTest, TrivialFile)
 {
     const auto path = "abc.txt";
