@@ -14,6 +14,7 @@
 
 #include <env.h>
 
+#include <digestgenerator.h>
 #include <fileutils.h>
 #include <logging.h>
 #include <reccdefaults.h>
@@ -55,6 +56,8 @@ std::string RECC_METRICS_FILE = DEFAULT_RECC_METRICS_FILE;
 std::string RECC_METRICS_UDP_SERVER = DEFAULT_RECC_METRICS_UDP_SERVER;
 std::string RECC_PREFIX_MAP = DEFAULT_RECC_PREFIX_MAP;
 std::vector<std::pair<std::string, std::string>> RECC_PREFIX_REPLACEMENT;
+
+std::string RECC_CAS_DIGEST_FUNCTION = DEFAULT_RECC_CAS_DIGEST_FUNCTION;
 
 bool RECC_ENABLE_METRICS = DEFAULT_RECC_ENABLE_METRICS;
 bool RECC_FORCE_REMOTE = DEFAULT_RECC_FORCE_REMOTE;
@@ -290,6 +293,7 @@ void parse_config_variables(const char *const *env)
         STRVAR(RECC_METRICS_FILE)
         STRVAR(RECC_METRICS_UDP_SERVER)
         STRVAR(RECC_PREFIX_MAP)
+        STRVAR(RECC_CAS_DIGEST_FUNCTION)
 
         BOOLVAR(RECC_VERBOSE)
         BOOLVAR(RECC_ENABLE_METRICS)
@@ -398,6 +402,13 @@ void handle_special_defaults()
     if (!RECC_PREFIX_MAP.empty()) {
         RECC_PREFIX_REPLACEMENT =
             vector_from_delimited_string(RECC_PREFIX_MAP);
+    }
+
+    if (DigestGenerator::stringToDigestFunctionMap().count(
+            RECC_CAS_DIGEST_FUNCTION) == 0) {
+        throw std::runtime_error(
+            "Unknown digest function set in RECC_CAS_DIGEST_FUNCTION: \"" +
+            RECC_CAS_DIGEST_FUNCTION + "\".");
     }
 }
 
