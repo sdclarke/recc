@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <digestgenerator.h>
+#include <env.h>
 
 #include <string>
 
@@ -21,7 +22,7 @@
 using namespace BloombergLP::recc;
 using proto::Digest;
 
-TEST(CASHashTest, EmptyString)
+TEST(CASHashTest, EmptyStringDefaultFunction)
 {
     const auto digest = DigestGenerator::make_digest("");
 
@@ -32,7 +33,7 @@ TEST(CASHashTest, EmptyString)
     EXPECT_EQ(digest.size_bytes(), 0);
 }
 
-TEST(DigestGeneratorTest, String)
+TEST(DigestGeneratorTest, StringDefaultFunction)
 {
     using namespace std::literals::string_literals;
     const std::string testString(
@@ -48,7 +49,7 @@ TEST(DigestGeneratorTest, String)
     EXPECT_EQ(digest.size_bytes(), testString.size());
 }
 
-TEST(DigestGeneratorTest, Proto)
+TEST(DigestGeneratorTest, ProtoDefaultFunction)
 {
     // Creating an arbitrary proto:
     proto::Command commandProto;
@@ -65,4 +66,71 @@ TEST(DigestGeneratorTest, Proto)
     const Digest stringDigest = DigestGenerator::make_digest(serializedProto);
 
     EXPECT_EQ(protoDigest, stringDigest);
+}
+
+using namespace std::literals::string_literals;
+const std::string TEST_STRING =
+    "This is a sample blob to hash. \0 It contains some NUL characters "
+    "\0."s;
+
+TEST(DigestGeneratorTest, TestStringMD5)
+{
+
+    RECC_CAS_DIGEST_FUNCTION = "MD5";
+    const Digest d = DigestGenerator::make_digest(TEST_STRING);
+
+    const std::string expected_md5_string = "c1ad80398f865c700449c073bd0a8358";
+
+    EXPECT_EQ(d.hash(), expected_md5_string);
+    EXPECT_EQ(d.size_bytes(), TEST_STRING.size());
+}
+
+TEST(DigestGeneratorTest, TestStringSha1)
+{
+    RECC_CAS_DIGEST_FUNCTION = "SHA1";
+    const Digest d = DigestGenerator::make_digest(TEST_STRING);
+
+    const std::string expected_sha1_hash =
+        "716e65700ad0e969cca29ec2259fa526e4bdb129";
+
+    EXPECT_EQ(d.hash(), expected_sha1_hash);
+    EXPECT_EQ(d.size_bytes(), TEST_STRING.size());
+}
+
+TEST(DigestGeneratorTest, TestStringSha256)
+{
+    RECC_CAS_DIGEST_FUNCTION = "SHA256";
+    const Digest d = DigestGenerator::make_digest(TEST_STRING);
+
+    const std::string expected_sha256_hash =
+        "b1c4daf6e3812505064c07f1ad0b1d6693d93b1b28c452e55ad17e38c30e89aa";
+
+    EXPECT_EQ(d.hash(), expected_sha256_hash);
+    EXPECT_EQ(d.size_bytes(), TEST_STRING.size());
+}
+
+TEST(DigestGeneratorTest, TestStringSha384)
+{
+    RECC_CAS_DIGEST_FUNCTION = "SHA384";
+    const Digest d = DigestGenerator::make_digest(TEST_STRING);
+
+    const std::string expected_sha384_hash =
+        "614589fe6e8bfd0e5a78e6819e439965364ec3af3a7482b69dd62e4ba47d82b5e305c"
+        "b609d529164c794ba2b98e0279b";
+
+    EXPECT_EQ(d.hash(), expected_sha384_hash);
+    EXPECT_EQ(d.size_bytes(), TEST_STRING.size());
+}
+
+TEST(DigestGeneratorTest, TestStringSha512)
+{
+    RECC_CAS_DIGEST_FUNCTION = "SHA512";
+    const Digest d = DigestGenerator::make_digest(TEST_STRING);
+
+    const std::string expected_sha512_hash =
+        "0e2c5c04c391ca0b8ca5fd9f6707bcddd53e8b7245c59331590d1c5490ffab7d505db"
+        "0ba9b70a0f48e0f26ab6afeb84f600a7501a5fb1958f82f8623a7a1f692";
+
+    EXPECT_EQ(d.hash(), expected_sha512_hash);
+    EXPECT_EQ(d.size_bytes(), TEST_STRING.size());
 }

@@ -17,6 +17,8 @@
 
 #include <protos.h>
 
+#include <unordered_map>
+
 namespace BloombergLP {
 namespace recc {
 
@@ -25,6 +27,11 @@ struct DigestGenerator {
 
     static proto::Digest
     make_digest(const google::protobuf::MessageLite &message);
+
+    static const std::unordered_map<std::string, proto::DigestFunction_Value> &
+    stringToDigestFunctionMap();
+
+    static std::string supportedDigestFunctionsList();
 };
 
 } // namespace recc

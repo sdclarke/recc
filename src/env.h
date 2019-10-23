@@ -40,6 +40,11 @@ extern std::string RECC_CAS_SERVER;
 extern bool RECC_CAS_GET_CAPABILITIES;
 
 /**
+ * Digest function to use to calculate Digests of blobs in CAS.
+ */
+extern std::string RECC_CAS_DIGEST_FUNCTION;
+
+/**
  * The URI of the action cache server to use. By default, uses
  * RECC_CAS_SERVER if set or RECC_SERVER if not.
  */

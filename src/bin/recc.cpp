@@ -172,7 +172,14 @@ const std::string HELP(
     "RECC_PREFIX_MAP - specify path mappings to replace. The source and "
     "destination must both be absolute paths. \n"
     "Supports multiple paths, separated by "
-    "colon(:). Ex. RECC_PREFIX_MAP=/usr/bin=/usr/local/bin)\n");
+    "colon(:). Ex. RECC_PREFIX_MAP=/usr/bin=/usr/local/bin)\n"
+    "\n"
+    "RECC_CAS_DIGEST_FUNCTION - specify what hash function to use to "
+    "calculate digests.\n"
+    "                           (By default, "
+    "\"" DEFAULT_RECC_CAS_DIGEST_FUNCTION "\")\n"
+    "                           Supported values: " +
+    DigestGenerator::supportedDigestFunctionsList() + "\n");
 
 int main(int argc, char *argv[])
 {
