@@ -104,8 +104,7 @@ const EVP_MD *getDigestFunctionStruct()
 
     // And from that value getting the OpenSSL MD corresponding to
     // that digest function:
-    static const std::unordered_map<proto::DigestFunction_Value,
-                                    const EVP_MD *>
+    static const std::map<proto::DigestFunction_Value, const EVP_MD *>
         digestValueToOpenSslStructMap = {
             {proto::DigestFunction_Value_MD5, EVP_md5()},
             {proto::DigestFunction_Value_SHA1, EVP_sha1()},
@@ -165,10 +164,10 @@ DigestGenerator::make_digest(const google::protobuf::MessageLite &message)
     return make_digest(message.SerializeAsString());
 }
 
-const std::unordered_map<std::string, proto::DigestFunction_Value> &
+const std::map<std::string, proto::DigestFunction_Value> &
 DigestGenerator::stringToDigestFunctionMap()
 {
-    static const std::unordered_map<std::string, proto::DigestFunction_Value>
+    static const std::map<std::string, proto::DigestFunction_Value>
         stringToFunctionMap = {{"MD5", proto::DigestFunction_Value_MD5},
                                {"SHA1", proto::DigestFunction_Value_SHA1},
                                {"SHA256", proto::DigestFunction_Value_SHA256},
