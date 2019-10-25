@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
     reccmetrics::PublisherGuard<StatsDPublisherType> statsDPublisherGuard(
         RECC_ENABLE_METRICS, get_statsdpublisher_from_config());
 
-    const std::string cwd = get_current_working_directory();
+    const std::string cwd = FileUtils::get_current_working_directory();
     ParsedCommand command(&argv[1], cwd.c_str());
 
     digest_string_umap blobs;

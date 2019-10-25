@@ -25,7 +25,7 @@ namespace recc {
 
 JsonFileManager::JsonFileManager(const std::string &jsonPath)
 {
-    d_jsonFilePath = expand_path(jsonPath);
+    d_jsonFilePath = FileUtils::expand_path(jsonPath);
 }
 
 JsonFileManager::~JsonFileManager()

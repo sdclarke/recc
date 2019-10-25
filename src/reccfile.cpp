@@ -53,9 +53,9 @@ bool ReccFile::isExecutable() const { return d_executable; }
 std::shared_ptr<ReccFile> ReccFileFactory::createFile(const char *path)
 {
     if (path != nullptr) {
-        bool executable = is_executable(path);
-        const std::string file_name = path_basename(path);
-        const std::string file_contents = get_file_contents(path);
+        bool executable = FileUtils::is_executable(path);
+        const std::string file_name = FileUtils::path_basename(path);
+        const std::string file_contents = FileUtils::get_file_contents(path);
         proto::Digest file_digest =
             DigestGenerator::make_digest(file_contents);
 

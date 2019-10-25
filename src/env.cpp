@@ -181,15 +181,15 @@ vector_from_delimited_string(std::string prefix_map,
         // Check if key/values are absolute paths
         std::string key = key_value.substr(0, equal_pos);
         std::string value = key_value.substr(equal_pos + 1);
-        key = normalize_path(key.c_str());
-        value = normalize_path(value.c_str());
-        if (!is_absolute_path(key.c_str()) &&
-            !is_absolute_path(value.c_str())) {
+        key = FileUtils::normalize_path(key.c_str());
+        value = FileUtils::normalize_path(value.c_str());
+        if (!FileUtils::is_absolute_path(key.c_str()) &&
+            !FileUtils::is_absolute_path(value.c_str())) {
             RECC_LOG_WARNING("Input paths must be absolute: [" << key_value
                                                                << "]");
             return;
         }
-        if (has_path_prefix(RECC_PROJECT_ROOT, key.c_str())) {
+        if (FileUtils::has_path_prefix(RECC_PROJECT_ROOT, key.c_str())) {
             RECC_LOG_WARNING("Path to replace: ["
                              << key.c_str()
                              << "] is a prefix of the project root: ["
@@ -376,14 +376,14 @@ void handle_special_defaults()
     }
 
     if (RECC_PROJECT_ROOT.empty()) {
-        RECC_PROJECT_ROOT = get_current_working_directory();
+        RECC_PROJECT_ROOT = FileUtils::get_current_working_directory();
         RECC_LOG_VERBOSE("No RECC_PROJECT_ROOT directory specified. "
                          << "Defaulting to current working directory ("
                          << RECC_PROJECT_ROOT << ")");
     }
     else if (RECC_PROJECT_ROOT.front() != '/') {
-        RECC_PROJECT_ROOT = make_path_absolute(
-            RECC_PROJECT_ROOT, get_current_working_directory());
+        RECC_PROJECT_ROOT = FileUtils::make_path_absolute(
+            RECC_PROJECT_ROOT, FileUtils::get_current_working_directory());
         RECC_LOG_WARNING("Warning: RECC_PROJECT_ROOT was set to a relative "
                          "path. "
                          << "Rewriting to absolute path "

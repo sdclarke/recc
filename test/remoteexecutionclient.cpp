@@ -275,8 +275,9 @@ TEST_F(RemoteExecutionClientTestFixture, WriteFilesToDisk)
     client.write_files_to_disk(testResult, tempDir.name());
 
     const std::string expectedPath = std::string(tempDir.name()) + "/test.txt";
-    EXPECT_TRUE(is_executable(expectedPath.c_str()));
-    EXPECT_EQ(get_file_contents(expectedPath.c_str()), "Test file content!");
+    EXPECT_TRUE(FileUtils::is_executable(expectedPath.c_str()));
+    EXPECT_EQ(FileUtils::get_file_contents(expectedPath.c_str()),
+              "Test file content!");
 }
 
 TEST_F(RemoteExecutionClientTestFixture, CancelOperation)

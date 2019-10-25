@@ -1,7 +1,7 @@
 #include <authsession.h>
 #include <authsession_fixture.h>
 #include <env.h>
-#include <fileutils.h>
+//#include <fileutils.h>
 #include <formpost.h>
 #include <grpccontext.h>
 #include <grpcretry.h>
@@ -14,7 +14,6 @@
 
 using BloombergLP::recc::AuthSession;
 using BloombergLP::recc::FormPost;
-using BloombergLP::recc::get_current_working_directory;
 using BloombergLP::recc::grpc_retry;
 using BloombergLP::recc::GrpcContext;
 using BloombergLP::recc::JsonFileManager;

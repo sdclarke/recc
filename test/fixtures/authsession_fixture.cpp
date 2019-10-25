@@ -19,12 +19,12 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
-using BloombergLP::recc::get_current_working_directory;
+using BloombergLP::recc::FileUtils;
 using BloombergLP::recc::JsonFileManager;
 
 void AuthSessionFiles::SetUpTestCase()
 {
-    const std::string currDir = get_current_working_directory();
+    const std::string currDir = FileUtils::get_current_working_directory();
     s_serverFilePath = currDir + "/" + "serverResponse";
     s_clientFilePath = currDir + "/" + "clientToken";
 

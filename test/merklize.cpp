@@ -242,8 +242,8 @@ TEST(NestedDirectoryTest, AddDirsToExistingNestedDirectory)
 TEST(NestedDirectoryTest, MakeNestedDirectory)
 {
     digest_string_umap fileMap;
-    RECC_PROJECT_ROOT = get_current_working_directory();
-    std::string cwd = get_current_working_directory();
+    RECC_PROJECT_ROOT = FileUtils::get_current_working_directory();
+    std::string cwd = FileUtils::get_current_working_directory();
     auto nestedDirectory = make_nesteddirectory(cwd.c_str(), &fileMap);
 
     EXPECT_EQ(2, nestedDirectory.d_subdirs->size());
@@ -336,7 +336,7 @@ TEST(NestedDirectoryTest, NestedDirectoryPathReplacement)
 {
     // Replace subdir located in $cwd/data/merklize with $cwd/hi
     // Get current working directory
-    std::string cwd = get_current_working_directory();
+    std::string cwd = FileUtils::get_current_working_directory();
     RECC_PREFIX_REPLACEMENT = {{cwd + "/nestdir/nestdir2", cwd + "/hi"}};
     digest_string_umap fileMap;
     auto make_nested_dir = cwd + "/nestdir";
@@ -357,7 +357,7 @@ TEST(NestedDirectoryTest, NestedDirectoryPathReplacement)
 
 TEST(NestedDirectoryTest, NestedDirectoryMultipleNestedDirPathReplacement)
 {
-    std::string cwd = get_current_working_directory();
+    std::string cwd = FileUtils::get_current_working_directory();
     RECC_PREFIX_REPLACEMENT = {
         {cwd + "/nestdir/nestdir2/nestdir3", cwd + "/nestdir"}};
     digest_string_umap fileMap;
@@ -379,7 +379,7 @@ TEST(NestedDirectoryTest, NestedDirectoryMultipleNestedDirPathReplacement)
 
 TEST(NestedDirectoryTest, NestedDirectoryNotAPrefix)
 {
-    std::string cwd = get_current_working_directory();
+    std::string cwd = FileUtils::get_current_working_directory();
     // not a prefix
     RECC_PREFIX_REPLACEMENT = {{cwd + "/nestdir/nestdir2", "/nestdir/hi"}};
     digest_string_umap fileMap;
@@ -400,7 +400,7 @@ TEST(NestedDirectoryTest, NestedDirectoryNotAPrefix)
 // Tests nestedDirectory construction with prefix replacement using add.
 TEST(NestedDirectoryTest, NestedDirectoryAddPrefixReplacement)
 {
-    std::string cwd = get_current_working_directory();
+    std::string cwd = FileUtils::get_current_working_directory();
     RECC_PREFIX_REPLACEMENT = {{"/nestdir/nestdir2/nestdir3", "/nestdir"}};
     digest_string_umap fileMap;
 
@@ -424,7 +424,7 @@ TEST(NestedDirectoryTest, NestedDirectoryAddPrefixReplacement)
 TEST(NestedDirectoryTest, TestPrefixOrder)
 {
     // Test that paths are replaced in order specified.
-    std::string cwd = get_current_working_directory();
+    std::string cwd = FileUtils::get_current_working_directory();
     // Set two of the same prefixes with different replacements, make sure that
     // the first one gets used.
     const auto recc_prefix_string =
@@ -454,7 +454,7 @@ TEST(NestedDirectoryTest, TestPrefixOrder)
 TEST(NestedDirectoryTest, TestRootReplacement)
 {
     // Test that paths are replaced in order specified.
-    std::string cwd = get_current_working_directory();
+    std::string cwd = FileUtils::get_current_working_directory();
 
     // Replace the root with "hi"
     const auto recc_prefix_string = "/=/hi";

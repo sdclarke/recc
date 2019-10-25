@@ -104,11 +104,12 @@ typedef std::function<bool(std::vector<std::string> *, const char *,
     }
 #define ARGUMENT_IS_PATH                                                      \
     if (argument.length() > 0 && argument[0] == '/') {                        \
-        REPLACE_ARGUMENT(make_path_relative(argument, workingDirectory));     \
+        REPLACE_ARGUMENT(                                                     \
+            FileUtils::make_path_relative(argument, workingDirectory));       \
     }
 #define ARGUMENT_IS_SEARCH_PATH(arg)                                          \
     if (arg.length() > 0) {                                                   \
-        REPLACE_ARGUMENT(resolve_path_from_prefix_map(arg));                  \
+        REPLACE_ARGUMENT(FileUtils::resolve_path_from_prefix_map(arg));       \
     }
 #define OPTIONS_START()                                                       \
     bool isCompileCommand = false;                                            \
@@ -144,8 +145,8 @@ typedef std::function<bool(std::vector<std::string> *, const char *,
     else                                                                      \
     {                                                                         \
         if ((*command)[i].length() > 0 && (*command)[i][0] == '/') {          \
-            (*command)[i] =                                                   \
-                make_path_relative((*command)[i], workingDirectory);          \
+            (*command)[i] = FileUtils::make_path_relative((*command)[i],      \
+                                                          workingDirectory);  \
         }                                                                     \
         depsCommand->push_back((*command)[i]);                                \
     }                                                                         \

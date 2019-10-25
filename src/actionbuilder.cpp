@@ -82,15 +82,17 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
             RECC_LOG_VERBOSE("Building Merkle tree");
             int parentsNeeded = 0;
             for (const auto &dep : deps) {
-                parentsNeeded = std::max(parentsNeeded,
-                                         parent_directory_levels(dep.c_str()));
+                parentsNeeded =
+                    std::max(parentsNeeded,
+                             FileUtils::parent_directory_levels(dep.c_str()));
             }
             for (const auto &product : products) {
                 parentsNeeded = std::max(
-                    parentsNeeded, parent_directory_levels(product.c_str()));
+                    parentsNeeded,
+                    FileUtils::parent_directory_levels(product.c_str()));
             }
             commandWorkingDirectory =
-                last_n_segments(cwd.c_str(), parentsNeeded);
+                FileUtils::last_n_segments(cwd.c_str(), parentsNeeded);
 
             for (const auto &dep : deps) {
                 // If the dependency is an absolute path, leave
@@ -102,7 +104,7 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
                 else {
                     merklePath = commandWorkingDirectory + "/" + dep;
                 }
-                merklePath = normalize_path(merklePath.c_str());
+                merklePath = FileUtils::normalize_path(merklePath.c_str());
 
                 std::shared_ptr<ReccFile> file =
                     ReccFileFactory::createFile(dep.c_str());
@@ -155,7 +157,7 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
     // prepended, and then normalized and replaced. If that is the case, and
     // the CWD contains a replaced prefix, then replace it.
     *commandProto.mutable_working_directory() =
-        resolve_path_from_prefix_map(commandWorkingDirectory);
+        FileUtils::resolve_path_from_prefix_map(commandWorkingDirectory);
     RECC_LOG_VERBOSE("Command: " << commandProto.ShortDebugString());
     const auto commandDigest = DigestGenerator::make_digest(commandProto);
     (*blobs)[commandDigest] = commandProto.SerializeAsString();

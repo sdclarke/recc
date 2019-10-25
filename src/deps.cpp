@@ -173,7 +173,8 @@ CommandFileInfo get_file_info(const ParsedCommand &parsedCommand)
     }
 
     for (const auto &product : products) {
-        result.d_possibleProducts.insert(normalize_path(product.c_str()));
+        result.d_possibleProducts.insert(
+            FileUtils::normalize_path(product.c_str()));
     }
 
     return result;
