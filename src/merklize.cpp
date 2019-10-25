@@ -49,7 +49,7 @@ void NestedDirectory::add(std::shared_ptr<ReccFile> file,
     // directory path is avaliable.
     if (!checkedPrefix) {
         replacedDirectory =
-            resolve_path_from_prefix_map(std::string(relativePath));
+            FileUtils::resolve_path_from_prefix_map(std::string(relativePath));
         checkedPrefix = true;
     }
 
@@ -90,7 +90,7 @@ void NestedDirectory::addDirectory(const char *directory, bool checkedPrefix)
     // directory path is available.
     if (!checkedPrefix) {
         replacedDirectory =
-            resolve_path_from_prefix_map(std::string(directory));
+            FileUtils::resolve_path_from_prefix_map(std::string(directory));
         checkedPrefix = true;
     }
 
@@ -197,15 +197,16 @@ void make_nesteddirectoryhelper(
                 // If the path matches any in RECC_PATH_PREFIX, replace it if
                 // necessary, and normalize path.
                 const std::string replacedRoot =
-                    resolve_path_from_prefix_map(entityPath).c_str();
+                    FileUtils::resolve_path_from_prefix_map(entityPath)
+                        .c_str();
 
                 // Get the relativePath from the current PROJECT_ROOT.
-                const std::string relativePath = make_path_relative(
+                const std::string relativePath = FileUtils::make_path_relative(
                     replacedRoot, RECC_PROJECT_ROOT.c_str());
 
                 // Normalize path
                 const std::string normalizedReplacedRoot =
-                    normalize_path(relativePath.c_str());
+                    FileUtils::normalize_path(relativePath.c_str());
 
                 RECC_LOG_VERBOSE("Mapping local file path: ["
                                  << entityPath

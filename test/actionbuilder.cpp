@@ -24,7 +24,10 @@ using namespace BloombergLP::recc;
 
 class ActionBuilderTestFixture : public ::testing::Test {
   protected:
-    ActionBuilderTestFixture() : cwd(get_current_working_directory()) {}
+    ActionBuilderTestFixture()
+        : cwd(FileUtils::get_current_working_directory())
+    {
+    }
     void SetUp() override
     {
         d_previous_recc_replacement_map = RECC_PREFIX_REPLACEMENT;
@@ -223,7 +226,7 @@ TEST_F(ActionBuilderTestFixture, AbsolutePathActionBuilt)
  */
 TEST_F(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
 {
-    cwd = get_current_working_directory();
+    cwd = FileUtils::get_current_working_directory();
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
                           "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
@@ -250,7 +253,7 @@ TEST_F(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
  */
 TEST_F(ActionBuilderTestFixture, EmptyWorkingDirInputRoot)
 {
-    cwd = get_current_working_directory();
+    cwd = FileUtils::get_current_working_directory();
     RECC_DEPS_OVERRIDE = {"../deps/empty.c"};
     std::vector<std::string> recc_args = {"gcc", "-c", "../deps/empty.c", "-o",
                                           "empty.o"};

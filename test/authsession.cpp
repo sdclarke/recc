@@ -85,7 +85,7 @@ TEST_F(AuthSessionFiles, GetNotJwtToken)
 
 TEST_F(AuthSessionFiles, GetNotExist)
 {
-    const std::string currDir = get_current_working_directory();
+    const std::string currDir = FileUtils::get_current_working_directory();
     const std::string fakePath = currDir + "/" + "fake_file.fake";
 
     RECC_JWT_JSON_FILE_PATH = fakePath;

@@ -29,9 +29,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <system_error>
-#include <unordered_map>
-
 #include <unistd.h>
+#include <unordered_map>
 
 namespace BloombergLP {
 namespace recc {
@@ -51,7 +50,7 @@ TemporaryDirectory::~TemporaryDirectory()
     execute(rmCommand);
 }
 
-void create_directory_recursive(const char *path)
+void FileUtils::create_directory_recursive(const char *path)
 {
     RECC_LOG_VERBOSE("Creating directory at " << path);
     if (mkdir(path, 0777) != 0) {
@@ -77,7 +76,7 @@ void create_directory_recursive(const char *path)
     }
 }
 
-bool is_executable(const char *path)
+bool FileUtils::is_executable(const char *path)
 {
     struct stat statResult;
     if (stat(path, &statResult) == 0) {
@@ -86,7 +85,7 @@ bool is_executable(const char *path)
     throw std::system_error(errno, std::system_category());
 }
 
-void make_executable(const char *path)
+void FileUtils::make_executable(const char *path)
 {
     struct stat statResult;
     if (stat(path, &statResult) == 0) {
@@ -98,7 +97,7 @@ void make_executable(const char *path)
     throw std::system_error(errno, std::system_category());
 }
 
-std::string get_file_contents(const char *path)
+std::string FileUtils::get_file_contents(const char *path)
 {
     struct stat statResult;
     if (stat(path, &statResult) != 0) {
@@ -129,7 +128,7 @@ std::string get_file_contents(const char *path)
     return contents;
 }
 
-void write_file(const char *path, const std::string &contents)
+void FileUtils::write_file(const char *path, const std::string &contents)
 {
     std::ofstream fileStream(path, std::ios::trunc | std::ios::binary);
     if (!fileStream) {
@@ -146,7 +145,7 @@ void write_file(const char *path, const std::string &contents)
     fileStream << contents << std::flush;
 }
 
-std::string normalize_path(const char *path)
+std::string FileUtils::normalize_path(const char *path)
 {
     std::vector<std::string> segments;
     const bool global = path[0] == '/';
@@ -188,7 +187,7 @@ std::string normalize_path(const char *path)
     return result;
 }
 
-bool has_path_prefix(const std::string &path, std::string prefix)
+bool FileUtils::has_path_prefix(const std::string &path, std::string prefix)
 {
     /* A path can never have the empty path as a prefix */
     if (prefix.empty()) {
@@ -209,7 +208,8 @@ bool has_path_prefix(const std::string &path, std::string prefix)
     return path.substr(0, prefix.length()) == prefix;
 }
 
-std::string make_path_relative(std::string path, const char *workingDirectory)
+std::string FileUtils::make_path_relative(std::string path,
+                                          const char *workingDirectory)
 {
     if (workingDirectory == nullptr || workingDirectory[0] == 0 ||
         path.length() == 0 || path[0] != '/' ||
@@ -274,14 +274,15 @@ std::string make_path_relative(std::string path, const char *workingDirectory)
     return result;
 }
 
-std::string make_path_absolute(const std::string &path, const std::string &cwd)
+std::string FileUtils::make_path_absolute(const std::string &path,
+                                          const std::string &cwd)
 {
     if (path.empty() || path.front() == '/') {
         return path;
     }
 
     const std::string fullPath = cwd + '/' + path;
-    std::string normalizedPath = normalize_path(fullPath.c_str());
+    std::string normalizedPath = FileUtils::normalize_path(fullPath.c_str());
 
     /* normalize_path removes trailing slashes, so let's preserve them here
      */
@@ -291,8 +292,8 @@ std::string make_path_absolute(const std::string &path, const std::string &cwd)
     return normalizedPath;
 }
 
-std::string join_normalize_path(const std::string &base,
-                                const std::string &extension)
+std::string FileUtils::join_normalize_path(const std::string &base,
+                                           const std::string &extension)
 {
     std::ostringstream catPath;
     catPath << base;
@@ -317,7 +318,7 @@ std::string join_normalize_path(const std::string &base,
     return normalize_path(catPathStr.c_str());
 }
 
-std::string expand_path(const std::string &path)
+std::string FileUtils::expand_path(const std::string &path)
 {
     std::string home = "";
     std::string newPath = path;
@@ -334,7 +335,7 @@ std::string expand_path(const std::string &path)
     return expandPath;
 }
 
-std::string get_current_working_directory()
+std::string FileUtils::get_current_working_directory()
 {
     unsigned int bufferSize = 1024;
     while (true) {
@@ -355,7 +356,7 @@ std::string get_current_working_directory()
     }
 }
 
-int parent_directory_levels(const char *path)
+int FileUtils::parent_directory_levels(const char *path)
 {
     int currentLevel = 0;
     int lowestLevel = 0;
@@ -387,7 +388,7 @@ int parent_directory_levels(const char *path)
     return -lowestLevel;
 }
 
-std::string last_n_segments(const char *path, int n)
+std::string FileUtils::last_n_segments(const char *path, int n)
 {
     if (n == 0) {
         return "";
@@ -420,12 +421,12 @@ std::string last_n_segments(const char *path, int n)
     throw std::logic_error("Not enough segments in path");
 }
 
-bool is_absolute_path(const char *path)
+bool FileUtils::is_absolute_path(const char *path)
 {
     return path != nullptr && path[0] == '/';
 }
 
-std::string resolve_path_from_prefix_map(const std::string &path)
+std::string FileUtils::resolve_path_from_prefix_map(const std::string &path)
 {
     if (RECC_PREFIX_REPLACEMENT.empty()) {
         return path;
@@ -435,13 +436,14 @@ std::string resolve_path_from_prefix_map(const std::string &path)
     // value.
     for (const auto &pair : RECC_PREFIX_REPLACEMENT) {
         // Check if prefix is found in the path, and that it is a prefix.
-        if (has_path_prefix(path, pair.first)) {
+        if (FileUtils::has_path_prefix(path, pair.first)) {
             // Append a trailing slash to the replacement, in cases of
             // replacing `/` Double slashes will get removed during
             // normalization.
             const std::string replaced_path =
                 pair.second + '/' + path.substr(pair.first.length());
-            const std::string newPath = normalize_path(replaced_path.c_str());
+            const std::string newPath =
+                FileUtils::normalize_path(replaced_path.c_str());
             RECC_LOG_VERBOSE("Replacing and normalized path: ["
                              << path << "] with newpath: [" << newPath << "]");
             return newPath;
@@ -450,9 +452,9 @@ std::string resolve_path_from_prefix_map(const std::string &path)
     return path;
 }
 
-std::string path_basename(const char *path)
+std::string FileUtils::path_basename(const char *path)
 {
-    return last_n_segments(path, 1);
+    return FileUtils::last_n_segments(path, 1);
 }
 
 } // namespace recc
