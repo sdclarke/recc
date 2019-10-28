@@ -76,14 +76,50 @@ void FileUtils::create_directory_recursive(const char *path)
     }
 }
 
+bool FileUtils::isSupportedFileType(const struct stat &s)
+{
+    return (S_ISREG(s.st_mode) || S_ISLNK(s.st_mode));
+}
+
+struct stat FileUtils::get_stat(const char *path)
+{
+    if (path == nullptr || *path == 0) {
+        std::ostringstream oss;
+        oss << "invalid args: path is either null or empty";
+        throw std::runtime_error(oss.str());
+    }
+
+    // Use lstat() so we read the contents of the link itself
+    // not to the target of the link
+    // See https://linux.die.net/man/2/lstat
+    struct stat statResult;
+    if (lstat(path, &statResult) == 0) {
+        return statResult;
+    }
+    throw std::system_error(errno, std::system_category());
+}
+
+bool FileUtils::is_executable(const struct stat &s)
+{
+    return s.st_mode & S_IXUSR;
+}
+
 bool FileUtils::is_executable(const char *path)
 {
+    if (path == nullptr || *path == 0) {
+        std::ostringstream oss;
+        oss << "invalid args: path is either null or empty";
+        throw std::runtime_error(oss.str());
+    }
+
     struct stat statResult;
     if (stat(path, &statResult) == 0) {
         return statResult.st_mode & S_IXUSR;
     }
     throw std::system_error(errno, std::system_category());
 }
+
+bool FileUtils::is_symlink(const struct stat &s) { return S_ISLNK(s.st_mode); }
 
 void FileUtils::make_executable(const char *path)
 {
@@ -100,31 +136,50 @@ void FileUtils::make_executable(const char *path)
 std::string FileUtils::get_file_contents(const char *path)
 {
     struct stat statResult;
-    if (stat(path, &statResult) != 0) {
+    if (lstat(path, &statResult) != 0) {
         throw std::system_error(errno, std::system_category());
     }
-    if (!S_ISREG(statResult.st_mode)) {
+
+    return FileUtils::get_file_contents(path, statResult);
+}
+
+std::string FileUtils::get_file_contents(const char *path,
+                                         const struct stat &statResult)
+{
+    std::string contents(statResult.st_size, '\0');
+    if (S_ISREG(statResult.st_mode)) {
+        std::ifstream fileStream;
+        fileStream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+        fileStream.open(path, std::ios::in | std::ios::binary);
+
+        auto start = fileStream.tellg();
+        fileStream.seekg(0, std::ios::end);
+        auto size = fileStream.tellg() - start;
+
+        contents.resize(static_cast<std::string::size_type>(size));
+        fileStream.seekg(start);
+
+        if (fileStream) {
+            fileStream.read(&contents[0],
+                            static_cast<std::streamsize>(contents.length()));
+        }
+    }
+    else if (S_ISLNK(statResult.st_mode)) {
+        const int rc = readlink(path, &contents[0], contents.size());
+        if (rc < 0) {
+            std::ostringstream oss;
+            oss << "readlink failed for \"" << std::string(path)
+                << "\", rc = " << rc << ", errno = [" << errno << ":"
+                << strerror(errno) << "]";
+            RECC_LOG_ERROR(oss.str());
+            throw std::runtime_error(oss.str());
+        }
+    }
+    else {
         throw std::runtime_error("\"" + std::string(path) +
-                                 "\" is not a regular file");
+                                 "\" is not a regular file or a symlink");
     }
 
-    std::string contents;
-
-    std::ifstream fileStream;
-    fileStream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    fileStream.open(path, std::ios::in | std::ios::binary);
-
-    auto start = fileStream.tellg();
-    fileStream.seekg(0, std::ios::end);
-    auto size = fileStream.tellg() - start;
-
-    contents.resize(static_cast<std::string::size_type>(size));
-    fileStream.seekg(start);
-
-    if (fileStream) {
-        fileStream.read(&contents[0],
-                        static_cast<std::streamsize>(contents.length()));
-    }
     return contents;
 }
 

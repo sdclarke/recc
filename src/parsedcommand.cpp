@@ -27,11 +27,11 @@ namespace recc {
 /**
  * A command parser is a function that takes the following arguments:
  *
- * -std::vector<string> *command
- * - const char *workingDirectory
- * -std::vector<string> *depsCommand
- * -std::set<string> *outputs
- * - bool *producesSunMakeRules
+ * std::vector<string> *command
+ * const char *workingDirectory
+ * std::vector<string> *depsCommand
+ * std::set<string> *outputs
+ * bool *producesSunMakeRules
  *
  * It stores a command to get the dependencies in depsCommand, stores
  * any outputs it can determine (e.g. by parsing "-o" flags) in outputs,

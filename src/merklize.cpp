@@ -43,6 +43,11 @@ void NestedDirectory::add(std::shared_ptr<ReccFile> file,
         return;
     }
 
+    if (file->isSymlink()) {
+        this->addSymlink(file->getFileContents(), relativePath, checkedPrefix);
+        return;
+    }
+
     std::string replacedDirectory(relativePath);
     // Check if directory passed in matches any in PREFIX_REPLACEMENT_MAP. if
     // so replace the path. Only check on the inital call, when the full
@@ -68,6 +73,36 @@ void NestedDirectory::add(std::shared_ptr<ReccFile> file,
     }
     else {
         d_files[replacedDirectory] = file;
+    }
+}
+
+void NestedDirectory::addSymlink(const std::string &target,
+                                 const char *relativePath, bool checkedPrefix)
+{
+    // Check if directory passed in matches any in PREFIX_REPLACEMENT_MAP. if
+    // so replace the path. Only check on the inital call, when the full
+    // directory path is avaliable.
+    std::string replacedDirectory(relativePath);
+    if (!checkedPrefix) {
+        replacedDirectory =
+            FileUtils::resolve_path_from_prefix_map(std::string(relativePath));
+        checkedPrefix = true;
+    }
+
+    const char *slash = strchr(replacedDirectory.c_str(), '/');
+    if (slash) {
+        const std::string subdirKey(replacedDirectory.c_str(),
+                                    slash - replacedDirectory.c_str());
+        if (subdirKey.empty()) {
+            this->addSymlink(target, slash + 1, checkedPrefix);
+        }
+        else {
+            (*d_subdirs)[subdirKey].addSymlink(target, slash + 1,
+                                               checkedPrefix);
+        }
+    }
+    else {
+        d_symlinks[replacedDirectory] = target;
     }
 }
 
@@ -126,11 +161,22 @@ proto::Digest NestedDirectory::to_digest(digest_string_umap *digestMap) const
     // name thus the iterators will iterate lexicographically
 
     proto::Directory directoryMessage;
+
+    // files
     for (const auto &fileIter : d_files) {
         *directoryMessage.add_files() =
             fileIter.second->getFileNode(fileIter.first);
     }
 
+    // symlinks
+    for (const auto &symlinkIter : d_symlinks) {
+        proto::SymlinkNode symlinkNode;
+        symlinkNode.set_name(symlinkIter.first);
+        symlinkNode.set_target(symlinkIter.second);
+        *directoryMessage.add_symlinks() = symlinkNode;
+    }
+
+    // directories
     for (const auto &subdirIter : *d_subdirs) {
         auto subdirNode = directoryMessage.add_directories();
         subdirNode->set_name(subdirIter.first);
@@ -156,7 +202,7 @@ void make_nesteddirectoryhelper(
     const char *path, digest_string_umap *fileMap,
     std::unordered_map<std::shared_ptr<ReccFile>, std::string> *filePathMap)
 {
-    RECC_LOG_VERBOSE("NestedDirectoryHelper, Iterating through " << path);
+    RECC_LOG_VERBOSE("Iterating through " << path);
 
     // dir is used to iterate through subdirectories in path
     auto dir = opendir(path);
@@ -179,7 +225,7 @@ void make_nesteddirectoryhelper(
         const std::string entityPath = pathString + "/" + entityName;
 
         struct stat statResult;
-        if (stat(entityPath.c_str(), &statResult) != 0) {
+        if (lstat(entityPath.c_str(), &statResult) != 0) {
             RECC_LOG_VERBOSE("Could not stat [" << entityPath
                                                 << "] skipping.");
             continue;
@@ -192,6 +238,11 @@ void make_nesteddirectoryhelper(
         else {
             const std::shared_ptr<ReccFile> file =
                 ReccFileFactory::createFile(entityPath.c_str());
+            if (!file) {
+                RECC_LOG_VERBOSE("Encountered unsupported file \""
+                                 << entityPath << "\", skipping...");
+                continue;
+            }
 
             if (fileMap != nullptr) {
                 // If the path matches any in RECC_PATH_PREFIX, replace it if

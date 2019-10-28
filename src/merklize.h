@@ -43,6 +43,9 @@ struct NestedDirectory {
     // Important to use a sorted map to keep files ordered by name
     std::map<std::string, std::shared_ptr<ReccFile>> d_files;
 
+    // name, target
+    std::map<std::string, std::string> d_symlinks;
+
     NestedDirectory() : d_subdirs(new subdir_map){};
 
     /**
@@ -53,6 +56,13 @@ struct NestedDirectory {
      */
     void add(std::shared_ptr<ReccFile> file, const char *relativePath,
              bool checkedPrefix = false);
+
+    /**
+     * Add the given symlink to this NestedDirectory at the given relative
+     * path, which may include subdirectories
+     */
+    void addSymlink(const std::string &target, const char *relativePath,
+                    bool checkedPrefix = false);
 
     /**
      * Add the given Directory to this NestedDirectory at a given relative

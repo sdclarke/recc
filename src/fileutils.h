@@ -17,6 +17,7 @@
 
 #include <reccdefaults.h>
 #include <string>
+#include <sys/stat.h>
 
 namespace BloombergLP {
 namespace recc {
@@ -48,6 +49,15 @@ struct FileUtils {
     static void create_directory_recursive(const char *path);
 
     /**
+     * Return the 'struct stat' given an absolute file path
+     */
+    static struct stat get_stat(const char *path);
+
+    static bool isSupportedFileType(const struct stat &s);
+    static bool is_executable(const struct stat &s);
+    static bool is_symlink(const struct stat &s);
+
+    /**
      * Return true if the given file path is executable.
      */
     static bool is_executable(const char *path);
@@ -64,6 +74,8 @@ struct FileUtils {
      * absolute or relative to the current directory.
      */
     static std::string get_file_contents(const char *path);
+    static std::string get_file_contents(const char *path,
+                                         const struct stat &statResult);
 
     /**
      * Overwrite the given file with the given contents.

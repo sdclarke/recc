@@ -108,6 +108,10 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
 
                 std::shared_ptr<ReccFile> file =
                     ReccFileFactory::createFile(dep.c_str());
+                if (!file) {
+                    RECC_LOG_VERBOSE("Encountered unsupported file \""
+                                     << dep << "\", skipping...");
+                }
                 nestedDirectory.add(file, merklePath.c_str());
                 // Store the digest to the file content.
                 (*digest_to_filecontents)[file->getDigest()] =
