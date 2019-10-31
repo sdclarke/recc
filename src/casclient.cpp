@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <casclient.h>
+#include <digestgenerator.h>
 
 #include <grpcretry.h>
 #include <reccmetrics/durationmetrictimer.h>
@@ -111,15 +112,34 @@ void CASClient::setUpFromServerCapabilities()
         return;
     }
 
+    const auto cache_capabilities = serverCapabilities.cache_capabilities();
+
     // Maximum bytes that can be batched in a request:
     const int64_t serverMaxBatchTotalSizeBytes =
-        serverCapabilities.cache_capabilities().max_batch_total_size_bytes();
+        cache_capabilities.max_batch_total_size_bytes();
 
     // If the server specifies a smaller limit than the one we currently have,
     // we override it. (0 means the server does not impose any limit).
     if (serverMaxBatchTotalSizeBytes > 0 &&
         serverMaxBatchTotalSizeBytes < d_maxTotalBatchSizeBytes) {
         d_maxTotalBatchSizeBytes = serverMaxBatchTotalSizeBytes;
+    }
+
+    // Checking that the function that we are using is supported by the server:
+    const auto configured_digest_function =
+        DigestGenerator::stringToDigestFunctionMap().at(
+            RECC_CAS_DIGEST_FUNCTION);
+
+    const auto supported_functions = cache_capabilities.digest_function();
+
+    if (std::find(supported_functions.cbegin(), supported_functions.cend(),
+                  configured_digest_function) == supported_functions.cend()) {
+        const std::string error_message =
+            "CAS server does not support the configured digest function: " +
+            RECC_CAS_DIGEST_FUNCTION;
+
+        RECC_LOG_ERROR(error_message);
+        throw std::runtime_error(error_message);
     }
 }
 
