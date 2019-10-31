@@ -144,14 +144,17 @@ typedef std::function<bool(std::vector<std::string> *, const char *,
 #define OPTIONS_END()                                                         \
     else                                                                      \
     {                                                                         \
+        std::string relative_command = (*command)[i];                         \
         if ((*command)[i].length() > 0 && (*command)[i][0] == '/') {          \
-            (*command)[i] = FileUtils::make_path_relative((*command)[i],      \
-                                                          workingDirectory);  \
+            relative_command = FileUtils::make_path_relative(                 \
+                (*command)[i], workingDirectory);                             \
         }                                                                     \
-        depsCommand->push_back((*command)[i]);                                \
+        depsCommand->push_back(relative_command);                             \
+        (*command)[i] = FileUtils::make_path_relative(                        \
+            FileUtils::resolve_path_from_prefix_map((*command)[i]),           \
+            workingDirectory);                                                \
     }                                                                         \
     }
-
 /**
  * Parse a comma-separated list and store the results in the given vector.
  */
