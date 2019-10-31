@@ -416,3 +416,55 @@ TEST(ReplacePathTest, PathInProjectRoot)
     EXPECT_EQ(parsedCommand.get_dependencies_command(), expectedDepsCommand);
     EXPECT_EQ(parsedCommand.get_products(), expectedProducts);
 }
+
+TEST(ReplacePathTest, SimpleCompilePathReplacement)
+{
+    RECC_PREFIX_REPLACEMENT = {{"/home/usr/bin", "/home/bin"}};
+    const std::vector<std::string> command = {"gcc", "-c",
+                                              "/home/usr/bin/hello.c"};
+    const ParsedCommand parsedCommand(command, "");
+
+    // Deps command shouldn't be rewritten.
+    const std::vector<std::string> expectedDepsCommand = {
+        "gcc", "-c", "/home/usr/bin/hello.c", "-M"};
+
+    const std::vector<std::string> expectedCommand = {"gcc", "-c",
+                                                      "/home/bin/hello.c"};
+    ASSERT_TRUE(parsedCommand.is_compiler_command());
+    EXPECT_EQ(parsedCommand.get_command(), expectedCommand);
+    EXPECT_EQ(parsedCommand.get_dependencies_command(), expectedDepsCommand);
+}
+
+TEST(ReplacePathTest, ReplaceCompilePathInProjectRoot)
+{
+    // Path to replace is inside project root, the behavior expected is:
+    // Path replaced by path in PREFIX_MAP, then if still relative to
+    // PROJECT_ROOT Replaced again to be made relative.
+    RECC_PREFIX_REPLACEMENT = {{"/home/usr/bin", "/home/bin"}};
+    RECC_PROJECT_ROOT = "/home/";
+
+    const std::vector<std::string> command = {
+        "gcc",
+        "-c",
+        "/home/usr/bin/hello.c",
+        "-I/home/usr/bin/include/headers",
+        "-o",
+        "hello.o"};
+
+    const ParsedCommand parsedCommand(command, "/home/");
+
+    // Deps command shouldn't be rewritten.
+    const std::vector<std::string> expectedDepsCommand = {
+        "gcc", "-c", "usr/bin/hello.c", "-Iusr/bin/include/headers", "-M"};
+
+    // -I should be replaced, and made relative
+    const std::vector<std::string> expectedCommand = {
+        "gcc", "-c", "bin/hello.c", "-Ibin/include/headers", "-o", "hello.o"};
+
+    const std::set<std::string> expectedProducts = {"hello.o"};
+
+    ASSERT_TRUE(parsedCommand.is_compiler_command());
+    EXPECT_EQ(parsedCommand.get_command(), expectedCommand);
+    EXPECT_EQ(parsedCommand.get_dependencies_command(), expectedDepsCommand);
+    EXPECT_EQ(parsedCommand.get_products(), expectedProducts);
+}
