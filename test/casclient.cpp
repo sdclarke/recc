@@ -315,10 +315,14 @@ TEST_F(CasClientFixture, FetchBlobResumeDownload)
 
 TEST_F(CasClientFixture, FetchCapabilities)
 {
-    const auto maxBatchSize = 123;
-
     proto::CacheCapabilities cacheCapabilities;
+    const auto maxBatchSize = 123;
     cacheCapabilities.set_max_batch_total_size_bytes(maxBatchSize);
+
+    // The remote supports all digest functions:
+    for (const auto &entry : DigestGenerator::stringToDigestFunctionMap()) {
+        cacheCapabilities.add_digest_function(entry.second);
+    }
 
     proto::ServerCapabilities serverCapabilities;
     serverCapabilities.mutable_cache_capabilities()->CopyFrom(
@@ -331,6 +335,30 @@ TEST_F(CasClientFixture, FetchCapabilities)
     casClient.setUpFromServerCapabilities();
 
     ASSERT_EQ(casClient.maxTotalBatchSizeBytes(), maxBatchSize);
+}
+
+TEST_F(CasClientFixture, FetchCapabilitiesDigestFunctionNotSupportedThrows)
+{
+    proto::CacheCapabilities cacheCapabilities;
+    // The server does not support the digest function that we have configured:
+    const auto configured_digest_function =
+        DigestGenerator::stringToDigestFunctionMap().at(
+            RECC_CAS_DIGEST_FUNCTION);
+    for (const auto &entry : DigestGenerator::stringToDigestFunctionMap()) {
+        if (entry.second != configured_digest_function) {
+            cacheCapabilities.add_digest_function(entry.second);
+        }
+    }
+
+    proto::ServerCapabilities serverCapabilities;
+    serverCapabilities.mutable_cache_capabilities()->CopyFrom(
+        cacheCapabilities);
+
+    EXPECT_CALL(*capabilitiesStub, GetCapabilities(_, _, _))
+        .WillOnce(DoAll(SetArgPointee<2>(serverCapabilities),
+                        Return(grpc::Status::OK)));
+
+    ASSERT_THROW(casClient.setUpFromServerCapabilities(), std::runtime_error);
 }
 
 TEST_F(CasClientFixture, FetchCapabilitiesFail)
