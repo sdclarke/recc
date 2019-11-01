@@ -21,6 +21,37 @@
 
 using namespace BloombergLP::recc;
 
+namespace {
+
+void printNestedDirectory(const NestedDirectory &nd,
+                          const std::string &dirName = "")
+{
+    std::cout << std::endl;
+
+    if (!dirName.empty()) {
+        std::cout << "directory " << dirName << std::endl;
+    }
+
+    std::cout << nd.d_files.size() << " file(s)" << std::endl;
+    for (const auto &it : nd.d_files) {
+        std::cout << "    " << it.first << std::endl;
+    }
+
+    std::cout << nd.d_symlinks.size() << " symlink(s)" << std::endl;
+    for (const auto &it : nd.d_symlinks) {
+        std::cout << "    " << it.first << std::endl;
+    }
+
+    std::cout << nd.d_subdirs->size() << " sub-directories" << std::endl;
+    for (const auto &it : *nd.d_subdirs) {
+        const std::string newDirPath =
+            dirName.empty() ? it.first : dirName + "/" + it.first;
+        printNestedDirectory(it.second, newDirPath);
+    }
+}
+
+} // namespace
+
 TEST(FileTest, TrivialFile)
 {
     const auto path = "abc.txt";
@@ -246,7 +277,7 @@ TEST(NestedDirectoryTest, MakeNestedDirectory)
     std::string cwd = FileUtils::get_current_working_directory();
     auto nestedDirectory = make_nesteddirectory(cwd.c_str(), &fileMap);
 
-    EXPECT_EQ(2, nestedDirectory.d_subdirs->size());
+    EXPECT_EQ(3, nestedDirectory.d_subdirs->size());
     EXPECT_EQ(2, nestedDirectory.d_files.size());
 
     EXPECT_EQ("abc", fileMap[nestedDirectory.d_files["abc.txt"]->getDigest()]);
@@ -379,13 +410,14 @@ TEST(NestedDirectoryTest, NestedDirectoryMultipleNestedDirPathReplacement)
 
 TEST(NestedDirectoryTest, NestedDirectoryNotAPrefix)
 {
+    RECC_PROJECT_ROOT = FileUtils::get_current_working_directory();
     std::string cwd = FileUtils::get_current_working_directory();
     // not a prefix
     RECC_PREFIX_REPLACEMENT = {{cwd + "/nestdir/nestdir2", "/nestdir/hi"}};
     digest_string_umap fileMap;
     auto nestedDirectory = make_nesteddirectory(cwd.c_str(), &fileMap);
 
-    EXPECT_EQ(2, nestedDirectory.d_subdirs->size());
+    EXPECT_EQ(3, nestedDirectory.d_subdirs->size());
     EXPECT_EQ(2, nestedDirectory.d_files.size());
 
     auto secondsubDir = &(*nestedDirectory.d_subdirs)["nestdir"];
@@ -483,4 +515,50 @@ TEST(NestedDirectoryTest, TestRootReplacement)
     EXPECT_EQ(1, subDir4->d_files.size());
     ASSERT_EQ(file->getFileContents(),
               subDir4->d_files["nestdirfile2.txt"]->getFileContents());
+}
+
+TEST(NestedDirectoryTest, SymlinkTest)
+{
+    digest_string_umap fileMap;
+    std::string rootDir = "symlinkdir";
+    std::string subDir = "subdir";
+    auto nestedDirectory = make_nesteddirectory(rootDir.c_str(), &fileMap);
+
+    auto subdirectory = &(*nestedDirectory.d_subdirs)[rootDir];
+    ASSERT_EQ(1, subdirectory->d_subdirs->size());
+    ASSERT_EQ(1, subdirectory->d_files.size());
+
+    ASSERT_EQ("regfile data\n",
+              fileMap[subdirectory->d_files["regular_file"]->getDigest()]);
+
+    auto subdirectory2 = &(*subdirectory->d_subdirs)[subDir];
+    ASSERT_EQ(0, subdirectory2->d_subdirs->size());
+    ASSERT_EQ(0, subdirectory2->d_files.size());
+    ASSERT_EQ(1, subdirectory2->d_symlinks.size());
+
+    // build a relative path
+    // lstat() the file and confirm it's a symlink
+    // readlink() the symlink and confirm that the contents
+    // are the same as the target in our nested directory structure
+    for (const auto &it : subdirectory2->d_symlinks) {
+        const std::string name = it.first;
+        const std::string target = it.second;
+        const std::string path = rootDir + "/" + subDir + "/" + name;
+        struct stat statResult;
+        int rc = lstat(path.c_str(), &statResult);
+        if (rc != 0) {
+            std::cout << "error in lstat() for \"" << path << "\", " << errno
+                      << ", " << strerror(errno) << std::endl;
+            FAIL();
+        }
+        ASSERT_TRUE(S_ISLNK(statResult.st_mode));
+        std::string contents(statResult.st_size, '\0');
+        rc = readlink(path.c_str(), &contents[0], contents.size());
+        if (rc < 0) {
+            std::cout << "error in readlink() for \"" << path << "\", "
+                      << errno << ", " << strerror(errno) << std::endl;
+            FAIL();
+        }
+        ASSERT_EQ(target, contents);
+    }
 }
