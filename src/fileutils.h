@@ -51,7 +51,7 @@ struct FileUtils {
     /**
      * Return the 'struct stat' given an absolute file path
      */
-    static struct stat get_stat(const char *path);
+    static struct stat get_stat(const char *path, const bool followSymlinks);
 
     static bool isSupportedFileType(const struct stat &s);
     static bool is_executable(const struct stat &s);
@@ -73,7 +73,8 @@ struct FileUtils {
      * The path must be a path to a file that exists on disk. It can be
      * absolute or relative to the current directory.
      */
-    static std::string get_file_contents(const char *path);
+    static std::string get_file_contents(const char *path,
+                                         const bool followSymlinks = true);
     static std::string get_file_contents(const char *path,
                                          const struct stat &statResult);
 

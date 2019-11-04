@@ -81,7 +81,7 @@ bool FileUtils::isSupportedFileType(const struct stat &s)
     return (S_ISREG(s.st_mode) || S_ISLNK(s.st_mode));
 }
 
-struct stat FileUtils::get_stat(const char *path)
+struct stat FileUtils::get_stat(const char *path, const bool followSymlinks)
 {
     if (path == nullptr || *path == 0) {
         std::ostringstream oss;
@@ -89,14 +89,17 @@ struct stat FileUtils::get_stat(const char *path)
         throw std::runtime_error(oss.str());
     }
 
-    // Use lstat() so we read the contents of the link itself
-    // not to the target of the link
-    // See https://linux.die.net/man/2/lstat
     struct stat statResult;
-    if (lstat(path, &statResult) == 0) {
-        return statResult;
+    const int rc =
+        (followSymlinks ? stat(path, &statResult) : lstat(path, &statResult));
+    if (rc < 0) {
+        RECC_LOG_ERROR("error in " << (followSymlinks ? "stat()" : "lstat()")
+                                   << ", rc = " << rc << ", errno = [" << errno
+                                   << ":" << strerror(errno) << "]");
+        throw std::system_error(errno, std::system_category());
     }
-    throw std::system_error(errno, std::system_category());
+
+    return statResult;
 }
 
 bool FileUtils::is_executable(const struct stat &s)
@@ -133,13 +136,10 @@ void FileUtils::make_executable(const char *path)
     throw std::system_error(errno, std::system_category());
 }
 
-std::string FileUtils::get_file_contents(const char *path)
+std::string FileUtils::get_file_contents(const char *path,
+                                         const bool followSymlinks)
 {
-    struct stat statResult;
-    if (lstat(path, &statResult) != 0) {
-        throw std::system_error(errno, std::system_category());
-    }
-
+    struct stat statResult = FileUtils::get_stat(path, followSymlinks);
     return FileUtils::get_file_contents(path, statResult);
 }
 

@@ -52,10 +52,11 @@ bool ReccFile::isExecutable() const { return d_executable; }
 
 bool ReccFile::isSymlink() const { return d_symlink; }
 
-std::shared_ptr<ReccFile> ReccFileFactory::createFile(const char *path)
+std::shared_ptr<ReccFile>
+ReccFileFactory::createFile(const char *path, const bool followSymlinks)
 {
     if (path != nullptr) {
-        struct stat statResults = FileUtils::get_stat(path);
+        struct stat statResults = FileUtils::get_stat(path, followSymlinks);
         if (!FileUtils::isSupportedFileType(statResults)) {
             return nullptr;
         }

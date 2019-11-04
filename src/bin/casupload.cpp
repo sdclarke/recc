@@ -56,7 +56,7 @@ void printNestedDirectory(const NestedDirectory &nd)
 } // namespace
 
 const std::string HELP(
-    "USAGE: casupload <paths>\n"
+    "USAGE: casupload <paths> [--doNotFollowSymlinks]\n"
     "Uploads the given files and directories to CAS, then prints the digest "
     "hash and size of\n"
     "the corresponding Directory messages.\n"
@@ -72,12 +72,17 @@ const std::string HELP(
     "\n"
     "The server and instance to write to are controlled by the "
     "RECC_CAS_SERVER\n"
-    "and RECC_INSTANCE environment variables.");
+    "and RECC_INSTANCE environment variables.\n"
+    "\n"
+    "By default, casupload will follow symlinks. Use option -d or \n"
+    "'--doNotFollowSymlinks' to alter this behavior\n");
 
 int main(int argc, char *argv[])
 {
+    bool followSymlinks = true;
+    int pathArgsIndex = 1;
     if (argc <= 1) {
-        RECC_LOG_ERROR("USAGE: casupload <paths>");
+        RECC_LOG_ERROR("USAGE: casupload <paths> [--doNotFollowSymlinks]");
         RECC_LOG_ERROR("(run \"casupload --help\" for details)");
         return 1;
     }
@@ -85,6 +90,11 @@ int main(int argc, char *argv[])
              (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)) {
         RECC_LOG_WARNING(HELP);
         return 1;
+    }
+    else if (argc == 3 && (strcmp(argv[1], "--doNotfollowSymlinks") == 0 ||
+                           strcmp(argv[1], "-d") == 0)) {
+        followSymlinks = false;
+        pathArgsIndex = 2;
     }
 
     set_config_locations();
@@ -109,19 +119,17 @@ int main(int argc, char *argv[])
 
     // Upload directories individually, and aggregate files to upload as single
     // merkle tree
-    for (int i = 1; i < argc; ++i) {
-        RECC_LOG("Starting to process \"" << argv[i] << "\"");
-        struct stat statResult;
-        if (stat(argv[i], &statResult) != 0) {
-            RECC_LOG_VERBOSE("Could not stat [" << argv[i] << "] skipping.");
-            continue;
-        }
+    for (int i = pathArgsIndex; i < argc; ++i) {
+        RECC_LOG("Starting to process \"" << argv[i] << "\", followSymlinks = "
+                                          << std::boolalpha << followSymlinks);
+
+        struct stat statResult = FileUtils::get_stat(argv[i], followSymlinks);
         if (S_ISDIR(statResult.st_mode)) {
             digest_string_umap directory_blobs;
             digest_string_umap directory_digest_to_filecontents;
 
             auto singleNestedDirectory = make_nesteddirectory(
-                argv[i], &directory_digest_to_filecontents);
+                argv[i], &directory_digest_to_filecontents, followSymlinks);
             auto digest = singleNestedDirectory.to_digest(&directory_blobs);
             RECC_LOG("Finished building nested directory from \"" << argv[i]
                                                                   << "\"");
@@ -143,7 +151,7 @@ int main(int argc, char *argv[])
         }
         else {
             std::shared_ptr<ReccFile> file =
-                ReccFileFactory::createFile(argv[i]);
+                ReccFileFactory::createFile(argv[i], followSymlinks);
             if (!file) {
                 RECC_LOG_VERBOSE("Encountered unsupported file \""
                                  << argv[i] << "\", skipping...");

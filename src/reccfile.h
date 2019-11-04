@@ -57,7 +57,8 @@ class ReccFile {
  */
 class ReccFileFactory {
   public:
-    static std::shared_ptr<ReccFile> createFile(const char *path);
+    static std::shared_ptr<ReccFile>
+    createFile(const char *path, const bool followSymlinks = true);
     ReccFileFactory() = delete;
 };
 

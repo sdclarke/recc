@@ -97,7 +97,8 @@ struct NestedDirectory {
  * call, and if so check the prefix.
  */
 NestedDirectory make_nesteddirectory(const char *path,
-                                     digest_string_umap *fileMap = nullptr);
+                                     digest_string_umap *fileMap = nullptr,
+                                     const bool followSymlinks = true);
 
 } // namespace recc
 } // namespace BloombergLP

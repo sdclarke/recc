@@ -200,7 +200,8 @@ proto::Digest NestedDirectory::to_digest(digest_string_umap *digestMap) const
  */
 void make_nesteddirectoryhelper(
     const char *path, digest_string_umap *fileMap,
-    std::unordered_map<std::shared_ptr<ReccFile>, std::string> *filePathMap)
+    std::unordered_map<std::shared_ptr<ReccFile>, std::string> *filePathMap,
+    const bool followSymlinks)
 {
     RECC_LOG_VERBOSE("Iterating through " << path);
 
@@ -224,20 +225,15 @@ void make_nesteddirectoryhelper(
         const std::string entityName(dirent->d_name);
         const std::string entityPath = pathString + "/" + entityName;
 
-        struct stat statResult;
-        if (lstat(entityPath.c_str(), &statResult) != 0) {
-            RECC_LOG_VERBOSE("Could not stat [" << entityPath
-                                                << "] skipping.");
-            continue;
-        }
-
+        struct stat statResult =
+            FileUtils::get_stat(entityPath.c_str(), followSymlinks);
         if (S_ISDIR(statResult.st_mode)) {
             make_nesteddirectoryhelper(entityPath.c_str(), fileMap,
-                                       filePathMap);
+                                       filePathMap, followSymlinks);
         }
         else {
-            const std::shared_ptr<ReccFile> file =
-                ReccFileFactory::createFile(entityPath.c_str());
+            const std::shared_ptr<ReccFile> file = ReccFileFactory::createFile(
+                entityPath.c_str(), followSymlinks);
             if (!file) {
                 RECC_LOG_VERBOSE("Encountered unsupported file \""
                                  << entityPath << "\", skipping...");
@@ -276,13 +272,14 @@ void make_nesteddirectoryhelper(
 }
 
 NestedDirectory make_nesteddirectory(const char *path,
-                                     digest_string_umap *fileMap)
+                                     digest_string_umap *fileMap,
+                                     const bool followSymlinks)
 {
     NestedDirectory nestedDir;
     std::unordered_map<std::shared_ptr<ReccFile>, std::string> file_path_map;
 
     // Populate both maps
-    make_nesteddirectoryhelper(path, fileMap, &file_path_map);
+    make_nesteddirectoryhelper(path, fileMap, &file_path_map, followSymlinks);
 
     // Construct nestedDirectory
     for (const auto &file : file_path_map) {
