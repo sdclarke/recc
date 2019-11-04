@@ -522,7 +522,8 @@ TEST(NestedDirectoryTest, SymlinkTest)
     digest_string_umap fileMap;
     std::string rootDir = "symlinkdir";
     std::string subDir = "subdir";
-    auto nestedDirectory = make_nesteddirectory(rootDir.c_str(), &fileMap, false);
+    auto nestedDirectory =
+        make_nesteddirectory(rootDir.c_str(), &fileMap, false);
 
     auto subdirectory = &(*nestedDirectory.d_subdirs)[rootDir];
     ASSERT_EQ(1, subdirectory->d_subdirs->size());
