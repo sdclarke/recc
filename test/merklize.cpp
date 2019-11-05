@@ -18,6 +18,8 @@
 #include <map>
 #include <merklize.h>
 #include <reccfile.h>
+#include <subprocess.h>
+#include <vector>
 
 using namespace BloombergLP::recc;
 
@@ -562,4 +564,40 @@ TEST(NestedDirectoryTest, SymlinkTest)
         }
         ASSERT_EQ(target, contents);
     }
+}
+
+TEST(NestedDirectoryTest, EmptyDirTest)
+{
+    std::string cwd = FileUtils::get_current_working_directory();
+    std::string topDir = "nestedtmpdir";
+    std::string subDir = "emptyDir";
+    std::string dirTree = topDir + "/" + subDir;
+    std::string filePath = topDir + "/hello.txt";
+    std::string fileContents = "hello!";
+    FileUtils::create_directory_recursive((cwd + "/" + dirTree).c_str());
+    FileUtils::write_file((cwd + "/" + filePath).c_str(),
+                          fileContents.c_str());
+
+    std::string dirPath = cwd + "/" + topDir;
+    digest_string_umap fileMap;
+    std::cout << dirPath << std::endl;
+    auto nestedDirectory = make_nesteddirectory(topDir.c_str(), &fileMap);
+    // make sure we don't place directories in filemap
+    EXPECT_EQ(fileMap.size(), 1);
+
+    // make sure we also captured the file
+    auto nestedtmpdir = nestedDirectory.d_subdirs->begin();
+    EXPECT_EQ(nestedtmpdir->second.d_files.size(), 1);
+
+    // should only have one subdirectory
+    auto emptydir = nestedtmpdir->second.d_subdirs->begin();
+    EXPECT_EQ(emptydir->first, subDir);
+
+    /// sanity check, make sure emptydir is empty
+    EXPECT_EQ(emptydir->second.d_files.size(), 0);
+    EXPECT_EQ(emptydir->second.d_subdirs->size(), 0);
+    EXPECT_EQ(emptydir->second.d_symlinks.size(), 0);
+
+    const std::vector<std::string> rmCommand = {"rm", "-rf", dirPath};
+    execute(rmCommand);
 }

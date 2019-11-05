@@ -35,6 +35,30 @@
 namespace BloombergLP {
 namespace recc {
 
+namespace {
+
+// Do path replacement and normalize
+const std::string normalize_replace_root(const std::string path)
+{
+
+    // If the path matches any in RECC_PATH_PREFIX, replace it if
+    // necessary, and normalize path.
+    const std::string replacedRoot =
+        FileUtils::resolve_path_from_prefix_map(path.c_str());
+
+    // Get the relativePath from the current PROJECT_ROOT.
+    const std::string relativePath =
+        FileUtils::make_path_relative(replacedRoot, RECC_PROJECT_ROOT.c_str());
+
+    // Normalize path
+    const std::string normalizedReplacedRoot =
+        FileUtils::normalize_path(relativePath.c_str());
+
+    return normalizedReplacedRoot;
+}
+
+} // unnamed namespace
+
 void NestedDirectory::add(std::shared_ptr<ReccFile> file,
                           const char *relativePath, bool checkedPrefix)
 {
@@ -201,7 +225,7 @@ proto::Digest NestedDirectory::to_digest(digest_string_umap *digestMap) const
 void make_nesteddirectoryhelper(
     const char *path, digest_string_umap *fileMap,
     std::unordered_map<std::shared_ptr<ReccFile>, std::string> *filePathMap,
-    const bool followSymlinks)
+    std::unordered_set<std::string> *emptyDirSet, const bool followSymlinks)
 {
     RECC_LOG_VERBOSE("Iterating through " << path);
 
@@ -210,6 +234,8 @@ void make_nesteddirectoryhelper(
     if (dir == nullptr) {
         throw std::system_error(errno, std::system_category());
     }
+
+    bool dirIsEmpty = true;
 
     // pathString is used to keep track of the top-level directory
     const std::string pathString(path);
@@ -222,6 +248,8 @@ void make_nesteddirectoryhelper(
             continue;
         }
 
+        dirIsEmpty = false;
+
         const std::string entityName(dirent->d_name);
         const std::string entityPath = pathString + "/" + entityName;
 
@@ -229,7 +257,8 @@ void make_nesteddirectoryhelper(
             FileUtils::get_stat(entityPath.c_str(), followSymlinks);
         if (S_ISDIR(statResult.st_mode)) {
             make_nesteddirectoryhelper(entityPath.c_str(), fileMap,
-                                       filePathMap, followSymlinks);
+                                       filePathMap, emptyDirSet,
+                                       followSymlinks);
         }
         else {
             const std::shared_ptr<ReccFile> file = ReccFileFactory::createFile(
@@ -241,19 +270,8 @@ void make_nesteddirectoryhelper(
             }
 
             if (fileMap != nullptr) {
-                // If the path matches any in RECC_PATH_PREFIX, replace it if
-                // necessary, and normalize path.
-                const std::string replacedRoot =
-                    FileUtils::resolve_path_from_prefix_map(entityPath)
-                        .c_str();
-
-                // Get the relativePath from the current PROJECT_ROOT.
-                const std::string relativePath = FileUtils::make_path_relative(
-                    replacedRoot, RECC_PROJECT_ROOT.c_str());
-
-                // Normalize path
                 const std::string normalizedReplacedRoot =
-                    FileUtils::normalize_path(relativePath.c_str());
+                    normalize_replace_root(entityPath);
 
                 RECC_LOG_VERBOSE("Mapping local file path: ["
                                  << entityPath
@@ -268,6 +286,19 @@ void make_nesteddirectoryhelper(
             }
         }
     }
+    if (dirIsEmpty) {
+        const std::string normalizedReplacedDir =
+            normalize_replace_root(pathString);
+
+        RECC_LOG_VERBOSE("Mapping local empty directory: ["
+                         << pathString
+                         << "] to normalized-relative (if)updated: ["
+                         << normalizedReplacedDir << "]");
+
+        // Store the updated/replaced path to directory in emptyDirSet.
+        // Which will be used to construct the NestedDirectory later
+        emptyDirSet->emplace(normalizedReplacedDir);
+    }
     closedir(dir);
 }
 
@@ -277,13 +308,20 @@ NestedDirectory make_nesteddirectory(const char *path,
 {
     NestedDirectory nestedDir;
     std::unordered_map<std::shared_ptr<ReccFile>, std::string> file_path_map;
+    std::unordered_set<std::string> empty_dir_set;
 
     // Populate both maps
-    make_nesteddirectoryhelper(path, fileMap, &file_path_map, followSymlinks);
+    make_nesteddirectoryhelper(path, fileMap, &file_path_map, &empty_dir_set,
+                               followSymlinks);
 
     // Construct nestedDirectory
     for (const auto &file : file_path_map) {
         nestedDir.add(file.first, file.second.c_str());
+    }
+
+    // Add empty directories to nestedDirectory
+    for (const auto &dir : empty_dir_set) {
+        nestedDir.addDirectory(dir.c_str());
     }
 
     return nestedDir;
