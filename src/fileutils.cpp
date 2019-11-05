@@ -512,5 +512,17 @@ std::string FileUtils::path_basename(const char *path)
     return FileUtils::last_n_segments(path, 1);
 }
 
+std::vector<std::string> FileUtils::parseDirectories(const std::string &path)
+{
+    std::vector<std::string> result;
+    char *token = std::strtok((char *)path.c_str(), "/");
+    while (token != nullptr) {
+        result.emplace_back(token);
+        token = std::strtok(nullptr, "/");
+    }
+
+    return result;
+}
+
 } // namespace recc
 } // namespace BloombergLP

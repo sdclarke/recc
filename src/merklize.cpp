@@ -218,6 +218,33 @@ proto::Digest NestedDirectory::to_digest(digest_string_umap *digestMap) const
     return digest;
 }
 
+void NestedDirectory::print(std::ostream &out,
+                            const std::string &dirName) const
+{
+    out << "directory: \"" << dirName << "\"" << std::endl;
+
+    out << d_files.size() << " files" << std::endl;
+    for (const auto &it : d_files) {
+        const std::string path =
+            dirName.empty() ? it.first : dirName + "/" + it.first;
+        out << "    \"" << path << "\"" << std::endl;
+    }
+
+    out << d_symlinks.size() << " symlinks" << std::endl;
+    for (const auto &it : d_symlinks) {
+        const std::string path =
+            dirName.empty() ? it.first : dirName + "/" + it.first;
+        out << "    \"" << path << "\", \"" << it.second << "\"" << std::endl;
+    }
+
+    out << d_subdirs->size() << " sub-directories" << std::endl << std::endl;
+    for (const auto &it : *d_subdirs) {
+        const std::string path =
+            dirName.empty() ? it.first : dirName + "/" + it.first;
+        it.second.print(out, path);
+    }
+}
+
 /**
  * Helper method, iterates through local filesystem, and populates fileMap,
  * and filePathMap.
@@ -325,6 +352,12 @@ NestedDirectory make_nesteddirectory(const char *path,
     }
 
     return nestedDir;
+}
+
+std::ostream &operator<<(std::ostream &out, const NestedDirectory &obj)
+{
+    obj.print(out);
+    return out;
 }
 
 } // namespace recc

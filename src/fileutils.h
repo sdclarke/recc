@@ -18,6 +18,7 @@
 #include <reccdefaults.h>
 #include <string>
 #include <sys/stat.h>
+#include <vector>
 
 namespace BloombergLP {
 namespace recc {
@@ -179,6 +180,8 @@ struct FileUtils {
      * the path is a/b/c.txt return c.txt.
      */
     static std::string path_basename(const char *path);
+
+    static std::vector<std::string> parseDirectories(const std::string &path);
 };
 
 } // namespace recc

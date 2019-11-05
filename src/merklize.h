@@ -83,6 +83,8 @@ struct NestedDirectory {
      * recursive -- nested subdirectories will also be stored.
      */
     proto::Digest to_digest(digest_string_umap *digestMap = nullptr) const;
+
+    void print(std::ostream &out, const std::string &dirName = "") const;
 };
 
 /**
@@ -99,6 +101,8 @@ struct NestedDirectory {
 NestedDirectory make_nesteddirectory(const char *path,
                                      digest_string_umap *fileMap = nullptr,
                                      const bool followSymlinks = true);
+
+std::ostream &operator<<(std::ostream &out, const NestedDirectory &obj);
 
 } // namespace recc
 } // namespace BloombergLP

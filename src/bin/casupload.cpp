@@ -31,30 +31,6 @@
 
 using namespace BloombergLP::recc;
 
-namespace {
-
-void printNestedDirectory(const NestedDirectory &nd)
-{
-    RECC_LOG_VERBOSE(nd.d_files.size() << " files")
-    for (const auto &it : nd.d_files) {
-        RECC_LOG_VERBOSE("file: " << it.first)
-    }
-
-    RECC_LOG_VERBOSE(nd.d_symlinks.size() << " symlinks");
-    for (const auto &it : nd.d_symlinks) {
-        RECC_LOG_VERBOSE(
-            "symlink_name: " << it.first << ", symlink_target: " << it.second);
-    }
-
-    RECC_LOG_VERBOSE(nd.d_subdirs->size() << " subdirectories");
-    for (const auto &it : *nd.d_subdirs) {
-        RECC_LOG_VERBOSE("dir_name: " << it.first);
-        printNestedDirectory(it.second);
-    }
-}
-
-} // namespace
-
 const std::string HELP(
     "USAGE: casupload <paths> [--doNotFollowSymlinks]\n"
     "Uploads the given files and directories to CAS, then prints the digest "
@@ -120,8 +96,9 @@ int main(int argc, char *argv[])
     // Upload directories individually, and aggregate files to upload as single
     // merkle tree
     for (int i = pathArgsIndex; i < argc; ++i) {
-        RECC_LOG("Starting to process \"" << argv[i] << "\", followSymlinks = "
-                                          << std::boolalpha << followSymlinks);
+        RECC_LOG_VERBOSE("Starting to process \""
+                         << argv[i] << "\", followSymlinks = "
+                         << std::boolalpha << followSymlinks);
 
         struct stat statResult = FileUtils::get_stat(argv[i], followSymlinks);
         if (S_ISDIR(statResult.st_mode)) {
@@ -131,12 +108,12 @@ int main(int argc, char *argv[])
             auto singleNestedDirectory = make_nesteddirectory(
                 argv[i], &directory_digest_to_filecontents, followSymlinks);
             auto digest = singleNestedDirectory.to_digest(&directory_blobs);
-            RECC_LOG("Finished building nested directory from \"" << argv[i]
-                                                                  << "\"");
-            printNestedDirectory(singleNestedDirectory);
+            RECC_LOG_VERBOSE("Finished building nested directory from \""
+                             << argv[i] << "\"");
+            RECC_LOG_VERBOSE(singleNestedDirectory);
 
             try {
-                RECC_LOG("Starting to upload merkle tree");
+                RECC_LOG_VERBOSE("Starting to upload merkle tree");
                 casClient.upload_resources(directory_blobs,
                                            directory_digest_to_filecontents);
             }
@@ -146,8 +123,8 @@ int main(int argc, char *argv[])
                                << " failed with error: " << e.what());
                 exit(1);
             }
-            RECC_LOG("Uploaded " << argv[i] << ": " << digest.hash() << "/"
-                                 << digest.size_bytes());
+            RECC_LOG_VERBOSE("Uploaded " << argv[i] << ": " << digest.hash()
+                                         << "/" << digest.size_bytes());
         }
         else {
             std::shared_ptr<ReccFile> file =
@@ -165,7 +142,7 @@ int main(int argc, char *argv[])
     }
 
     if (!digest_to_filecontents.empty()) {
-        RECC_LOG("Building nested directory structure");
+        RECC_LOG_VERBOSE("Building nested directory structure");
         digest_string_umap blobs;
         auto directoryDigest = nestedDirectory.to_digest(&blobs);
         try {
@@ -175,8 +152,8 @@ int main(int argc, char *argv[])
             RECC_LOG_ERROR("Uploading files failed with error: " << e.what());
             exit(1);
         }
-        RECC_LOG("Uploaded files: " << directoryDigest.hash() << "/"
-                                    << directoryDigest.size_bytes());
+        RECC_LOG_VERBOSE("Uploaded files: " << directoryDigest.hash() << "/"
+                                            << directoryDigest.size_bytes());
     }
 
     return 0;
