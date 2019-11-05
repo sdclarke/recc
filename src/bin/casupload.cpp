@@ -32,7 +32,7 @@
 using namespace BloombergLP::recc;
 
 const std::string HELP(
-    "USAGE: casupload <paths> [--doNotFollowSymlinks]\n"
+    "USAGE: casupload <paths> [--followSymlinks]\n"
     "Uploads the given files and directories to CAS, then prints the digest "
     "hash and size of\n"
     "the corresponding Directory messages.\n"
@@ -50,15 +50,15 @@ const std::string HELP(
     "RECC_CAS_SERVER\n"
     "and RECC_INSTANCE environment variables.\n"
     "\n"
-    "By default, casupload will follow symlinks. Use option -d or \n"
-    "'--doNotFollowSymlinks' to alter this behavior\n");
+    "By default 'casupload' will not follow symlinks. Use option -f or \n"
+    "'--followSymlinks' to alter this behavior\n");
 
 int main(int argc, char *argv[])
 {
-    bool followSymlinks = true;
+    bool followSymlinks = false;
     int pathArgsIndex = 1;
     if (argc <= 1) {
-        RECC_LOG_ERROR("USAGE: casupload <paths> [--doNotFollowSymlinks]");
+        RECC_LOG_ERROR("USAGE: casupload <paths> [-f | --followSymlinks]");
         RECC_LOG_ERROR("(run \"casupload --help\" for details)");
         return 1;
     }
@@ -67,9 +67,9 @@ int main(int argc, char *argv[])
         RECC_LOG_WARNING(HELP);
         return 1;
     }
-    else if (argc == 3 && (strcmp(argv[1], "--doNotfollowSymlinks") == 0 ||
-                           strcmp(argv[1], "-d") == 0)) {
-        followSymlinks = false;
+    else if (argc == 3 && (strcmp(argv[1], "--followSymlinks") == 0 ||
+                           strcmp(argv[1], "-f") == 0)) {
+        followSymlinks = true;
         pathArgsIndex = 2;
     }
 
