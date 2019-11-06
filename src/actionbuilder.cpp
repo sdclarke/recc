@@ -111,6 +111,7 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
                 if (!file) {
                     RECC_LOG_VERBOSE("Encountered unsupported file \""
                                      << dep << "\", skipping...");
+                    continue;
                 }
                 nestedDirectory.add(file, merklePath.c_str());
                 // Store the digest to the file content.
