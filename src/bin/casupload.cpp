@@ -105,6 +105,9 @@ int main(int argc, char *argv[])
             digest_string_umap directory_blobs;
             digest_string_umap directory_digest_to_filecontents;
 
+            // set root project so the path in the merkle tree
+            // starts there
+            RECC_PROJECT_ROOT = argv[i];
             auto singleNestedDirectory = make_nesteddirectory(
                 argv[i], &directory_digest_to_filecontents, followSymlinks);
             auto digest = singleNestedDirectory.to_digest(&directory_blobs);
