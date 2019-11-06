@@ -112,7 +112,8 @@ int main(int argc, char *argv[])
                 argv[i], &directory_digest_to_filecontents, followSymlinks);
             auto digest = singleNestedDirectory.to_digest(&directory_blobs);
             RECC_LOG_VERBOSE("Finished building nested directory from \""
-                             << argv[i] << "\"");
+                             << argv[i] << "\": " << digest.hash() << "/"
+                             << digest.size_bytes());
             RECC_LOG_VERBOSE(singleNestedDirectory);
 
             try {
@@ -126,8 +127,9 @@ int main(int argc, char *argv[])
                                << " failed with error: " << e.what());
                 exit(1);
             }
-            RECC_LOG_VERBOSE("Uploaded " << argv[i] << ": " << digest.hash()
-                                         << "/" << digest.size_bytes());
+            RECC_LOG_VERBOSE("Uploaded \"" << argv[i]
+                                           << "\": " << digest.hash() << "/"
+                                           << digest.size_bytes());
         }
         else {
             std::shared_ptr<ReccFile> file =
