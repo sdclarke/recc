@@ -127,9 +127,8 @@ int main(int argc, char *argv[])
                                << " failed with error: " << e.what());
                 exit(1);
             }
-            RECC_LOG_VERBOSE("Uploaded \"" << argv[i]
-                                           << "\": " << digest.hash() << "/"
-                                           << digest.size_bytes());
+            RECC_LOG("Uploaded \"" << argv[i] << "\": " << digest.hash() << "/"
+                                   << digest.size_bytes());
         }
         else {
             std::shared_ptr<ReccFile> file =
@@ -157,8 +156,8 @@ int main(int argc, char *argv[])
             RECC_LOG_ERROR("Uploading files failed with error: " << e.what());
             exit(1);
         }
-        RECC_LOG_VERBOSE("Uploaded files: " << directoryDigest.hash() << "/"
-                                            << directoryDigest.size_bytes());
+        RECC_LOG("Uploaded files: " << directoryDigest.hash() << "/"
+                                    << directoryDigest.size_bytes());
     }
 
     return 0;
