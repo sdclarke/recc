@@ -76,14 +76,53 @@ void FileUtils::create_directory_recursive(const char *path)
     }
 }
 
+bool FileUtils::isRegularFileOrSymlink(const struct stat &s)
+{
+    return (S_ISREG(s.st_mode) || S_ISLNK(s.st_mode));
+}
+
+struct stat FileUtils::get_stat(const char *path, const bool followSymlinks)
+{
+    if (path == nullptr || *path == 0) {
+        const std::string error = "invalid args: path is either null or empty";
+        RECC_LOG_ERROR(error);
+        throw std::runtime_error(error);
+    }
+
+    struct stat statResult;
+    const int rc =
+        (followSymlinks ? stat(path, &statResult) : lstat(path, &statResult));
+    if (rc < 0) {
+        RECC_LOG_ERROR("error in " << (followSymlinks ? "stat()" : "lstat()")
+                                   << ", rc = " << rc << ", errno = [" << errno
+                                   << ":" << strerror(errno) << "]");
+        throw std::system_error(errno, std::system_category());
+    }
+
+    return statResult;
+}
+
+bool FileUtils::is_executable(const struct stat &s)
+{
+    return s.st_mode & S_IXUSR;
+}
+
 bool FileUtils::is_executable(const char *path)
 {
+    if (path == nullptr || *path == 0) {
+        std::ostringstream oss;
+        oss << "invalid args: path is either null or empty";
+        throw std::runtime_error(oss.str());
+    }
+
     struct stat statResult;
     if (stat(path, &statResult) == 0) {
         return statResult.st_mode & S_IXUSR;
     }
     throw std::system_error(errno, std::system_category());
 }
+
+bool FileUtils::is_symlink(const struct stat &s) { return S_ISLNK(s.st_mode); }
 
 void FileUtils::make_executable(const char *path)
 {
@@ -97,19 +136,52 @@ void FileUtils::make_executable(const char *path)
     throw std::system_error(errno, std::system_category());
 }
 
+std::string FileUtils::get_symlink_contents(const char *path,
+                                            const struct stat &statResult)
+{
+    if (path == nullptr || *path == 0) {
+        const std::string error = "invalid args: path is either null or empty";
+        RECC_LOG_ERROR(error);
+        throw std::runtime_error(error);
+    }
+
+    if (!S_ISLNK(statResult.st_mode)) {
+        std::ostringstream oss;
+        oss << "file \"" << path << "\" is not a symlink";
+        RECC_LOG_ERROR(oss.str());
+        throw std::runtime_error(oss.str());
+    }
+
+    std::string contents(statResult.st_size, '\0');
+    const int rc = readlink(path, &contents[0], contents.size());
+    if (rc < 0) {
+        std::ostringstream oss;
+        oss << "readlink failed for \"" << path << "\", rc = " << rc
+            << ", errno = [" << errno << ":" << strerror(errno) << "]";
+        RECC_LOG_ERROR(oss.str());
+        throw std::runtime_error(oss.str());
+    }
+
+    return contents;
+}
+
 std::string FileUtils::get_file_contents(const char *path)
 {
-    struct stat statResult;
-    if (stat(path, &statResult) != 0) {
-        throw std::system_error(errno, std::system_category());
-    }
+    struct stat statResult = FileUtils::get_stat(path, true);
+    return FileUtils::get_file_contents(path, statResult);
+}
+
+std::string FileUtils::get_file_contents(const char *path,
+                                         const struct stat &statResult)
+{
     if (!S_ISREG(statResult.st_mode)) {
-        throw std::runtime_error("\"" + std::string(path) +
-                                 "\" is not a regular file");
+        std::ostringstream oss;
+        oss << "file \"" << path << "\" is not a regular file";
+        RECC_LOG_ERROR(oss.str());
+        throw std::runtime_error(oss.str());
     }
 
     std::string contents;
-
     std::ifstream fileStream;
     fileStream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     fileStream.open(path, std::ios::in | std::ios::binary);
@@ -125,6 +197,7 @@ std::string FileUtils::get_file_contents(const char *path)
         fileStream.read(&contents[0],
                         static_cast<std::streamsize>(contents.length()));
     }
+
     return contents;
 }
 
@@ -455,6 +528,18 @@ std::string FileUtils::resolve_path_from_prefix_map(const std::string &path)
 std::string FileUtils::path_basename(const char *path)
 {
     return FileUtils::last_n_segments(path, 1);
+}
+
+std::vector<std::string> FileUtils::parseDirectories(const std::string &path)
+{
+    std::vector<std::string> result;
+    char *token = std::strtok((char *)path.c_str(), "/");
+    while (token != nullptr) {
+        result.emplace_back(token);
+        token = std::strtok(nullptr, "/");
+    }
+
+    return result;
 }
 
 } // namespace recc

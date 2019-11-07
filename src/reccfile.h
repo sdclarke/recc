@@ -29,7 +29,7 @@ class ReccFile {
   public:
     ReccFile(const std::string &file_path, const std::string &file_name,
              const std::string &contents, const proto::Digest &digest,
-             bool executable);
+             bool executable, bool symlink = false);
     ReccFile() = delete;
     /**
      * Converts a ReccFile to a proto::FileNode with the given name.
@@ -41,6 +41,7 @@ class ReccFile {
     const std::string &getFilePath() const;
     const std::string &getFileContents() const;
     bool isExecutable() const;
+    bool isSymlink() const;
 
   private:
     const std::string d_filePath;
@@ -48,6 +49,7 @@ class ReccFile {
     const std::string d_fileContents;
     const proto::Digest d_digest;
     bool d_executable;
+    bool d_symlink;
 };
 
 /*
@@ -55,7 +57,8 @@ class ReccFile {
  */
 class ReccFileFactory {
   public:
-    static std::shared_ptr<ReccFile> createFile(const char *path);
+    static std::shared_ptr<ReccFile>
+    createFile(const char *path, const bool followSymlinks = true);
     ReccFileFactory() = delete;
 };
 

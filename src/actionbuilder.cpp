@@ -46,8 +46,11 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
     std::set<std::string> products = RECC_OUTPUT_FILES_OVERRIDE;
     if (!RECC_DEPS_DIRECTORY_OVERRIDE.empty()) {
         RECC_LOG_VERBOSE("Building Merkle tree using directory override");
-        nestedDirectory = make_nesteddirectory(
-            RECC_DEPS_DIRECTORY_OVERRIDE.c_str(), digest_to_filecontents);
+        // when RECC_DEPS_DIRECTORY_OVERRIDE is set, we will not follow
+        // symlinks to help us avoid getting into endless loop
+        nestedDirectory =
+            make_nesteddirectory(RECC_DEPS_DIRECTORY_OVERRIDE.c_str(),
+                                 digest_to_filecontents, false);
     }
     else {
         std::set<std::string> deps = RECC_DEPS_OVERRIDE;
@@ -108,6 +111,11 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
 
                 std::shared_ptr<ReccFile> file =
                     ReccFileFactory::createFile(dep.c_str());
+                if (!file) {
+                    RECC_LOG_VERBOSE("Encountered unsupported file \""
+                                     << dep << "\", skipping...");
+                    continue;
+                }
                 nestedDirectory.add(file, merklePath.c_str());
                 // Store the digest to the file content.
                 (*digest_to_filecontents)[file->getDigest()] =

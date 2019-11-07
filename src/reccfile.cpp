@@ -21,9 +21,9 @@ namespace BloombergLP {
 namespace recc {
 ReccFile::ReccFile(const std::string &file_path, const std::string &file_name,
                    const std::string &contents, const proto::Digest &digest,
-                   bool executable)
+                   bool executable, bool symlink)
     : d_filePath(file_path), d_fileName(file_name), d_fileContents(contents),
-      d_digest(digest), d_executable(executable)
+      d_digest(digest), d_executable(executable), d_symlink(symlink)
 {
 }
 
@@ -50,24 +50,38 @@ const std::string &ReccFile::getFileContents() const { return d_fileContents; }
 
 bool ReccFile::isExecutable() const { return d_executable; }
 
-std::shared_ptr<ReccFile> ReccFileFactory::createFile(const char *path)
+bool ReccFile::isSymlink() const { return d_symlink; }
+
+std::shared_ptr<ReccFile>
+ReccFileFactory::createFile(const char *path, const bool followSymlinks)
 {
     if (path != nullptr) {
-        bool executable = FileUtils::is_executable(path);
+        const struct stat statResult =
+            FileUtils::get_stat(path, followSymlinks);
+        if (!FileUtils::isRegularFileOrSymlink(statResult)) {
+            return nullptr;
+        }
+
+        const bool executable = FileUtils::is_executable(statResult);
+        const bool symlink = FileUtils::is_symlink(statResult);
         const std::string file_name = FileUtils::path_basename(path);
-        const std::string file_contents = FileUtils::get_file_contents(path);
-        proto::Digest file_digest =
+        const std::string file_contents =
+            (symlink ? FileUtils::get_symlink_contents(path, statResult)
+                     : FileUtils::get_file_contents(path, statResult));
+
+        const proto::Digest file_digest =
             DigestGenerator::make_digest(file_contents);
 
         RECC_LOG_VERBOSE("Creating"
                          << (executable ? " " : " non-")
                          << "executable file object"
-                         << " with digest: " << file_digest.ShortDebugString()
-                         << " and path: " << path);
+                         << " with digest \"" << file_digest.ShortDebugString()
+                         << "\" and path \"" << path
+                         << "\", symlink = " << std::boolalpha << symlink);
 
-        return std::make_shared<ReccFile>(ReccFile(std::string(path),
-                                                   file_name, file_contents,
-                                                   file_digest, executable));
+        return std::make_shared<ReccFile>(
+            ReccFile(std::string(path), file_name, file_contents, file_digest,
+                     executable, symlink));
     }
     else {
         RECC_LOG_ERROR("Path is not valid");

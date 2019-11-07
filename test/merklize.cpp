@@ -18,6 +18,8 @@
 #include <map>
 #include <merklize.h>
 #include <reccfile.h>
+#include <subprocess.h>
+#include <vector>
 
 using namespace BloombergLP::recc;
 
@@ -246,7 +248,7 @@ TEST(NestedDirectoryTest, MakeNestedDirectory)
     std::string cwd = FileUtils::get_current_working_directory();
     auto nestedDirectory = make_nesteddirectory(cwd.c_str(), &fileMap);
 
-    EXPECT_EQ(2, nestedDirectory.d_subdirs->size());
+    EXPECT_EQ(3, nestedDirectory.d_subdirs->size());
     EXPECT_EQ(2, nestedDirectory.d_files.size());
 
     EXPECT_EQ("abc", fileMap[nestedDirectory.d_files["abc.txt"]->getDigest()]);
@@ -379,13 +381,14 @@ TEST(NestedDirectoryTest, NestedDirectoryMultipleNestedDirPathReplacement)
 
 TEST(NestedDirectoryTest, NestedDirectoryNotAPrefix)
 {
+    RECC_PROJECT_ROOT = FileUtils::get_current_working_directory();
     std::string cwd = FileUtils::get_current_working_directory();
     // not a prefix
     RECC_PREFIX_REPLACEMENT = {{cwd + "/nestdir/nestdir2", "/nestdir/hi"}};
     digest_string_umap fileMap;
     auto nestedDirectory = make_nesteddirectory(cwd.c_str(), &fileMap);
 
-    EXPECT_EQ(2, nestedDirectory.d_subdirs->size());
+    EXPECT_EQ(3, nestedDirectory.d_subdirs->size());
     EXPECT_EQ(2, nestedDirectory.d_files.size());
 
     auto secondsubDir = &(*nestedDirectory.d_subdirs)["nestdir"];
@@ -483,4 +486,100 @@ TEST(NestedDirectoryTest, TestRootReplacement)
     EXPECT_EQ(1, subDir4->d_files.size());
     ASSERT_EQ(file->getFileContents(),
               subDir4->d_files["nestdirfile2.txt"]->getFileContents());
+}
+
+TEST(NestedDirectoryTest, SymlinkTest)
+{
+    // unset explicitly
+    RECC_PREFIX_REPLACEMENT = {};
+    RECC_PROJECT_ROOT = "";
+
+    const std::string cwd =
+        FileUtils::get_current_working_directory() + "/symlinkdir";
+    digest_string_umap fileMap;
+    const std::string subDir = "subdir";
+    auto nestedDirectory = make_nesteddirectory(cwd.c_str(), &fileMap, false);
+
+    // because we ingested an absolute path, we need to drill down
+    // to the nested directory node that we are interested in
+    std::vector<std::string> directories = FileUtils::parseDirectories(cwd);
+    auto *subDirectory = &nestedDirectory;
+    for (const auto &str : directories) {
+        const auto it = subDirectory->d_subdirs->find(str);
+        if (it != subDirectory->d_subdirs->end()) {
+            subDirectory = &it->second;
+        }
+    }
+
+    ASSERT_EQ(1, subDirectory->d_subdirs->size());
+    ASSERT_EQ(1, subDirectory->d_files.size());
+    ASSERT_EQ("regfile data\n",
+              fileMap[subDirectory->d_files["regular_file"]->getDigest()]);
+
+    auto subDirectory2 = &(*subDirectory->d_subdirs)[subDir];
+    ASSERT_EQ(0, subDirectory2->d_subdirs->size());
+    ASSERT_EQ(0, subDirectory2->d_files.size());
+    ASSERT_EQ(1, subDirectory2->d_symlinks.size());
+
+    // build a relative path
+    // lstat() the file and confirm it's a symlink
+    // readlink() the symlink and confirm that the contents
+    // are the same as the target in our nested directory structure
+    for (const auto &it : subDirectory2->d_symlinks) {
+        const std::string name = it.first;
+        const std::string target = it.second;
+        const std::string path = "symlinkdir/" + subDir + "/" + name;
+        struct stat statResult;
+        int rc = lstat(path.c_str(), &statResult);
+        if (rc != 0) {
+            std::cout << "error in lstat() for \"" << path << "\", " << errno
+                      << ", " << strerror(errno) << std::endl;
+            FAIL();
+        }
+        ASSERT_TRUE(S_ISLNK(statResult.st_mode));
+        std::string contents(statResult.st_size, '\0');
+        rc = readlink(path.c_str(), &contents[0], contents.size());
+        if (rc < 0) {
+            std::cout << "error in readlink() for \"" << path << "\", "
+                      << errno << ", " << strerror(errno) << std::endl;
+            FAIL();
+        }
+        ASSERT_EQ(target, contents);
+    }
+}
+
+TEST(NestedDirectoryTest, EmptyDirTest)
+{
+    std::string cwd = FileUtils::get_current_working_directory();
+    std::string topDir = "nestedtmpdir";
+    std::string subDir = "emptyDir";
+    std::string dirTree = topDir + "/" + subDir;
+    std::string filePath = topDir + "/hello.txt";
+    std::string fileContents = "hello!";
+    FileUtils::create_directory_recursive((cwd + "/" + dirTree).c_str());
+    FileUtils::write_file((cwd + "/" + filePath).c_str(),
+                          fileContents.c_str());
+
+    std::string dirPath = cwd + "/" + topDir;
+    digest_string_umap fileMap;
+    std::cout << dirPath << std::endl;
+    auto nestedDirectory = make_nesteddirectory(topDir.c_str(), &fileMap);
+    // make sure we don't place directories in filemap
+    EXPECT_EQ(fileMap.size(), 1);
+
+    // make sure we also captured the file
+    auto nestedtmpdir = nestedDirectory.d_subdirs->begin();
+    EXPECT_EQ(nestedtmpdir->second.d_files.size(), 1);
+
+    // should only have one subdirectory
+    auto emptydir = nestedtmpdir->second.d_subdirs->begin();
+    EXPECT_EQ(emptydir->first, subDir);
+
+    /// sanity check, make sure emptydir is empty
+    EXPECT_EQ(emptydir->second.d_files.size(), 0);
+    EXPECT_EQ(emptydir->second.d_subdirs->size(), 0);
+    EXPECT_EQ(emptydir->second.d_symlinks.size(), 0);
+
+    const std::vector<std::string> rmCommand = {"rm", "-rf", dirPath};
+    execute(rmCommand);
 }

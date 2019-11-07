@@ -43,6 +43,9 @@ struct NestedDirectory {
     // Important to use a sorted map to keep files ordered by name
     std::map<std::string, std::shared_ptr<ReccFile>> d_files;
 
+    // name, target
+    std::map<std::string, std::string> d_symlinks;
+
     NestedDirectory() : d_subdirs(new subdir_map){};
 
     /**
@@ -53,6 +56,13 @@ struct NestedDirectory {
      */
     void add(std::shared_ptr<ReccFile> file, const char *relativePath,
              bool checkedPrefix = false);
+
+    /**
+     * Add the given symlink to this NestedDirectory at the given relative
+     * path, which may include subdirectories
+     */
+    void addSymlink(const std::string &target, const char *relativePath,
+                    bool checkedPrefix = false);
 
     /**
      * Add the given Directory to this NestedDirectory at a given relative
@@ -73,6 +83,8 @@ struct NestedDirectory {
      * recursive -- nested subdirectories will also be stored.
      */
     proto::Digest to_digest(digest_string_umap *digestMap = nullptr) const;
+
+    void print(std::ostream &out, const std::string &dirName = "") const;
 };
 
 /**
@@ -87,7 +99,10 @@ struct NestedDirectory {
  * call, and if so check the prefix.
  */
 NestedDirectory make_nesteddirectory(const char *path,
-                                     digest_string_umap *fileMap = nullptr);
+                                     digest_string_umap *fileMap = nullptr,
+                                     const bool followSymlinks = true);
+
+std::ostream &operator<<(std::ostream &out, const NestedDirectory &obj);
 
 } // namespace recc
 } // namespace BloombergLP

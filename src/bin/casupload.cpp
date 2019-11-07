@@ -32,7 +32,7 @@
 using namespace BloombergLP::recc;
 
 const std::string HELP(
-    "USAGE: casupload <paths>\n"
+    "USAGE: casupload <paths> [--followSymlinks]\n"
     "Uploads the given files and directories to CAS, then prints the digest "
     "hash and size of\n"
     "the corresponding Directory messages.\n"
@@ -48,12 +48,17 @@ const std::string HELP(
     "\n"
     "The server and instance to write to are controlled by the "
     "RECC_CAS_SERVER\n"
-    "and RECC_INSTANCE environment variables.");
+    "and RECC_INSTANCE environment variables.\n"
+    "\n"
+    "By default 'casupload' will not follow symlinks. Use option -f or \n"
+    "'--followSymlinks' to alter this behavior\n");
 
 int main(int argc, char *argv[])
 {
+    bool followSymlinks = false;
+    int pathArgsIndex = 1;
     if (argc <= 1) {
-        RECC_LOG_ERROR("USAGE: casupload <paths>");
+        RECC_LOG_ERROR("USAGE: casupload <paths> [-f | --followSymlinks]");
         RECC_LOG_ERROR("(run \"casupload --help\" for details)");
         return 1;
     }
@@ -61,6 +66,11 @@ int main(int argc, char *argv[])
              (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)) {
         RECC_LOG_WARNING(HELP);
         return 1;
+    }
+    else if (argc == 3 && (strcmp(argv[1], "--followSymlinks") == 0 ||
+                           strcmp(argv[1], "-f") == 0)) {
+        followSymlinks = true;
+        pathArgsIndex = 2;
     }
 
     set_config_locations();
@@ -81,24 +91,33 @@ int main(int argc, char *argv[])
     }
 
     NestedDirectory nestedDirectory;
-    digest_string_umap blobs;
     digest_string_umap digest_to_filecontents;
+
     // Upload directories individually, and aggregate files to upload as single
     // merkle tree
-    for (int i = 1; i < argc; ++i) {
-        struct stat statResult;
-        if (stat(argv[i], &statResult) != 0) {
-            RECC_LOG_VERBOSE("Could not stat [" << argv[i] << "] skipping.");
-            continue;
-        }
+    for (int i = pathArgsIndex; i < argc; ++i) {
+        RECC_LOG_VERBOSE("Starting to process \""
+                         << argv[i] << "\", followSymlinks = "
+                         << std::boolalpha << followSymlinks);
+
+        struct stat statResult = FileUtils::get_stat(argv[i], followSymlinks);
         if (S_ISDIR(statResult.st_mode)) {
             digest_string_umap directory_blobs;
             digest_string_umap directory_digest_to_filecontents;
 
+            // set root project so the path in the merkle tree
+            // starts there
+            RECC_PROJECT_ROOT = argv[i];
             auto singleNestedDirectory = make_nesteddirectory(
-                argv[i], &directory_digest_to_filecontents);
+                argv[i], &directory_digest_to_filecontents, followSymlinks);
             auto digest = singleNestedDirectory.to_digest(&directory_blobs);
+            RECC_LOG_VERBOSE("Finished building nested directory from \""
+                             << argv[i] << "\": " << digest.hash() << "/"
+                             << digest.size_bytes());
+            RECC_LOG_VERBOSE(singleNestedDirectory);
+
             try {
+                RECC_LOG_VERBOSE("Starting to upload merkle tree");
                 casClient.upload_resources(directory_blobs,
                                            directory_digest_to_filecontents);
             }
@@ -108,18 +127,27 @@ int main(int argc, char *argv[])
                                << " failed with error: " << e.what());
                 exit(1);
             }
-            RECC_LOG("Uploaded " << argv[i] << ": " << digest.hash() << "/"
-                                 << digest.size_bytes());
+            RECC_LOG("Uploaded \"" << argv[i] << "\": " << digest.hash() << "/"
+                                   << digest.size_bytes());
         }
         else {
             std::shared_ptr<ReccFile> file =
-                ReccFileFactory::createFile(argv[i]);
+                ReccFileFactory::createFile(argv[i], followSymlinks);
+            if (!file) {
+                RECC_LOG_VERBOSE("Encountered unsupported file \""
+                                 << argv[i] << "\", skipping...");
+                continue;
+            }
+
             nestedDirectory.add(file, argv[i]);
             digest_to_filecontents.emplace(file->getDigest(),
                                            file->getFileContents());
         }
     }
+
     if (!digest_to_filecontents.empty()) {
+        RECC_LOG_VERBOSE("Building nested directory structure");
+        digest_string_umap blobs;
         auto directoryDigest = nestedDirectory.to_digest(&blobs);
         try {
             casClient.upload_resources(blobs, digest_to_filecontents);
