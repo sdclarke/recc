@@ -69,13 +69,21 @@ struct FileUtils {
     static void make_executable(const char *path);
 
     /**
+     * Given the path to a symlink, return a std::string with its contents.
+     *
+     * The path must be a path to a symlink that exists on disk. It can be
+     * absolute or relative to the current directory.
+     */
+    static std::string get_symlink_contents(const char *path,
+                                            const struct stat &statResult);
+
+    /**
      * Given the path to a file, return a std::string with its contents.
      *
      * The path must be a path to a file that exists on disk. It can be
      * absolute or relative to the current directory.
      */
-    static std::string get_file_contents(const char *path,
-                                         const bool followSymlinks = true);
+    static std::string get_file_contents(const char *path);
     static std::string get_file_contents(const char *path,
                                          const struct stat &statResult);
 

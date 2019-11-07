@@ -56,17 +56,19 @@ std::shared_ptr<ReccFile>
 ReccFileFactory::createFile(const char *path, const bool followSymlinks)
 {
     if (path != nullptr) {
-        const struct stat statResults =
+        const struct stat statResult =
             FileUtils::get_stat(path, followSymlinks);
-        if (!FileUtils::isRegularFileOrSymlink(statResults)) {
+        if (!FileUtils::isRegularFileOrSymlink(statResult)) {
             return nullptr;
         }
 
-        bool executable = FileUtils::is_executable(statResults);
-        bool symlink = FileUtils::is_symlink(statResults);
+        bool executable = FileUtils::is_executable(statResult);
+        bool symlink = FileUtils::is_symlink(statResult);
         const std::string file_name = FileUtils::path_basename(path);
         const std::string file_contents =
-            FileUtils::get_file_contents(path, statResults);
+            (symlink ? FileUtils::get_symlink_contents(path, statResult)
+                     : FileUtils::get_file_contents(path, statResult));
+
         proto::Digest file_digest =
             DigestGenerator::make_digest(file_contents);
 

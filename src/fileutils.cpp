@@ -136,48 +136,66 @@ void FileUtils::make_executable(const char *path)
     throw std::system_error(errno, std::system_category());
 }
 
-std::string FileUtils::get_file_contents(const char *path,
-                                         const bool followSymlinks)
+std::string FileUtils::get_symlink_contents(const char *path,
+                                            const struct stat &statResult)
 {
-    struct stat statResult = FileUtils::get_stat(path, followSymlinks);
+    if (path == nullptr || *path == 0) {
+        const std::string error = "invalid args: path is either null or empty";
+        RECC_LOG_ERROR(error);
+        throw std::runtime_error(error);
+    }
+
+    if (!S_ISLNK(statResult.st_mode)) {
+        std::ostringstream oss;
+        oss << "file \"" << path << "\" is not a symlink";
+        RECC_LOG_ERROR(oss.str());
+        throw std::runtime_error(oss.str());
+    }
+
+    std::string contents(statResult.st_size, '\0');
+    const int rc = readlink(path, &contents[0], contents.size());
+    if (rc < 0) {
+        std::ostringstream oss;
+        oss << "readlink failed for \"" << path << "\", rc = " << rc
+            << ", errno = [" << errno << ":" << strerror(errno) << "]";
+        RECC_LOG_ERROR(oss.str());
+        throw std::runtime_error(oss.str());
+    }
+
+    return contents;
+}
+
+std::string FileUtils::get_file_contents(const char *path)
+{
+    struct stat statResult = FileUtils::get_stat(path, true);
     return FileUtils::get_file_contents(path, statResult);
 }
 
 std::string FileUtils::get_file_contents(const char *path,
                                          const struct stat &statResult)
 {
-    std::string contents(statResult.st_size, '\0');
-    if (S_ISREG(statResult.st_mode)) {
-        std::ifstream fileStream;
-        fileStream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-        fileStream.open(path, std::ios::in | std::ios::binary);
-
-        auto start = fileStream.tellg();
-        fileStream.seekg(0, std::ios::end);
-        auto size = fileStream.tellg() - start;
-
-        contents.resize(static_cast<std::string::size_type>(size));
-        fileStream.seekg(start);
-
-        if (fileStream) {
-            fileStream.read(&contents[0],
-                            static_cast<std::streamsize>(contents.length()));
-        }
+    if (!S_ISREG(statResult.st_mode)) {
+        std::ostringstream oss;
+        oss << "file \"" << path << "\" is not a regular file";
+        RECC_LOG_ERROR(oss.str());
+        throw std::runtime_error(oss.str());
     }
-    else if (S_ISLNK(statResult.st_mode)) {
-        const int rc = readlink(path, &contents[0], contents.size());
-        if (rc < 0) {
-            std::ostringstream oss;
-            oss << "readlink failed for \"" << std::string(path)
-                << "\", rc = " << rc << ", errno = [" << errno << ":"
-                << strerror(errno) << "]";
-            RECC_LOG_ERROR(oss.str());
-            throw std::runtime_error(oss.str());
-        }
-    }
-    else {
-        throw std::runtime_error("\"" + std::string(path) +
-                                 "\" is not a regular file or a symlink");
+
+    std::string contents;
+    std::ifstream fileStream;
+    fileStream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    fileStream.open(path, std::ios::in | std::ios::binary);
+
+    auto start = fileStream.tellg();
+    fileStream.seekg(0, std::ios::end);
+    auto size = fileStream.tellg() - start;
+
+    contents.resize(static_cast<std::string::size_type>(size));
+    fileStream.seekg(start);
+
+    if (fileStream) {
+        fileStream.read(&contents[0],
+                        static_cast<std::streamsize>(contents.length()));
     }
 
     return contents;
