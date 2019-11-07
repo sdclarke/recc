@@ -62,14 +62,14 @@ ReccFileFactory::createFile(const char *path, const bool followSymlinks)
             return nullptr;
         }
 
-        bool executable = FileUtils::is_executable(statResult);
-        bool symlink = FileUtils::is_symlink(statResult);
+        const bool executable = FileUtils::is_executable(statResult);
+        const bool symlink = FileUtils::is_symlink(statResult);
         const std::string file_name = FileUtils::path_basename(path);
         const std::string file_contents =
             (symlink ? FileUtils::get_symlink_contents(path, statResult)
                      : FileUtils::get_file_contents(path, statResult));
 
-        proto::Digest file_digest =
+        const proto::Digest file_digest =
             DigestGenerator::make_digest(file_contents);
 
         RECC_LOG_VERBOSE("Creating"
