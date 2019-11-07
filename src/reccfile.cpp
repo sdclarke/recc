@@ -56,8 +56,9 @@ std::shared_ptr<ReccFile>
 ReccFileFactory::createFile(const char *path, const bool followSymlinks)
 {
     if (path != nullptr) {
-        struct stat statResults = FileUtils::get_stat(path, followSymlinks);
-        if (!FileUtils::isSupportedFileType(statResults)) {
+        const struct stat statResults =
+            FileUtils::get_stat(path, followSymlinks);
+        if (!FileUtils::isRegularFileOrSymlink(statResults)) {
             return nullptr;
         }
 

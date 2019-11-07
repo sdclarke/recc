@@ -76,7 +76,7 @@ void FileUtils::create_directory_recursive(const char *path)
     }
 }
 
-bool FileUtils::isSupportedFileType(const struct stat &s)
+bool FileUtils::isRegularFileOrSymlink(const struct stat &s)
 {
     return (S_ISREG(s.st_mode) || S_ISLNK(s.st_mode));
 }
@@ -84,9 +84,9 @@ bool FileUtils::isSupportedFileType(const struct stat &s)
 struct stat FileUtils::get_stat(const char *path, const bool followSymlinks)
 {
     if (path == nullptr || *path == 0) {
-        std::ostringstream oss;
-        oss << "invalid args: path is either null or empty";
-        throw std::runtime_error(oss.str());
+        const std::string error = "invalid args: path is either null or empty";
+        RECC_LOG_ERROR(error);
+        throw std::runtime_error(error);
     }
 
     struct stat statResult;

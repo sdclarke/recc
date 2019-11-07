@@ -54,7 +54,7 @@ struct FileUtils {
      */
     static struct stat get_stat(const char *path, const bool followSymlinks);
 
-    static bool isSupportedFileType(const struct stat &s);
+    static bool isRegularFileOrSymlink(const struct stat &s);
     static bool is_executable(const struct stat &s);
     static bool is_symlink(const struct stat &s);
 
