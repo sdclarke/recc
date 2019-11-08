@@ -32,7 +32,7 @@
 using namespace BloombergLP::recc;
 
 const std::string HELP(
-    "USAGE: casupload <paths> [--followSymlinks]\n"
+    "USAGE: casupload <paths> [--follow-symlinks]\n"
     "Uploads the given files and directories to CAS, then prints the digest "
     "hash and size of\n"
     "the corresponding Directory messages.\n"
@@ -51,14 +51,14 @@ const std::string HELP(
     "and RECC_INSTANCE environment variables.\n"
     "\n"
     "By default 'casupload' will not follow symlinks. Use option -f or \n"
-    "'--followSymlinks' to alter this behavior\n");
+    "'--follow-symlinks' to alter this behavior\n");
 
 int main(int argc, char *argv[])
 {
     bool followSymlinks = false;
     int pathArgsIndex = 1;
     if (argc <= 1) {
-        RECC_LOG_ERROR("USAGE: casupload <paths> [-f | --followSymlinks]");
+        RECC_LOG_ERROR("USAGE: casupload <paths> [-f | --follow-symlinks]");
         RECC_LOG_ERROR("(run \"casupload --help\" for details)");
         return 1;
     }
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
         RECC_LOG_WARNING(HELP);
         return 1;
     }
-    else if (argc == 3 && (strcmp(argv[1], "--followSymlinks") == 0 ||
+    else if (argc == 3 && (strcmp(argv[1], "--follow-symlinks") == 0 ||
                            strcmp(argv[1], "-f") == 0)) {
         followSymlinks = true;
         pathArgsIndex = 2;
@@ -97,8 +97,9 @@ int main(int argc, char *argv[])
     // merkle tree
     for (int i = pathArgsIndex; i < argc; ++i) {
         RECC_LOG_VERBOSE("Starting to process \""
-                         << argv[i] << "\", followSymlinks = "
-                         << std::boolalpha << followSymlinks);
+                         << argv[i]
+                         << "\", followSymlinks = " << std::boolalpha
+                         << followSymlinks << std::noboolalpha);
 
         struct stat statResult = FileUtils::get_stat(argv[i], followSymlinks);
         if (S_ISDIR(statResult.st_mode)) {
