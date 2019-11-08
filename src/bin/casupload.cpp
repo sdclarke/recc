@@ -100,7 +100,14 @@ int main(int argc, char *argv[])
                          << argv[i] << "\", followSymlinks = "
                          << std::boolalpha << followSymlinks);
 
-        struct stat statResult = FileUtils::get_stat(argv[i], followSymlinks);
+        struct stat statResult;
+        try {
+            statResult = FileUtils::get_stat(argv[i], followSymlinks);
+        }
+        catch (const std::system_error &) {
+            exit(1); // `get_stat()` logged the error.
+        }
+
         if (S_ISDIR(statResult.st_mode)) {
             digest_string_umap directory_blobs;
             digest_string_umap directory_digest_to_filecontents;
