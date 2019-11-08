@@ -93,9 +93,11 @@ struct stat FileUtils::get_stat(const char *path, const bool followSymlinks)
     const int rc =
         (followSymlinks ? stat(path, &statResult) : lstat(path, &statResult));
     if (rc < 0) {
-        RECC_LOG_ERROR("error in " << (followSymlinks ? "stat()" : "lstat()")
-                                   << ", rc = " << rc << ", errno = [" << errno
-                                   << ":" << strerror(errno) << "]");
+        RECC_LOG_ERROR("Error calling "
+                       << (followSymlinks ? "stat()" : "lstat()")
+                       << " for path \"" << path << "\": "
+                       << "rc = " << rc << ", errno = [" << errno << ":"
+                       << strerror(errno) << "]");
         throw std::system_error(errno, std::system_category());
     }
 
