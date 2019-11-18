@@ -156,12 +156,6 @@ extern bool RECC_SERVER_JWT;
 extern std::string RECC_JWT_JSON_FILE_PATH;
 
 /**
- * Url to service which refreshes access token. If this url is an empty
- * string, Recc won't try to refresh. Defaults to empty string.
- */
-extern std::string RECC_AUTH_REFRESH_URL;
-
-/**
  * Customisable msg to display to indicate that authentication has not been
  * configured.
  */

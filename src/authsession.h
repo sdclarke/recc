@@ -61,15 +61,9 @@ class AuthSession : public AuthBase {
     /**
      * Constructor creates a JsonFileManager object around
      * RECC_JWT_JSON_FILE_PATH. It will also create a
-     * proto::AccessTokenResponse object from the file path. It will initialize
-     * curl if RECC_AUTH_REFRESH_URL is not set to NULL
+     * proto::AccessTokenResponse object from the file path.
      */
     AuthSession(Post *formPostFactory);
-
-    /**
-     * Clean up curl if RECC_AUTH_REFRESH_URL is set
-     */
-    virtual ~AuthSession();
 
     /**
      * Will retrieve the access_token from d_jwtToken.
@@ -79,11 +73,7 @@ class AuthSession : public AuthBase {
 
     /**
      * Will attemp to refresh jwt token and write new token into
-     * RECC_JWT_JSON_FILE_PATH, if RECC_AUTH_REFRESH_URL is set.
-     * Will only write in new token if it is a valid jwt object. Will throw
-     * runtime error otherwise. Also sets d_jwtToken with new token.
-     * If RECC_AUTH_REFRESH_URL is not set, it will reset d_jwtToken using the
-     * token in  RECC_JWT_JSON_FILE_PATH.
+     * RECC_JWT_JSON_FILE_PATH.
      */
     void refresh_current_token();
 
@@ -99,12 +89,6 @@ class AuthSession : public AuthBase {
      * A class which will generate a properly formatted post request
      */
     Post *d_formPostFactory;
-
-    /**
-     * Use libcurl to make a post request to
-     * RECC_AUTH_REFRESH_URL. Returns server response.
-     */
-    std::string post_form(const std::string &formPost);
 
     /**
      * verify if string is a proper json jwt object.
