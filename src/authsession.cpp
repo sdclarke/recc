@@ -21,7 +21,6 @@
 #include <logging.h>
 #include <protos.h>
 
-#include <curl/curl.h>
 #include <fstream>
 #include <google/protobuf/message.h>
 #include <google/protobuf/stubs/stringpiece.h>
@@ -33,39 +32,11 @@
 namespace BloombergLP {
 namespace recc {
 
-namespace {
-
-// Function which libcurl calls to write server response to string
-size_t write_server_response(char *contents, size_t size, size_t nmemb,
-                             std::ostringstream *store)
-{
-    store->write(contents, nmemb);
-    return size * nmemb;
-}
-
-} // Unnamed namespace
-
 AuthBase::~AuthBase() {}
 AuthSession::AuthSession(Post *formPostFactory)
 {
     init_jwt();
     d_formPostFactory = formPostFactory;
-    if (RECC_AUTH_REFRESH_URL != "") {
-        CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
-        // throw an error on failure
-        const std::string error_case = curl_easy_strerror(res);
-        if (res != CURLE_OK) {
-            throw std::runtime_error("curl_global_init() failed: " +
-                                     error_case);
-        }
-    }
-}
-
-AuthSession::~AuthSession()
-{
-    if (RECC_AUTH_REFRESH_URL != "") {
-        curl_global_cleanup();
-    }
 }
 
 std::string AuthSession::get_access_token()
@@ -75,71 +46,8 @@ std::string AuthSession::get_access_token()
 
 void AuthSession::refresh_current_token()
 {
-    // Just re-read token if URL not specified
-    if (RECC_AUTH_REFRESH_URL == "") {
-        RECC_LOG_VERBOSE("Refreshing Token: reloading token from file");
-        init_jwt();
-    }
-    else {
-        RECC_LOG_VERBOSE("Refreshing Token: sending curl request to server");
-        const std::string formPost =
-            d_formPostFactory->generate_post(d_jwtToken.refresh_token());
-        const std::string response = post_form(formPost);
-        d_jwtToken = construct_token(response, "From Auth Server", true);
-        JsonFileManager jwtFile(RECC_JWT_JSON_FILE_PATH);
-        jwtFile.write(response);
-    }
-}
-
-std::string AuthSession::post_form(const std::string &formPost)
-{
-    CURL *curl = curl_easy_init();
-    struct curl_slist *headers = NULL;
-    CURLcode res;
-
-    std::ostringstream response;
-    if (curl) {
-        // set the headers
-        headers = curl_slist_append(
-            headers, "Content-Type: application/x-www-form-urlencoded");
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-        // Post Request
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, formPost.c_str());
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, -1L);
-
-        // Set URL
-        curl_easy_setopt(curl, CURLOPT_URL, RECC_AUTH_REFRESH_URL.c_str());
-
-        // Only allow HTTPS, FILE and SFTP protocols.
-        // HTTP is not included, to prevent refresh tokens leaking
-        // on a insecure connection. FILE is used for testing.
-        curl_easy_setopt(curl, CURLOPT_PROTOCOLS,
-                         CURLPROTO_HTTPS | CURLPROTO_FILE | CURLPROTO_SFTP);
-
-        // set function to read server response
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_server_response);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-
-        // Perform the request, res will get the return code
-        res = curl_easy_perform(curl);
-
-        // Check for errors
-        if (res != CURLE_OK) {
-            const std::string error_code = curl_easy_strerror(res);
-            curl_easy_cleanup(curl);
-            throw std::runtime_error("curl_easy_perform() failed: " +
-                                     error_code);
-        }
-
-        // Avoid memory leaks
-        curl_easy_cleanup(curl);
-    }
-    else {
-        throw std::runtime_error("curl_easy_init() failed: returned NULL ptr");
-    }
-
-    return response.str();
+    RECC_LOG_VERBOSE("Refreshing Token: reloading token from file");
+    init_jwt();
 }
 
 proto::AccessTokenResponse

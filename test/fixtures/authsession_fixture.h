@@ -49,13 +49,10 @@ class AuthSessionFiles : public ::testing::Test {
      */
     virtual void TearDown();
 
-    static JsonFileManager *s_serverFile;
     static JsonFileManager *s_clientFile;
-    static std::string s_serverFilePath;
     static std::string s_clientFilePath;
 
   private:
-    static std::string s_serverFileContents;
     static std::string s_clientFileContents;
 };
 

@@ -23,7 +23,6 @@ Currently recc relies on:
 * [CMake][]
 * [GoogleTest][]
 * [pkg-config][]
-* [libcurl][]
 
 Some package managers (apt) include all these dependencies while others (brew) require manual installation of some. Please follow the relevant guides for your OS.
 
@@ -31,10 +30,10 @@ Some package managers (apt) include all these dependencies while others (brew) r
 
 ### Installing on OSX
 
-Install [gRPC][], [Protobuf][], [OpenSSL][], [CMake][], [pkg-config][], [libcurl][] through `brew`:
+Install [gRPC][], [Protobuf][], [OpenSSL][], [CMake][], [pkg-config][], through `brew`:
 
 ```sh
-$ brew install grpc protobuf openssl cmake pkg-config curl
+$ brew install grpc protobuf openssl cmake pkg-config
 ```
 
 [GoogleTest][] is not available in Homebrew, so instead, you should download a copy of [its source code][googletest source], unzip it somewhere, and use `-DGTEST_SOURCE_ROOT` to tell CMake where to find it. (See below.)
@@ -45,10 +44,10 @@ You can now compile `recc`.
 
 ### Installing on Debian.
 
-Install [OpenSSL][], [CMake][], [pkg-config][], [libcurl][], [googletest][] through `apt`:
+Install [OpenSSL][], [CMake][], [pkg-config][], [googletest][] through `apt`:
 
 ```sh
-$ [sudo] apt-get install cmake gcc g++ googletest libssl-dev pkg-config libcurl4-openssl-dev
+$ [sudo] apt-get install cmake gcc g++ googletest libssl-dev pkg-config
 ```
 
 **If not already installed**, install [gRPC][], [Protobuf][]:
@@ -113,7 +112,6 @@ Clone `recc` and follow the instructions in either the [Installing on Debian sec
 [googletest]: https://github.com/google/googletest
 [googletest source]: https://github.com/google/googletest/archive/release-1.8.1.zip
 [pkg-config]: https://www.freedesktop.org/wiki/Software/pkg-config/
-[libcurl]: https://curl.haxx.se/libcurl/
 [remoteex]: https://docs.bazel.build/versions/master/remote-execution.html
 [buildgrid]: http://buildgrid.build/
 [buildbox-worker]: https://gitlab.com/BuildGrid/buildbox/buildbox-worker
@@ -176,7 +174,6 @@ You can compile recc statically with the `-DBUILD_STATIC` option; however, doing
 
 All of recc's dependencies must be available as static libraries (`.a`files) and visible in `${CMAKE_MODULE_PATH}`.
 
-In addition, [libcurl and its external dependencies](https://curl.haxx.se/docs/libs.html) must be available on the system as static libraries and visible in `${CMAKE_LIBRARY_PATH}`.
 However, this is slightly complicated because Kerberos isn't generally available as a static library in many package management systems. You will likely need to build and install it yourself. See the [MIT Kerberos page](https://web.mit.edu/kerberos/) for the source and instructions.
 
 ## Running `recc`

@@ -16,22 +16,6 @@ if(BUILD_STATIC)
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 endif()
 
-find_package(CURL REQUIRED)
-if(BUILD_STATIC)
-    set(DEPS
-        "libcurl.a"
-        "libssh2.a"
-        "libgssapi_krb5.a"
-        "libkrb5.a"
-        "libk5crypto.a"
-        "libcom_err.a"
-        "libkrb5support.a")
-    set(EXTRA_FLAGS "")
-    static_link(CURL_LIBRARIES "${DEPS}" "${EXTRA_FLAGS}")
-endif()
-
-include_directories(${CURL_INCLUDE_DIR})
-
 if(BUILD_STATIC)
     find_package(ZLIB REQUIRED)
 endif()

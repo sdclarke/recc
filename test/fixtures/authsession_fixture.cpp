@@ -25,53 +25,34 @@ using BloombergLP::recc::JsonFileManager;
 void AuthSessionFiles::SetUpTestCase()
 {
     const std::string currDir = FileUtils::get_current_working_directory();
-    s_serverFilePath = currDir + "/" + "serverResponse";
     s_clientFilePath = currDir + "/" + "clientToken";
 
-    s_serverFile = new JsonFileManager(s_serverFilePath);
     s_clientFile = new JsonFileManager(s_clientFilePath);
 
-    s_serverFileContents =
-        "{\"access_token\": \"fake\", \"refresh_token\": \"fake\"}";
     s_clientFileContents = "{\"access_token\": \"old_fake\", "
                            "\"refresh_token\": \"old_fake\"}";
-    s_serverFile->write(s_serverFileContents);
     s_clientFile->write(s_clientFileContents);
 }
 
 void AuthSessionFiles::TearDownTestCase()
 {
-    if (s_serverFile) {
-        s_serverFile->write(s_serverFileContents);
-        delete s_serverFile;
-    }
-
     if (s_clientFile) {
         s_clientFile->write(s_clientFileContents);
         delete s_clientFile;
     }
 
-    s_serverFile = NULL;
     s_clientFile = NULL;
 }
 
-void AuthSessionFiles::SetUp()
-{
-    s_serverFile->write(s_serverFileContents);
-    s_clientFile->write(s_clientFileContents);
-}
+void AuthSessionFiles::SetUp() { s_clientFile->write(s_clientFileContents); }
 
 void AuthSessionFiles::TearDown()
 {
-    s_serverFile->write(s_serverFileContents);
     s_clientFile->write(s_clientFileContents);
 }
 
 // Needed since these members are all static
-JsonFileManager *AuthSessionFiles::s_serverFile = NULL;
 JsonFileManager *AuthSessionFiles::s_clientFile = NULL;
-std::string AuthSessionFiles::s_serverFilePath = "";
 std::string AuthSessionFiles::s_clientFilePath = "";
 
-std::string AuthSessionFiles::s_serverFileContents = "";
 std::string AuthSessionFiles::s_clientFileContents = "";

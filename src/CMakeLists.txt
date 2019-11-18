@@ -35,7 +35,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
 endif()
 
 add_library(remoteexecution STATIC ${SRCS})
-target_link_libraries(remoteexecution reccproto ${_EXTRA_LDD_FLAGS} ${CURL_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_TARGET} ${OPENSSL_TARGET})
+target_link_libraries(remoteexecution reccproto ${_EXTRA_LDD_FLAGS} ${Protobuf_LIBRARIES} ${GRPC_TARGET} ${OPENSSL_TARGET})
 
 if(BUILD_STATIC)
     target_link_libraries(remoteexecution ${ZLIB_LIBRARIES} ${OS_LIBS})
