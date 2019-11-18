@@ -28,12 +28,14 @@ class ActionBuilderTestFixture : public ::testing::Test {
         : cwd(FileUtils::get_current_working_directory())
     {
     }
+
     void SetUp() override
     {
         d_previous_recc_replacement_map = RECC_PREFIX_REPLACEMENT;
         d_previous_deps_override = RECC_DEPS_OVERRIDE;
         d_previous_force_remote = RECC_FORCE_REMOTE;
         d_previous_deps_global_path = RECC_DEPS_GLOBAL_PATHS;
+        d_previous_deps_exclude_paths = RECC_DEPS_EXCLUDE_PATHS;
     }
 
     void TearDown() override
@@ -42,6 +44,7 @@ class ActionBuilderTestFixture : public ::testing::Test {
         RECC_DEPS_OVERRIDE = d_previous_deps_override;
         RECC_FORCE_REMOTE = d_previous_force_remote;
         RECC_DEPS_GLOBAL_PATHS = d_previous_deps_global_path;
+        RECC_DEPS_EXCLUDE_PATHS = d_previous_deps_exclude_paths;
     }
 
     digest_string_umap blobs;
@@ -52,6 +55,7 @@ class ActionBuilderTestFixture : public ::testing::Test {
     std::vector<std::pair<std::string, std::string>>
         d_previous_recc_replacement_map;
     std::set<std::string> d_previous_deps_override;
+    std::set<std::string> d_previous_deps_exclude_paths;
     bool d_previous_force_remote;
     bool d_previous_deps_global_path;
 };
@@ -230,6 +234,97 @@ TEST_F(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
                           "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
+    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                          "hello.o"};
+    ParsedCommand command(recc_args, cwd.c_str());
+    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                &digest_to_filecontents);
+
+    auto current_digest = actionPtr->input_root_digest();
+    MerkleTree expected_tree = {
+        {{"directories", {"actionbuilder", "deps", "usr"}}},
+        {{"files", {"hello.cpp"}}},
+        {{"files", {"empty.c"}}},
+        {{"directories", {"include"}}},
+        {{"files", {"ctype.h"}}}};
+    verify_merkle_tree(current_digest, expected_tree.begin(),
+                       expected_tree.end(), blobs);
+}
+
+TEST_F(ActionBuilderTestFixture, ExcludePath)
+{
+    cwd = FileUtils::get_current_working_directory();
+    RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
+                          "hello.cpp"};
+    RECC_DEPS_GLOBAL_PATHS = 1;
+    RECC_DEPS_EXCLUDE_PATHS = {"/usr/include"};
+    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                          "hello.o"};
+    ParsedCommand command(recc_args, cwd.c_str());
+    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                &digest_to_filecontents);
+
+    auto current_digest = actionPtr->input_root_digest();
+    MerkleTree expected_tree = {{{"directories", {"actionbuilder", "deps"}}},
+                                {{"files", {"hello.cpp"}}},
+                                {{"files", {"empty.c"}}}};
+    verify_merkle_tree(current_digest, expected_tree.begin(),
+                       expected_tree.end(), blobs);
+}
+
+TEST_F(ActionBuilderTestFixture, ExcludePathMultipleMatchOne)
+{
+    cwd = FileUtils::get_current_working_directory();
+    RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
+                          "hello.cpp"};
+    RECC_DEPS_GLOBAL_PATHS = 1;
+    RECC_DEPS_EXCLUDE_PATHS = {"/foo/bar", "/usr/include"};
+    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                          "hello.o"};
+    ParsedCommand command(recc_args, cwd.c_str());
+    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                &digest_to_filecontents);
+
+    auto current_digest = actionPtr->input_root_digest();
+    MerkleTree expected_tree = {{{"directories", {"actionbuilder", "deps"}}},
+                                {{"files", {"hello.cpp"}}},
+                                {{"files", {"empty.c"}}}};
+    verify_merkle_tree(current_digest, expected_tree.begin(),
+                       expected_tree.end(), blobs);
+}
+
+TEST_F(ActionBuilderTestFixture, ExcludePathNoMatch)
+{
+    cwd = FileUtils::get_current_working_directory();
+    RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
+                          "hello.cpp"};
+    RECC_DEPS_GLOBAL_PATHS = 1;
+    RECC_DEPS_EXCLUDE_PATHS = {"/foo/bar"};
+    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                          "hello.o"};
+    ParsedCommand command(recc_args, cwd.c_str());
+    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                &digest_to_filecontents);
+
+    auto current_digest = actionPtr->input_root_digest();
+    MerkleTree expected_tree = {
+        {{"directories", {"actionbuilder", "deps", "usr"}}},
+        {{"files", {"hello.cpp"}}},
+        {{"files", {"empty.c"}}},
+        {{"directories", {"include"}}},
+        {{"files", {"ctype.h"}}}};
+    verify_merkle_tree(current_digest, expected_tree.begin(),
+                       expected_tree.end(), blobs);
+}
+
+TEST_F(ActionBuilderTestFixture, ExcludePathSingleWithMultiInput)
+{
+    cwd = FileUtils::get_current_working_directory();
+    RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h",
+                          "/usr/include/net/ethernet.h", "../deps/empty.c",
+                          "hello.cpp"};
+    RECC_DEPS_GLOBAL_PATHS = 1;
+    RECC_DEPS_EXCLUDE_PATHS = {"/usr/include/net"};
     std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
                                           "hello.o"};
     ParsedCommand command(recc_args, cwd.c_str());

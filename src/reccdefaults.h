@@ -21,7 +21,7 @@
 // clang-format off
 // allow default instance name to be set at compile time
 #ifndef DEFAULT_RECC_INSTANCE
-#define DEFAULT_RECC_INSTANCE "" 
+#define DEFAULT_RECC_INSTANCE ""
 #endif
 #define DEFAULT_RECC_POLL_WAIT std::chrono::seconds(1)
 #define DEFAULT_RECC_RETRY_LIMIT 0
@@ -52,6 +52,7 @@
 #define DEFAULT_RECC_DEPS_OVERRIDE {}
 #define DEFAULT_RECC_OUTPUT_FILES_OVERRIDE {}
 #define DEFAULT_RECC_OUTPUT_DIRECTORIES_OVERRIDE {}
+#define DEFAULT_RECC_DEPS_EXCLUDE_PATHS {}
 
 #define DEFAULT_RECC_DEPS_ENV {}
 #define DEFAULT_RECC_REMOTE_ENV {}

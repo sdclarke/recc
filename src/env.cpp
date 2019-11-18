@@ -93,6 +93,8 @@ std::set<std::string> RECC_OUTPUT_FILES_OVERRIDE =
     DEFAULT_RECC_OUTPUT_FILES_OVERRIDE;
 std::set<std::string> RECC_OUTPUT_DIRECTORIES_OVERRIDE =
     DEFAULT_RECC_OUTPUT_DIRECTORIES_OVERRIDE;
+std::set<std::string> RECC_DEPS_EXCLUDE_PATHS =
+    DEFAULT_RECC_DEPS_EXCLUDE_PATHS;
 
 std::map<std::string, std::string> RECC_DEPS_ENV = DEFAULT_RECC_DEPS_ENV;
 std::map<std::string, std::string> RECC_REMOTE_ENV = DEFAULT_RECC_REMOTE_ENV;
@@ -117,19 +119,21 @@ void to_upper(std::string *const value,
 }
 
 /**
- * Parse a comma-separated list, storing its items in the given set.
+ * Parse a 'sep' delimited list, storing its items in the given set.
  */
-void parse_set(const char *str, std::set<std::string> *result)
+void parse_set(const char *str, std::set<std::string> *result,
+               const char sep = ',')
 {
     while (true) {
-        const auto comma = strchr(str, ',');
-        if (comma == nullptr) {
+        const auto cur_delim = strchr(str, sep);
+        if (cur_delim == nullptr) {
             result->insert(std::string(str));
             return;
         }
         else {
-            result->insert(std::string(str, static_cast<size_t>(comma - str)));
-            str = comma + 1;
+            result->insert(
+                std::string(str, static_cast<size_t>(cur_delim - str)));
+            str = cur_delim + 1;
         }
     }
 }
@@ -311,6 +315,7 @@ void parse_config_variables(const char *const *env)
         SETVAR(RECC_DEPS_OVERRIDE)
         SETVAR(RECC_OUTPUT_FILES_OVERRIDE)
         SETVAR(RECC_OUTPUT_DIRECTORIES_OVERRIDE)
+        SETVAR(RECC_DEPS_EXCLUDE_PATHS)
 
         MAPVAR(RECC_DEPS_ENV)
         MAPVAR(RECC_REMOTE_ENV)
