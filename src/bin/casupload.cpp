@@ -15,6 +15,7 @@
 #include <authsession.h>
 #include <casclient.h>
 #include <env.h>
+#include <fileutils.h>
 #include <grpcchannels.h>
 #include <grpccontext.h>
 #include <logging.h>
@@ -86,11 +87,13 @@ void processDirectory(const std::string &path, const bool followSymlinks,
     digest_string_umap directoryBlobs;
     digest_string_umap directoryDigestToFilecontents;
 
-    // set root project so the path in the merkle tree
-    // starts there
-    RECC_PROJECT_ROOT = path.c_str();
+    // set project root to the fully resolved path of this directory
+    // to ensure it's the root in the merkle tree
+    const std::string abspath = FileUtils::make_path_absolute(
+        path, FileUtils::get_current_working_directory());
+    RECC_PROJECT_ROOT = abspath.c_str();
     const auto singleNestedDirectory = make_nesteddirectory(
-        path.c_str(), &directoryDigestToFilecontents, followSymlinks);
+        abspath.c_str(), &directoryDigestToFilecontents, followSymlinks);
     const auto digest = singleNestedDirectory.to_digest(&directoryBlobs);
 
     RECC_LOG_VERBOSE("Finished building nested directory from \""
