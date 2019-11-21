@@ -199,101 +199,127 @@ int main(int argc, char *argv[])
     digest_string_umap blobs;
     digest_string_umap digest_to_filecontents;
 
-    std::shared_ptr<proto::Action> actionPtr;
-
-    try {
-        actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                               &digest_to_filecontents);
-    }
-    catch (const subprocess_failed_error &e) {
-        exit(e.d_error_code);
-    }
-
+    // Trying to build an `Action`:
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+    // If that fails, we defer to running the command locally:
     if (!actionPtr) {
         execvp(argv[1], &argv[1]);
         RECC_LOG_PERROR(argv[1]);
         exit(1);
     }
-    auto action = *actionPtr;
-    auto actionDigest = DigestGenerator::make_digest(action);
+
+    const proto::Action action = *actionPtr;
+    const proto::Digest actionDigest = DigestGenerator::make_digest(action);
+
     RECC_LOG_VERBOSE("Action Digest: " << actionDigest.ShortDebugString()
                                        << " Action Contents: "
                                        << action.ShortDebugString());
 
-    int rc = -1;
+    // Setting up the gRPC connections:
+    std::unique_ptr<GrpcChannels> returnChannels;
     try {
-        GrpcChannels returnChannels = GrpcChannels::get_channels_from_config();
+        returnChannels = std::make_unique<GrpcChannels>(
+            GrpcChannels::get_channels_from_config());
+    }
+    catch (const std::runtime_error &e) {
+        RECC_LOG_ERROR("Invalid argument in channel config: " << e.what());
+        return -1;
+    }
 
-        GrpcContext grpcContext;
-        grpcContext.set_action_id(actionDigest.hash());
+    GrpcContext grpcContext;
+    grpcContext.set_action_id(actionDigest.hash());
 
-        std::unique_ptr<AuthSession> reccAuthSession;
-        FormPost formPostFactory;
-        if (RECC_SERVER_JWT) {
-            reccAuthSession.reset(new AuthSession(&formPostFactory));
-            grpcContext.set_auth(reccAuthSession.get());
-        }
-        RemoteExecutionClient client(
-            returnChannels.server(), returnChannels.cas(),
-            returnChannels.action_cache(), RECC_INSTANCE, &grpcContext);
+    std::unique_ptr<AuthSession> reccAuthSession;
+    FormPost formPostFactory;
+    if (RECC_SERVER_JWT) {
+        reccAuthSession = std::make_unique<AuthSession>(&formPostFactory);
+        grpcContext.set_auth(reccAuthSession.get());
+    }
 
-        ActionResult result;
+    RemoteExecutionClient client(
+        returnChannels->server(), returnChannels->cas(),
+        returnChannels->action_cache(), RECC_INSTANCE, &grpcContext);
 
-        /* If allowed, we look in the action cache first */
-        bool action_in_cache = false;
-        if (!RECC_SKIP_CACHE) {
-            try {
-                { // Timed block
-                    reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer>
-                        mt(TIMER_NAME_QUERY_ACTION_CACHE, RECC_ENABLE_METRICS);
+    bool action_in_cache = false;
+    ActionResult result;
 
-                    action_in_cache = client.fetch_from_action_cache(
-                        actionDigest, RECC_INSTANCE, &result);
-                    if (action_in_cache) {
-                        RECC_LOG_VERBOSE("Action cache hit for "
-                                         << actionDigest.hash());
-                    }
+    // If allowed, we look in the action cache first:
+    if (!RECC_SKIP_CACHE) {
+        try {
+            { // Timed block
+                reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+                    TIMER_NAME_QUERY_ACTION_CACHE, RECC_ENABLE_METRICS);
+
+                action_in_cache = client.fetch_from_action_cache(
+                    actionDigest, RECC_INSTANCE, &result);
+                if (action_in_cache) {
+                    RECC_LOG_VERBOSE("Action cache hit for "
+                                     << actionDigest.hash());
                 }
             }
-            catch (const std::runtime_error &e) {
-                RECC_LOG_VERBOSE(e.what());
-            }
         }
+        catch (const std::exception &e) {
+            RECC_LOG_ERROR("Error while querying action cache at \""
+                           << RECC_ACTION_CACHE_SERVER << "\": " << e.what());
+        }
+    }
 
-        if (!action_in_cache) {
-            blobs[actionDigest] = action.SerializeAsString();
+    // If the results for the action are not cached, we upload the
+    // necessary resources to CAS:
+    if (!action_in_cache) {
+        blobs[actionDigest] = action.SerializeAsString();
 
-            RECC_LOG_VERBOSE("Uploading resources...");
-            // We are going to make a batch request to the CAS, setting up the
-            // client's max. batch size according to what the server supports:
+        RECC_LOG_VERBOSE("Uploading resources...");
+        try {
+            // We are going to make a batch request to the CAS, setting up
+            // the client's max. batch size according to what the server
+            // supports:
             if (RECC_CAS_GET_CAPABILITIES) {
                 client.setUpFromServerCapabilities();
             }
+
             client.upload_resources(blobs, digest_to_filecontents);
-
-            RECC_LOG_VERBOSE(
-                "Executing action... actionDigest: " << actionDigest.hash());
-            { // Timed block
-                reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-                    TIMER_NAME_EXECUTE_ACTION, RECC_ENABLE_METRICS);
-
-                result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
-            }
         }
+        catch (const std::exception &e) {
+            RECC_LOG_ERROR("Error while uploading resources to CAS at \""
+                           << RECC_CAS_SERVER << "\": " << e.what());
+            return -1;
+        }
+    }
 
-        rc = result.d_exitCode;
+    // And call `Execute()`:
+    try {
+        RECC_LOG_VERBOSE(
+            "Executing action... actionDigest: " << actionDigest.hash());
+        { // Timed block
+            reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+                TIMER_NAME_EXECUTE_ACTION, RECC_ENABLE_METRICS);
 
-        /* These don't use logging macros because they are compiler output */
+            result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
+        }
+    }
+    catch (const std::exception &e) {
+        RECC_LOG_ERROR("Error while calling `Execute()` on \""
+                       << RECC_SERVER << "\": " << e.what());
+        return -1;
+    }
+
+    const int exitCode = result.d_exitCode;
+    try {
+        /* These don't use logging macros because they are compiler output
+         */
         std::cout << client.get_outputblob(result.d_stdOut);
         std::cerr << client.get_outputblob(result.d_stdErr);
 
         if (!RECC_DONT_SAVE_OUTPUT) {
             client.write_files_to_disk(result);
         }
+
+        return exitCode;
     }
     catch (const std::exception &e) {
         RECC_LOG_ERROR(e.what());
-        rc = (rc == 0 ? -1 : rc);
+        return (exitCode == 0 ? -1 : exitCode);
     }
-    return rc;
 }

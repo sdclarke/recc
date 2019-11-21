@@ -179,7 +179,8 @@ bool RemoteExecutionClient::fetch_from_action_cache(
             return false;
 
         throw std::runtime_error("Action cache returned error " +
-                                 status.error_message());
+                                 std::to_string(status.error_code()) + ": \"" +
+                                 status.error_message() + "\"");
     }
 
     if (result != nullptr) {
