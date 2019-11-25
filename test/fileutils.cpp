@@ -192,6 +192,9 @@ TEST(HasPathPrefixesTest, PathTests)
 
     EXPECT_TRUE(FileUtils::has_path_prefixes("/some/dir/foo.h", {"/"}));
     EXPECT_FALSE(FileUtils::has_path_prefixes("/", {"/some/other/dir"}));
+
+    EXPECT_TRUE(FileUtils::has_path_prefixes("/some/dir,withcomma/foo.h",
+                                             {"/some/dir,withcomma/"}));
 }
 
 class MakePathRelativeTest : public ::testing::Test {
