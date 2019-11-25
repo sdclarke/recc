@@ -27,22 +27,6 @@
 namespace BloombergLP {
 namespace recc {
 
-namespace {
-
-bool hasPrefix(const std::string &path,
-               const std::set<std::string> &pathPrefixes)
-{
-    for (const auto &prefix : pathPrefixes) {
-        if (FileUtils::has_path_prefix(path, prefix)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-} // namespace
-
 std::shared_ptr<proto::Action>
 ActionBuilder::BuildAction(const ParsedCommand &command,
                            const std::string &cwd, digest_string_umap *blobs,
@@ -129,7 +113,8 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
                 merklePath = FileUtils::normalize_path(merklePath.c_str());
 
                 // don't include a dependency if it's exclusion is requested
-                if (hasPrefix(merklePath, RECC_DEPS_EXCLUDE_PATHS)) {
+                if (FileUtils::has_path_prefixes(merklePath,
+                                                 RECC_DEPS_EXCLUDE_PATHS)) {
                     RECC_LOG_DEBUG("Skipping  \"" << merklePath << "\"");
                     continue;
                 }

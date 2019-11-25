@@ -285,6 +285,18 @@ bool FileUtils::has_path_prefix(const std::string &path,
     return path.substr(0, tmpPrefix.length()) == tmpPrefix;
 }
 
+bool FileUtils::has_path_prefixes(const std::string &path,
+                                  const std::set<std::string> &pathPrefixes)
+{
+    for (const auto &prefix : pathPrefixes) {
+        if (FileUtils::has_path_prefix(path, prefix)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 std::string FileUtils::make_path_relative(std::string path,
                                           const char *workingDirectory)
 {

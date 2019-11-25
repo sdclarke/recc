@@ -121,8 +121,7 @@ void to_upper(std::string *const value,
 /**
  * Parse a 'sep' delimited list, storing its items in the given set.
  */
-void parse_set(const char *str, std::set<std::string> *result,
-               const char sep = ',')
+void parse_set(const char *str, std::set<std::string> *result, const char sep)
 {
     while (true) {
         const auto cur_delim = strchr(str, sep);
@@ -265,10 +264,10 @@ void parse_config_variables(const char *const *env)
     {                                                                         \
         name = std::stoi(std::string(env[i] + strlen(#name "=")));            \
     }
-#define SETVAR(name)                                                          \
+#define SETVAR(name, delim)                                                   \
     else if (strncmp(env[i], #name "=", strlen(#name "=")) == 0)              \
     {                                                                         \
-        parse_set(env[i] + strlen(#name "="), &name);                         \
+        parse_set(env[i] + strlen(#name "="), &name, delim);                  \
     }
 #define MAPVAR(name)                                                          \
     else if (strncmp(env[i], #name "_", strlen(#name "_")) == 0)              \
@@ -312,10 +311,10 @@ void parse_config_variables(const char *const *env)
         INTVAR(RECC_RETRY_LIMIT)
         INTVAR(RECC_RETRY_DELAY)
 
-        SETVAR(RECC_DEPS_OVERRIDE)
-        SETVAR(RECC_OUTPUT_FILES_OVERRIDE)
-        SETVAR(RECC_OUTPUT_DIRECTORIES_OVERRIDE)
-        SETVAR(RECC_DEPS_EXCLUDE_PATHS)
+        SETVAR(RECC_DEPS_OVERRIDE, ',')
+        SETVAR(RECC_OUTPUT_FILES_OVERRIDE, ',')
+        SETVAR(RECC_OUTPUT_DIRECTORIES_OVERRIDE, ',')
+        SETVAR(RECC_DEPS_EXCLUDE_PATHS, ',')
 
         MAPVAR(RECC_DEPS_ENV)
         MAPVAR(RECC_REMOTE_ENV)
