@@ -37,11 +37,15 @@ TEST_F(EnvTest, EnvSetTest)
                                  "RECC_OUTPUT_FILES_OVERRIDE=one,two,three",
                                  "RECC_REMOTE_ENV_key=val",
                                  "RECC_REMOTE_ENV_anotherkey=anotherval",
+                                 "RECC_DEPS_EXCLUDE_PATHS=/usr/include,/opt/"
+                                 "rh/devtoolset-7,/some/dir\\,withcomma",
                                  "TMPDIR=/some/tmp/dir",
                                  nullptr};
     const std::string expectedServer = "server:1234";
     const std::set<std::string> expectedDeps = {"oneitem"};
     const std::set<std::string> expectedOutputFiles = {"one", "two", "three"};
+    const std::set<std::string> expectedExcludePaths = {
+        "/usr/include", "/opt/rh/devtoolset-7", "/some/dir,withcomma"};
     const std::map<std::string, std::string> expectedRemoteEnv = {
         {"key", "val"}, {"anotherkey", "anotherval"}};
     parse_config_variables(testEnviron);
@@ -60,6 +64,8 @@ TEST_F(EnvTest, EnvSetTest)
     EXPECT_EQ(expectedOutputFiles, RECC_OUTPUT_FILES_OVERRIDE);
     EXPECT_EQ(expectedRemoteEnv, RECC_REMOTE_ENV);
     EXPECT_EQ("/some/tmp/dir", TMPDIR);
+
+    EXPECT_EQ(expectedExcludePaths, RECC_DEPS_EXCLUDE_PATHS);
 }
 
 TEST_F(EnvTest, EnvSetTestWithCAS)
@@ -80,6 +86,7 @@ TEST_F(EnvTest, EnvSetTestWithCAS)
     EXPECT_EQ(expectedCasServer, RECC_CAS_SERVER);
     EXPECT_EQ(expectedCasServer, RECC_ACTION_CACHE_SERVER);
 }
+
 TEST_F(EnvTest, EnvSetTestWithOnlyACCAS)
 {
     const char *testEnviron[] = {"RECC_SERVER=server:1234",

@@ -119,19 +119,44 @@ void to_upper(std::string *const value,
 }
 
 /**
+ * Make a copy of input string, but stripping passed in char
+ */
+std::string stripChar(const std::string &str, const char value)
+{
+    std::string tmp;
+    tmp.resize(str.size());
+    auto it = std::copy_if(str.begin(), str.end(), tmp.begin(),
+                           [value](char c) { return (c != value); });
+    tmp.resize(std::distance(tmp.begin(), it));
+    return tmp;
+}
+
+/**
  * Parse a 'sep' delimited list, storing its items in the given set.
  */
 void parse_set(const char *str, std::set<std::string> *result, const char sep)
 {
+    const char escape = '\\';
     while (true) {
-        const auto cur_delim = strchr(str, sep);
+        const char *cur_delim = strchr(str, sep);
         if (cur_delim == nullptr) {
             result->insert(std::string(str));
             return;
         }
         else {
-            result->insert(
-                std::string(str, static_cast<size_t>(cur_delim - str)));
+            // we have an escaped 'sep'
+            if (*(cur_delim - 1) == escape) {
+                do {
+                    cur_delim = strchr(cur_delim + 1, sep);
+                } while (cur_delim != nullptr && *(cur_delim - 1) == escape);
+                if (cur_delim == nullptr) {
+                    result->insert(stripChar(str, escape));
+                    return;
+                }
+            }
+
+            std::string tmp(str, static_cast<size_t>(cur_delim - str));
+            result->insert(stripChar(tmp, escape));
             str = cur_delim + 1;
         }
     }
@@ -214,7 +239,7 @@ vector_from_delimited_string(std::string prefix_map,
         emplace_key_values(prefix_map);
     }
     return return_vector;
-} // namespace recc
+}
 
 /*
  * Parse the config variables, and pass to parse_config_variables
@@ -320,7 +345,7 @@ void parse_config_variables(const char *const *env)
         MAPVAR(RECC_REMOTE_ENV)
         MAPVAR(RECC_REMOTE_PLATFORM)
     }
-} // namespace recc
+}
 
 void find_and_parse_config_files()
 {
