@@ -32,15 +32,13 @@ namespace {
 bool hasPrefix(const std::string &path,
                const std::set<std::string> &pathPrefixes)
 {
-    bool result = false;
     for (const auto &prefix : pathPrefixes) {
         if (FileUtils::has_path_prefix(path, prefix)) {
-            result = true;
-            break;
+            return true;
         }
     }
 
-    return result;
+    return false;
 }
 
 } // namespace
