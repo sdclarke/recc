@@ -179,7 +179,7 @@ TEST(HasPathPrefixTest, RelativePaths)
     EXPECT_FALSE(FileUtils::has_path_prefix("/a/b/c", "a/b"));
 }
 
-TEST(HasPathPrefixesTest, SystemPaths)
+TEST(HasPathPrefixesTest, PathTests)
 {
     const std::set<std::string> prefixes = {"/usr/include",
                                             "/opt/rh/devtoolset-7"};
@@ -189,6 +189,9 @@ TEST(HasPathPrefixesTest, SystemPaths)
     EXPECT_TRUE(
         FileUtils::has_path_prefixes("/opt/rh/devtoolset-7/foo.h", prefixes));
     EXPECT_FALSE(FileUtils::has_path_prefixes("/opt/rh/foo.h", prefixes));
+
+    EXPECT_TRUE(FileUtils::has_path_prefixes("/some/dir/foo.h", {"/"}));
+    EXPECT_FALSE(FileUtils::has_path_prefixes("/", {"/some/other/dir"}));
 }
 
 class MakePathRelativeTest : public ::testing::Test {
