@@ -194,8 +194,9 @@ extern std::set<std::string> RECC_OUTPUT_FILES_OVERRIDE;
 extern std::set<std::string> RECC_OUTPUT_DIRECTORIES_OVERRIDE;
 
 /**
- * A comma-separated list of directories to be excluded from the input
- * dependency list.
+ * A comma-separated list of directory prefixes to be excluded from the input
+ * dependency list. The immediate usage for this allows recc to not include
+ * system header files as part of the input root
  */
 extern std::set<std::string> RECC_DEPS_EXCLUDE_PATHS;
 
