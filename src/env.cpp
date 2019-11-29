@@ -144,8 +144,10 @@ void parse_set(const char *str, std::set<std::string> *result, const char sep)
             return;
         }
         else {
-            // we have an escaped 'sep'
-            if (*(cur_delim - 1) == escape) {
+            // if we see an escaped delimiter, scan past all such occurances
+            // avoiding invalid memory reads of memory before pointer
+            // 'str', ie; ","
+            if ((cur_delim > str) && *(cur_delim - 1) == escape) {
                 do {
                     cur_delim = strchr(cur_delim + 1, sep);
                 } while (cur_delim != nullptr && *(cur_delim - 1) == escape);

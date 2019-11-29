@@ -26,6 +26,7 @@ class EnvTest : public ::testing::Test {
         RECC_FORCE_REMOTE = false;
         RECC_DEPS_OVERRIDE = RECC_OUTPUT_FILES_OVERRIDE = {};
         RECC_REMOTE_ENV.clear();
+        RECC_DEPS_EXCLUDE_PATHS.clear();
     }
 };
 
@@ -65,6 +66,16 @@ TEST_F(EnvTest, EnvSetTest)
     EXPECT_EQ(expectedRemoteEnv, RECC_REMOTE_ENV);
     EXPECT_EQ("/some/tmp/dir", TMPDIR);
 
+    EXPECT_EQ(expectedExcludePaths, RECC_DEPS_EXCLUDE_PATHS);
+}
+
+TEST_F(EnvTest, EnvSetTest2)
+{
+    const char *testEnviron[] = {"RECC_DEPS_EXCLUDE_PATHS=,",
+                                 nullptr};
+    const std::set<std::string> expectedExcludePaths = {""};
+    parse_config_variables(testEnviron);
+    handle_special_defaults();
     EXPECT_EQ(expectedExcludePaths, RECC_DEPS_EXCLUDE_PATHS);
 }
 
