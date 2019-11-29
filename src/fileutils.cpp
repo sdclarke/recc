@@ -47,7 +47,7 @@ TemporaryDirectory::~TemporaryDirectory()
 {
     const std::vector<std::string> rmCommand = {"rm", "-rf", d_name};
     // TODO: catch here so as to not throw from destructor
-    execute(rmCommand);
+    SubProcess::execute(rmCommand);
 }
 
 void FileUtils::create_directory_recursive(const char *path)

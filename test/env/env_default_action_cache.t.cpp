@@ -23,10 +23,10 @@ TEST(EnvTest, ActionCacheDefaultToServerWhenNoCasTest)
     const char *testEnviron[] = {"RECC_SERVER=somehost:1234", nullptr};
     std::string expectedActionCacheServer = "somehost:1234";
 
-    parse_config_variables(testEnviron);
+    Env::parse_config_variables(testEnviron);
     // need this for testing, since we are calling parse_config_variables
     // directly.
-    handle_special_defaults();
+    Env::handle_special_defaults();
 
     EXPECT_EQ(expectedActionCacheServer, RECC_SERVER);
     EXPECT_EQ(expectedActionCacheServer, RECC_ACTION_CACHE_SERVER);
@@ -39,10 +39,10 @@ TEST(EnvTest, ActionCacheDefaultToCasWhenCasTest)
                                  "RECC_ACTION_CACHE_SERVER=", nullptr};
     std::string expectedActionCacheServer = "someotherhost:5678";
 
-    parse_config_variables(testEnviron);
+    Env::parse_config_variables(testEnviron);
     // need this for testing, since we are calling parse_config_variables
     // directly.
-    handle_special_defaults();
+    Env::handle_special_defaults();
 
     EXPECT_EQ(expectedActionCacheServer, RECC_CAS_SERVER);
     EXPECT_EQ(expectedActionCacheServer, RECC_ACTION_CACHE_SERVER);

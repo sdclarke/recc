@@ -182,8 +182,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    set_config_locations();
-    parse_config_variables();
+    Env::set_config_locations();
+    Env::parse_config_variables();
 
     // gRPC connection objects (we don't initialize them if `dryRunMode` is
     // set):

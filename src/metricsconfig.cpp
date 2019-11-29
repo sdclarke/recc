@@ -28,8 +28,8 @@ StatsDPublisherType get_statsdpublisher_from_config()
     if (RECC_METRICS_UDP_SERVER.size()) {
         publishMethod =
             reccmetrics::StatsDPublisherOptions::PublishMethod::UDP;
-        parse_host_port_string(RECC_METRICS_UDP_SERVER, publishPath,
-                               &publishPort);
+        Env::parse_host_port_string(RECC_METRICS_UDP_SERVER, publishPath,
+                                    &publishPort);
     }
     else if (RECC_METRICS_FILE.size()) {
         publishMethod =

@@ -27,7 +27,7 @@ TEST(EnvTest, DifferentCASServerTest)
     std::string expectedReccServer = "somehost:1234";
     std::string expectedCasServer = "someotherhost:5678";
 
-    parse_config_variables(testEnviron);
+    Env::parse_config_variables(testEnviron);
 
     EXPECT_EQ(expectedReccServer, RECC_SERVER);
     EXPECT_EQ(expectedCasServer, RECC_CAS_SERVER);
@@ -42,7 +42,7 @@ TEST(EnvTest, EnableCasGetCapabilitiesTest)
     std::string expectedReccServer = "somehost:1234";
     std::string expectedCasServer = "someotherhost:5678";
 
-    parse_config_variables(testEnviron);
+    Env::parse_config_variables(testEnviron);
 
     EXPECT_EQ(expectedReccServer, RECC_SERVER);
     EXPECT_EQ(expectedCasServer, RECC_CAS_SERVER);

@@ -28,12 +28,12 @@ TEST(EnvTest, EnvFromFileOverride)
 
     // need this for testing, since we are calling parse_config_variables
     // directly.
-    set_config_locations(evaluate_config_locations());
-    find_and_parse_config_files();
-    parse_config_variables(testEnviron);
+    Env::set_config_locations(Env::evaluate_config_locations());
+    Env::find_and_parse_config_files();
+    Env::parse_config_variables(testEnviron);
     // need this for testing, since we are calling parse_config_variables
     // directly.
-    handle_special_defaults();
+    Env::handle_special_defaults();
 
     EXPECT_EQ(expectedReccServer, RECC_SERVER);
     EXPECT_EQ(expectedRecCasServer, RECC_CAS_SERVER);

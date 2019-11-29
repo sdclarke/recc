@@ -104,6 +104,7 @@ std::map<std::string, std::string> RECC_REMOTE_PLATFORM =
 // Keep this empty initially and have set_default_locations() populate it
 std::deque<std::string> RECC_CONFIG_LOCATIONS = {};
 
+namespace {
 /**
  * Convert each string character to uppercase until equal_pos length.
  */
@@ -172,7 +173,7 @@ void format_config_string(std::string *const line)
 {
     std::string::size_type start_pos = 0;
     std::string::size_type end_pos = line->find('=');
-    const std::string map_key = substring_until_nth_token(*line, "_", 2);
+    const std::string map_key = Env::substring_until_nth_token(*line, "_", 2);
 
     // Handle map configuration variables. Only convert keys, not value.
     if (map_key == "remote_platform" || map_key == "deps_env" ||
@@ -189,6 +190,7 @@ void format_config_string(std::string *const line)
     }
 }
 
+<<<<<<< HEAD
 std::vector<std::pair<std::string, std::string>>
 vector_from_delimited_string(std::string prefix_map,
                              const std::string &first_delimiter,
@@ -243,6 +245,8 @@ vector_from_delimited_string(std::string prefix_map,
     return return_vector;
 }
 
+=======
+>>>>>>> Move global functions to scoped struct static
 /*
  * Parse the config variables, and pass to parse_config_variables
  */
@@ -266,10 +270,12 @@ void parse_config_files(const std::string &config_file_name)
         env_cstrings.push_back(const_cast<char *>(i.c_str()));
     }
     env_cstrings.push_back(nullptr);
-    parse_config_variables(env_cstrings.data());
+    Env::parse_config_variables(env_cstrings.data());
 }
 
-void parse_config_variables(const char *const *env)
+} // namespace
+
+void Env::parse_config_variables(const char *const *env)
 {
 #define VARS_START()                                                          \
     if (strncmp(env[i], "RECC_", 4) != 0 &&                                   \
@@ -349,7 +355,7 @@ void parse_config_variables(const char *const *env)
     }
 }
 
-void find_and_parse_config_files()
+void Env::find_and_parse_config_files()
 {
     for (auto file_location : RECC_CONFIG_LOCATIONS) {
         std::ifstream config(file_location);
@@ -362,7 +368,7 @@ void find_and_parse_config_files()
     }
 }
 
-void handle_special_defaults()
+void Env::handle_special_defaults()
 {
     if (RECC_SERVER.empty()) {
         RECC_SERVER = DEFAULT_RECC_SERVER;
@@ -430,7 +436,7 @@ void handle_special_defaults()
 
     if (!RECC_PREFIX_MAP.empty()) {
         RECC_PREFIX_REPLACEMENT =
-            vector_from_delimited_string(RECC_PREFIX_MAP);
+            Env::vector_from_delimited_string(RECC_PREFIX_MAP);
     }
 
     if (DigestGenerator::stringToDigestFunctionMap().count(
@@ -441,7 +447,7 @@ void handle_special_defaults()
     }
 }
 
-void verify_files_writeable()
+void Env::verify_files_writeable()
 {
     if (RECC_METRICS_FILE.size()) {
         std::ofstream of;
@@ -470,7 +476,7 @@ void verify_files_writeable()
     }
 }
 
-std::deque<std::string> evaluate_config_locations()
+std::deque<std::string> Env::evaluate_config_locations()
 {
     // Note that the order in which the config locations are pushed
     // is significant.
@@ -495,18 +501,72 @@ std::deque<std::string> evaluate_config_locations()
     return config_order;
 }
 
-void set_config_locations()
+std::vector<std::pair<std::string, std::string>>
+Env::vector_from_delimited_string(std::string prefix_map,
+                                  const std::string &first_delimiter,
+                                  const std::string &second_delimiter)
 {
-    set_config_locations(evaluate_config_locations());
+    std::vector<std::pair<std::string, std::string>> return_vector;
+    // To reduce code duplication, lambda parses key/value by second
+    // delimiter, and emplaces back into the vector.
+    auto emplace_key_values = [&return_vector,
+                               &second_delimiter](auto key_value) {
+        const auto equal_pos = key_value.find(second_delimiter);
+        // Extra check in case there is input with no second
+        // delimiter.
+        if (equal_pos == std::string::npos) {
+            RECC_LOG_WARNING("Incorrect path specification for key/value: ["
+                             << key_value << "] please see README for usage.")
+            return;
+        }
+        // Check if key/values are absolute paths
+        std::string key = key_value.substr(0, equal_pos);
+        std::string value = key_value.substr(equal_pos + 1);
+        key = FileUtils::normalize_path(key.c_str());
+        value = FileUtils::normalize_path(value.c_str());
+        if (!FileUtils::is_absolute_path(key.c_str()) &&
+            !FileUtils::is_absolute_path(value.c_str())) {
+            RECC_LOG_WARNING("Input paths must be absolute: [" << key_value
+                                                               << "]");
+            return;
+        }
+        if (FileUtils::has_path_prefix(RECC_PROJECT_ROOT, key.c_str())) {
+            RECC_LOG_WARNING("Path to replace: ["
+                             << key.c_str()
+                             << "] is a prefix of the project root: ["
+                             << RECC_PROJECT_ROOT << "]");
+        }
+        return_vector.emplace_back(std::make_pair(key, value));
+    };
+    size_t delim_pos = std::string::npos;
+    // Iterate while we can find the first delimiter
+    while ((delim_pos = prefix_map.find(first_delimiter)) !=
+           std::string::npos) {
+        emplace_key_values(prefix_map.substr(0, delim_pos));
+        // Erase the key/value, including the delimiter
+        prefix_map.erase(0, delim_pos + 1);
+    }
+    // If there is only one key/value, or it's the final key/value pair after
+    // multiple, emplace it back.
+    if (!prefix_map.empty() &&
+        prefix_map.find(first_delimiter) == std::string::npos) {
+        emplace_key_values(prefix_map);
+    }
+    return return_vector;
 }
 
-void set_config_locations(const std::deque<std::string> &config_order)
+void Env::set_config_locations()
+{
+    set_config_locations(Env::evaluate_config_locations());
+}
+
+void Env::set_config_locations(const std::deque<std::string> &config_order)
 {
     RECC_CONFIG_LOCATIONS = config_order;
 }
 
-void parse_host_port_string(const std::string &inputString,
-                            std::string &serverRet, int *portRet)
+void Env::parse_host_port_string(const std::string &inputString,
+                                 std::string &serverRet, int *portRet)
 {
     // NOTE: This only works for IPv4 addresses, not IPv6.
     const std::size_t split_at = inputString.find_last_of(":");
@@ -533,9 +593,9 @@ void parse_host_port_string(const std::string &inputString,
     }
 }
 
-std::string substring_until_nth_token(const std::string &value,
-                                      const std::string &character,
-                                      const std::string::size_type &pos)
+std::string Env::substring_until_nth_token(const std::string &value,
+                                           const std::string &character,
+                                           const std::string::size_type &pos)
 {
     std::size_t i = 0;
     std::string result, next_string = value;
@@ -552,6 +612,14 @@ std::string substring_until_nth_token(const std::string &value,
         ++i;
     }
     return result;
+}
+
+void Env::parse_config_variables()
+{
+    Env::find_and_parse_config_files();
+    Env::parse_config_variables(environ);
+    Env::handle_special_defaults();
+    Env::verify_files_writeable();
 }
 
 } // namespace recc

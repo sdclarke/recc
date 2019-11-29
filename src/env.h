@@ -247,99 +247,99 @@ extern std::deque<std::string> RECC_CONFIG_LOCATIONS;
 extern std::string RECC_CORRELATED_INVOCATIONS_ID;
 
 /**
- * Parse the given environment and store it in the corresponding global
- * variables.
- *
- * environ should be an array of "VARIABLE=value" std::strings whose last entry
- * is nullptr.
- */
-void parse_config_variables(const char *const *environ);
-
-/**
- * Finds config files specified in RECC_CONFIG_LOCATIONS and passes variables
- * to parse_config_variables
- */
-void find_and_parse_config_files();
-
-/**
- * Handles the case that RECC_SERVER and RECC_CAS_SERVER have not been set.
- */
-void handle_special_defaults();
-
-/**
- * Verifies that the files referred to in the configuration can be actually
- * written to.
- */
-void verify_files_writeable();
-
-/*
- * Evaluates ENV and Returns a prioritized deque with the config locations
- * as follows:
- *  1. ${cwd}/recc
- *  2. ~/.recc
- *  3. ${RECC_CONFIG_PREFIX_DIR}
- *  4. ${INSTALL_DIR}/../etc/recc
- */
-std::deque<std::string> evaluate_config_locations();
-
-/**
- * Given a string, return a vector of pairs containing key=value pairs of the
- * string split at the delimiter, key/values split by second delimiter.
- * Default delimiters = ":", "=".
- * Ex. recc=build:build=recc will return a vector [(recc, build),(build, recc)]
- **/
-std::vector<std::pair<std::string, std::string>>
-vector_from_delimited_string(std::string prefix_map,
-                             const std::string &first_delimiter = ":",
-                             const std::string &second_delimiter = "=");
-
-/**
- * Sets the prioritized configuration file locations from
- * evaluate_config_locations() -- default ordering
- */
-void set_config_locations();
-
-/**
- * Sets the prioritized configuration file locations as specified
- * in config_order
- */
-void set_config_locations(const std::deque<std::string> &config_order);
-
-/**
- * Parses strings of the form `host:port` and stores each segment in the
- * individual string/int that are referenced/pointed to. If no port is
- * specified, it defaults to 0. NOTE: This only works for IPv4, not IPv6.
- */
-void parse_host_port_string(const std::string &inputString,
-                            std::string &serverRet, int *portRet);
-
-/**
- * Return a substring ending at the nth occurrence of a character. If a nth
- * occurrence isn't found, return empty string.
- */
-std::string substring_until_nth_token(const std::string &value,
-                                      const std::string &character,
-                                      const std::string::size_type &pos);
-
-/**
  * The process environment.
  */
 extern "C" char **environ;
 
-/**
- * Calculate and set the config locations, parse the config files from those,
- * then parse the environment variables for overrides and run some sanity
- * checks (handle_special_defaults) on the resulting config. Takes optional
- * parameter specifying source file which calls it, to pass to
- * handle_special_defaults
- */
-inline void parse_config_variables()
-{
-    find_and_parse_config_files();
-    parse_config_variables(environ);
-    handle_special_defaults();
-    verify_files_writeable();
-}
+struct Env {
+    /**
+     * Parse the given environment and store it in the corresponding global
+     * variables.
+     *
+     * environ should be an array of "VARIABLE=value" std::strings whose last
+     * entry is nullptr.
+     */
+    static void parse_config_variables(const char *const *environ);
+
+    /**
+     * Finds config files specified in RECC_CONFIG_LOCATIONS and passes
+     * variables to parse_config_variables
+     */
+    static void find_and_parse_config_files();
+
+    /**
+     * Handles the case that RECC_SERVER and RECC_CAS_SERVER have not been set.
+     */
+    static void handle_special_defaults();
+
+    /**
+     * Verifies that the files referred to in the configuration can be actually
+     * written to.
+     */
+    static void verify_files_writeable();
+
+    /*
+     * Evaluates ENV and Returns a prioritized deque with the config locations
+     * as follows:
+     *  1. ${cwd}/recc
+     *  2. ~/.recc
+     *  3. ${RECC_CONFIG_PREFIX_DIR}
+     *  4. ${INSTALL_DIR}/../etc/recc
+     */
+    static std::deque<std::string> evaluate_config_locations();
+
+    /**
+     * Given a string, return a vector of pairs containing key=value pairs of
+     *the string split at the delimiter, key/values split by second delimiter.
+     * Default delimiters = ":", "=".
+     * Ex. recc=build:build=recc will return a vector [(recc, build),(build,
+     *recc)]
+     **/
+    static std::vector<std::pair<std::string, std::string>>
+    vector_from_delimited_string(std::string prefix_map,
+                                 const std::string &first_delimiter = ":",
+                                 const std::string &second_delimiter = "=");
+
+    /**
+     * Sets the prioritized configuration file locations from
+     * evaluate_config_locations() -- default ordering
+     */
+    static void set_config_locations();
+
+    /**
+     * Sets the prioritized configuration file locations as specified
+     * in config_order
+     */
+    static void
+    set_config_locations(const std::deque<std::string> &config_order);
+
+    /**
+     * Parses strings of the form `host:port` and stores each segment in the
+     * individual string/int that are referenced/pointed to. If no port is
+     * specified, it defaults to 0. NOTE: This only works for IPv4, not IPv6.
+     */
+    static void parse_host_port_string(const std::string &inputString,
+                                       std::string &serverRet, int *portRet);
+
+    /**
+     * Return a substring ending at the nth occurrence of a character. If a nth
+     * occurrence isn't found, return empty string.
+     */
+    static std::string
+    substring_until_nth_token(const std::string &value,
+                              const std::string &character,
+                              const std::string::size_type &pos);
+
+    /**
+     * Calculate and set the config locations, parse the config files from
+     * those, then parse the environment variables for overrides and run some
+     * sanity checks (handle_special_defaults) on the resulting config. Takes
+     * optional parameter specifying source file which calls it, to pass to
+     * handle_special_defaults
+     */
+    static void parse_config_variables();
+};
+
 } // namespace recc
 } // namespace BloombergLP
 

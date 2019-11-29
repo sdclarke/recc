@@ -37,7 +37,8 @@ TEST(EnvTest, EnvConfigOrderAdvertised)
     RECC_CUSTOM_PREFIX = "/tmp/recc/custom/prefix";
     RECC_INSTALL_DIR = "/tmp/recc/install/dir";
 
-    const std::deque<std::string> config_order = evaluate_config_locations();
+    const std::deque<std::string> config_order =
+        Env::evaluate_config_locations();
     /* config_order.size() must be at least 4, might be higher if more
      * locations are defined in reccdefaults.h
      */

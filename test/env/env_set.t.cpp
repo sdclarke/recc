@@ -49,13 +49,13 @@ TEST_F(EnvTest, EnvSetTest)
         "/usr/include", "/opt/rh/devtoolset-7", "/some/dir,withcomma"};
     const std::map<std::string, std::string> expectedRemoteEnv = {
         {"key", "val"}, {"anotherkey", "anotherval"}};
-    parse_config_variables(testEnviron);
+    Env::parse_config_variables(testEnviron);
 
     EXPECT_EQ(expectedServer, RECC_SERVER);
     EXPECT_TRUE(RECC_CAS_SERVER.empty());
     EXPECT_TRUE(RECC_ACTION_CACHE_SERVER.empty());
 
-    handle_special_defaults();
+    Env::handle_special_defaults();
     // If the cas and action cache servers are not set then they
     // should fall back to RECC_SERVER.
     EXPECT_EQ(expectedServer, RECC_CAS_SERVER);
@@ -84,13 +84,13 @@ TEST_F(EnvTest, EnvSetTestWithCAS)
                                  "RECC_CAS_SERVER=casserver:123456", nullptr};
     const std::string expectedServer = "server:1234";
     const std::string expectedCasServer = "casserver:123456";
-    parse_config_variables(testEnviron);
+    Env::parse_config_variables(testEnviron);
 
     EXPECT_EQ(expectedServer, RECC_SERVER);
     EXPECT_EQ(expectedCasServer, RECC_CAS_SERVER);
     EXPECT_TRUE(RECC_ACTION_CACHE_SERVER.empty());
 
-    handle_special_defaults();
+    Env::handle_special_defaults();
     // The CAS setting should be respected and the AC should use the CAS.
     EXPECT_EQ(expectedServer, RECC_SERVER);
     EXPECT_EQ(expectedCasServer, RECC_CAS_SERVER);
@@ -104,13 +104,13 @@ TEST_F(EnvTest, EnvSetTestWithOnlyACCAS)
                                  nullptr};
     const std::string expectedServer = "server:1234";
     const std::string expectedAcServer = "acserver:123456";
-    parse_config_variables(testEnviron);
+    Env::parse_config_variables(testEnviron);
 
     EXPECT_EQ(expectedServer, RECC_SERVER);
     EXPECT_TRUE(RECC_CAS_SERVER.empty());
     EXPECT_EQ(expectedAcServer, RECC_ACTION_CACHE_SERVER);
 
-    handle_special_defaults();
+    Env::handle_special_defaults();
     // If only AC and server are set then CAS should fallback to
     // where the AC is.
     EXPECT_EQ(expectedServer, RECC_SERVER);

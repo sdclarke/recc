@@ -63,7 +63,7 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
             try { // Timed block
                 reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
                     TIMER_NAME_COMPILER_DEPS, RECC_ENABLE_METRICS);
-                fileInfo = get_file_info(command);
+                fileInfo = Deps::get_file_info(command);
             }
             catch (const subprocess_failed_error &e) {
                 RECC_LOG_VERBOSE("Running locally, to display the error.");

@@ -37,7 +37,7 @@ void permute_test(const std::vector<const char *> expectedOrderVec,
         // nullptr
         permuteVec.push_back(nullptr);
 
-        parse_config_variables(permuteVec.data());
+        Env::parse_config_variables(permuteVec.data());
         // remove nullptr
         permuteVec.pop_back();
 

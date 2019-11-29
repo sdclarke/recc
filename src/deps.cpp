@@ -34,9 +34,8 @@
 namespace BloombergLP {
 namespace recc {
 
-std::set<std::string> dependencies_from_make_rules(const std::string &rules,
-                                                   bool is_sun_format,
-                                                   bool include_global_paths)
+std::set<std::string> Deps::dependencies_from_make_rules(
+    const std::string &rules, bool is_sun_format, bool include_global_paths)
 {
     std::set<std::string> result;
     bool saw_colon_on_line = false;
@@ -96,7 +95,7 @@ std::set<std::string> dependencies_from_make_rules(const std::string &rules,
     return result;
 }
 
-std::string crtbegin_from_clang_v(const std::string &str)
+std::string Deps::crtbegin_from_clang_v(const std::string &str)
 {
     // Look for lines of the form:
     // ^Selected GCC installation: <path>$
@@ -130,11 +129,11 @@ std::string crtbegin_from_clang_v(const std::string &str)
     return crtbegin_file;
 }
 
-CommandFileInfo get_file_info(const ParsedCommand &parsedCommand)
+CommandFileInfo Deps::get_file_info(const ParsedCommand &parsedCommand)
 {
     CommandFileInfo result;
     bool is_clang = parsedCommand.is_clang();
-    auto subprocessResult = execute(parsedCommand.get_dependencies_command(),
+    auto subprocessResult = SubProcess::execute(parsedCommand.get_dependencies_command(),
                                     true, is_clang, RECC_DEPS_ENV);
 
     if (subprocessResult.d_exitCode != 0) {
@@ -180,7 +179,7 @@ CommandFileInfo get_file_info(const ParsedCommand &parsedCommand)
     return result;
 }
 
-std::set<std::string> guess_products(const std::set<std::string> &deps)
+std::set<std::string> Deps::guess_products(const std::set<std::string> &deps)
 {
     static const std::set<std::string> defaultOutputLocations = {"a.out"};
     static const std::set<std::string> defaultOutputExtensions = {".o", ".gch",
@@ -203,5 +202,6 @@ std::set<std::string> guess_products(const std::set<std::string> &deps)
 
     return result;
 }
+
 } // namespace recc
 } // namespace BloombergLP
