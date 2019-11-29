@@ -200,7 +200,8 @@ RemoteExecutionClient::execute_action(const proto::Digest &actionDigest,
     *executeRequest.mutable_action_digest() = actionDigest;
     executeRequest.set_skip_cache_lookup(skipCache);
 
-    Signal::setup_signal_handler(SIGINT, RemoteExecutionClient::set_sigint_received);
+    Signal::setup_signal_handler(SIGINT,
+                                 RemoteExecutionClient::set_sigint_received);
 
     ReaderPointer reader_ptr;
     OperationPointer operation_ptr;

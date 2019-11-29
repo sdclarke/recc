@@ -49,7 +49,8 @@ TEST(DepsTest, SimpleInclude)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c"};
     std::set<std::string> expected = {"includes_empty.c", "empty.h"};
-    EXPECT_EQ(expected, normalize_all(Deps::get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, RecursiveDependency)
@@ -60,7 +61,8 @@ TEST(DepsTest, RecursiveDependency)
                              "includes_includes_empty.c"};
     std::set<std::string> expected = {"includes_includes_empty.c",
                                       "includes_empty.h", "empty.h"};
-    EXPECT_EQ(expected, normalize_all(Deps::get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, MultiFile)
@@ -72,7 +74,8 @@ TEST(DepsTest, MultiFile)
     std::set<std::string> expected = {"includes_includes_empty.c",
                                       "includes_empty.c", "includes_empty.h",
                                       "empty.h"};
-    EXPECT_EQ(expected, normalize_all(Deps::get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, EdgeCases)
@@ -83,7 +86,8 @@ TEST(DepsTest, EdgeCases)
                              "edge_cases.c"};
     std::set<std::string> expected = {"edge_cases.c", "empty.h",
                                       "header with spaces.h"};
-    EXPECT_EQ(expected, normalize_all(Deps::get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, OutputArgument)
@@ -93,7 +97,8 @@ TEST(DepsTest, OutputArgument)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c",     "-o", "/dev/null"};
     std::set<std::string> expected = {"includes_empty.c", "empty.h"};
-    EXPECT_EQ(expected, normalize_all(Deps::get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, OutputArgumentNoSpace)
@@ -103,7 +108,8 @@ TEST(DepsTest, OutputArgumentNoSpace)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c", "-o/dev/null"};
     std::set<std::string> expected = {"includes_empty.c", "empty.h"};
-    EXPECT_EQ(expected, normalize_all(Deps::get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, PreprocessorOutputArgument)
@@ -125,7 +131,8 @@ TEST(DepsTest, Subdirectory)
                              "-Isubdirectory", "includes_from_subdirectory.c"};
     std::set<std::string> expected = {"includes_from_subdirectory.c",
                                       "subdirectory/header.h"};
-    EXPECT_EQ(expected, normalize_all(Deps::get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, SystemSubdirectory)
@@ -150,7 +157,8 @@ TEST(DepsTest, InputInSubdirectory)
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c",
                              "subdirectory/empty.c"};
     std::set<std::string> expected = {"subdirectory/empty.c"};
-    EXPECT_EQ(expected, normalize_all(Deps::get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, SubprocessFailure)
@@ -167,10 +175,12 @@ TEST(DepsTest, GlobalPathsAllowed)
     RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "ctype_include.c"};
     std::set<std::string> expected = {"ctype_include.c"};
-    EXPECT_EQ(expected, normalize_all(Deps::get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 
     RECC_DEPS_GLOBAL_PATHS = 1;
-    EXPECT_NE(expected, normalize_all(Deps::get_file_info(command).d_dependencies));
+    EXPECT_NE(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, ClangCrtbegin)
