@@ -282,8 +282,7 @@ Guidelines for replacement are:
 
 #### Support for dependency filtering
 
-When using `RECC_DEPS_GLOBAL_PATHS`, paths to system files (/usr/include, /opt/rh/devtoolset-7, etc) are included as part of the input root. Once we start using our new runner, buildbox-run-userchroot, we will encounter merge conflicts with
-these system level header files because they will be part of the chroot-template. To avoid this, we have implemented a way to filter out certain dependencies based on a set of paths set in the `RECC_DEPS_EXCLUDE_PATHS` environment variable. This variable is a comma-delimited set of paths(used as path prefixes) that can be set to instruct recc to not include as part of the input root dependency list.
+When using `RECC_DEPS_GLOBAL_PATHS`, paths to system files (/usr/include, /opt/rh/devtoolset-7, etc) are included as part of the input root. To avoid these system dependencies potential conflicting with downstream build environment dependencies, there is now a method to filter out dependencies based on a set of paths. Setting the `RECC_DEPS_EXCLUDE_PATHS` environment variable with a comma-delimited set of paths(used as path prefixes) will be used as a filter to exclude those dependencies:
 ```
 export RECC_DEPS_EXCLUDE_PATH=/usr/include,/opt/rh/devtoolset-7
 ```
