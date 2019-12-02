@@ -71,8 +71,7 @@ TEST_F(EnvTest, EnvSetTest)
 
 TEST_F(EnvTest, EnvSetTest2)
 {
-    const char *testEnviron[] = {"RECC_DEPS_EXCLUDE_PATHS=,",
-                                 nullptr};
+    const char *testEnviron[] = {"RECC_DEPS_EXCLUDE_PATHS=,", nullptr};
     const std::set<std::string> expectedExcludePaths = {""};
     parse_config_variables(testEnviron);
     handle_special_defaults();
