@@ -190,63 +190,6 @@ void format_config_string(std::string *const line)
     }
 }
 
-<<<<<<< HEAD
-std::vector<std::pair<std::string, std::string>>
-vector_from_delimited_string(std::string prefix_map,
-                             const std::string &first_delimiter,
-                             const std::string &second_delimiter)
-{
-    std::vector<std::pair<std::string, std::string>> return_vector;
-    // To reduce code duplication, lambda parses key/value by second
-    // delimiter, and emplaces back into the vector.
-    auto emplace_key_values = [&return_vector,
-                               &second_delimiter](auto key_value) {
-        const auto equal_pos = key_value.find(second_delimiter);
-        // Extra check in case there is input with no second
-        // delimiter.
-        if (equal_pos == std::string::npos) {
-            RECC_LOG_WARNING("Incorrect path specification for key/value: ["
-                             << key_value << "] please see README for usage.")
-            return;
-        }
-        // Check if key/values are absolute paths
-        std::string key = key_value.substr(0, equal_pos);
-        std::string value = key_value.substr(equal_pos + 1);
-        key = FileUtils::normalize_path(key.c_str());
-        value = FileUtils::normalize_path(value.c_str());
-        if (!FileUtils::is_absolute_path(key.c_str()) &&
-            !FileUtils::is_absolute_path(value.c_str())) {
-            RECC_LOG_WARNING("Input paths must be absolute: [" << key_value
-                                                               << "]");
-            return;
-        }
-        if (FileUtils::has_path_prefix(RECC_PROJECT_ROOT, key.c_str())) {
-            RECC_LOG_WARNING("Path to replace: ["
-                             << key.c_str()
-                             << "] is a prefix of the project root: ["
-                             << RECC_PROJECT_ROOT << "]");
-        }
-        return_vector.emplace_back(std::make_pair(key, value));
-    };
-    size_t delim_pos = std::string::npos;
-    // Iterate while we can find the first delimiter
-    while ((delim_pos = prefix_map.find(first_delimiter)) !=
-           std::string::npos) {
-        emplace_key_values(prefix_map.substr(0, delim_pos));
-        // Erase the key/value, including the delimiter
-        prefix_map.erase(0, delim_pos + 1);
-    }
-    // If there is only one key/value, or it's the final key/value pair after
-    // multiple, emplace it back.
-    if (!prefix_map.empty() &&
-        prefix_map.find(first_delimiter) == std::string::npos) {
-        emplace_key_values(prefix_map);
-    }
-    return return_vector;
-}
-
-=======
->>>>>>> Move global functions to scoped struct static
 /*
  * Parse the config variables, and pass to parse_config_variables
  */
