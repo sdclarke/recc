@@ -280,6 +280,13 @@ Guidelines for replacement are:
 2. Prefix candidates are matched from left to right, and once a match is found it is replaced and no more prefix replacement is done.
 3. Path prefix replacement happens before absolute to relative path conversion.
 
+#### Support for dependency filtering
+
+When using `RECC_DEPS_GLOBAL_PATHS`, paths to system files (/usr/include, /opt/rh/devtoolset-7, etc) are included as part of the input root. To avoid these system dependencies potential conflicting with downstream build environment dependencies, there is now a method to filter out dependencies based on a set of paths. Setting the `RECC_DEPS_EXCLUDE_PATHS` environment variable with a comma-delimited set of paths(used as path prefixes) will be used as a filter to exclude those dependencies:
+```
+export RECC_DEPS_EXCLUDE_PATH=/usr/include,/opt/rh/devtoolset-7
+```
+
 ### Running `recc` against Google's RBE (Remote Build Execution) API
 
 *NOTE:* At time of writing, RBE is still in alpha and instructions are subject

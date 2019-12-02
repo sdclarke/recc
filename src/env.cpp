@@ -93,6 +93,8 @@ std::set<std::string> RECC_OUTPUT_FILES_OVERRIDE =
     DEFAULT_RECC_OUTPUT_FILES_OVERRIDE;
 std::set<std::string> RECC_OUTPUT_DIRECTORIES_OVERRIDE =
     DEFAULT_RECC_OUTPUT_DIRECTORIES_OVERRIDE;
+std::set<std::string> RECC_DEPS_EXCLUDE_PATHS =
+    DEFAULT_RECC_DEPS_EXCLUDE_PATHS;
 
 std::map<std::string, std::string> RECC_DEPS_ENV = DEFAULT_RECC_DEPS_ENV;
 std::map<std::string, std::string> RECC_REMOTE_ENV = DEFAULT_RECC_REMOTE_ENV;
@@ -117,19 +119,47 @@ void to_upper(std::string *const value,
 }
 
 /**
- * Parse a comma-separated list, storing its items in the given set.
+ * Make a copy of input string, but stripping passed in char
  */
-void parse_set(const char *str, std::set<std::string> *result)
+std::string stripChar(const std::string &str, const char value)
 {
+    std::string tmp;
+    tmp.resize(str.size());
+    auto it = std::copy_if(str.begin(), str.end(), tmp.begin(),
+                           [value](char c) { return (c != value); });
+    tmp.resize(std::distance(tmp.begin(), it));
+    return tmp;
+}
+
+/**
+ * Parse a 'sep' delimited list, storing its items in the given set.
+ */
+void parse_set(const char *str, std::set<std::string> *result, const char sep)
+{
+    const char escape = '\\';
     while (true) {
-        const auto comma = strchr(str, ',');
-        if (comma == nullptr) {
+        const char *cur_delim = strchr(str, sep);
+        if (cur_delim == nullptr) {
             result->insert(std::string(str));
             return;
         }
         else {
-            result->insert(std::string(str, static_cast<size_t>(comma - str)));
-            str = comma + 1;
+            // if we see an escaped delimiter, scan past all such occurances
+            // avoiding invalid memory reads of memory before pointer
+            // 'str', ie; ","
+            if ((cur_delim > str) && *(cur_delim - 1) == escape) {
+                do {
+                    cur_delim = strchr(cur_delim + 1, sep);
+                } while (cur_delim != nullptr && *(cur_delim - 1) == escape);
+                if (cur_delim == nullptr) {
+                    result->insert(stripChar(str, escape));
+                    return;
+                }
+            }
+
+            std::string tmp(str, static_cast<size_t>(cur_delim - str));
+            result->insert(stripChar(tmp, escape));
+            str = cur_delim + 1;
         }
     }
 }
@@ -211,7 +241,7 @@ vector_from_delimited_string(std::string prefix_map,
         emplace_key_values(prefix_map);
     }
     return return_vector;
-} // namespace recc
+}
 
 /*
  * Parse the config variables, and pass to parse_config_variables
@@ -261,10 +291,10 @@ void parse_config_variables(const char *const *env)
     {                                                                         \
         name = std::stoi(std::string(env[i] + strlen(#name "=")));            \
     }
-#define SETVAR(name)                                                          \
+#define SETVAR(name, delim)                                                   \
     else if (strncmp(env[i], #name "=", strlen(#name "=")) == 0)              \
     {                                                                         \
-        parse_set(env[i] + strlen(#name "="), &name);                         \
+        parse_set(env[i] + strlen(#name "="), &name, delim);                  \
     }
 #define MAPVAR(name)                                                          \
     else if (strncmp(env[i], #name "_", strlen(#name "_")) == 0)              \
@@ -308,15 +338,16 @@ void parse_config_variables(const char *const *env)
         INTVAR(RECC_RETRY_LIMIT)
         INTVAR(RECC_RETRY_DELAY)
 
-        SETVAR(RECC_DEPS_OVERRIDE)
-        SETVAR(RECC_OUTPUT_FILES_OVERRIDE)
-        SETVAR(RECC_OUTPUT_DIRECTORIES_OVERRIDE)
+        SETVAR(RECC_DEPS_OVERRIDE, ',')
+        SETVAR(RECC_OUTPUT_FILES_OVERRIDE, ',')
+        SETVAR(RECC_OUTPUT_DIRECTORIES_OVERRIDE, ',')
+        SETVAR(RECC_DEPS_EXCLUDE_PATHS, ',')
 
         MAPVAR(RECC_DEPS_ENV)
         MAPVAR(RECC_REMOTE_ENV)
         MAPVAR(RECC_REMOTE_PLATFORM)
     }
-} // namespace recc
+}
 
 void find_and_parse_config_files()
 {

@@ -16,6 +16,7 @@
 #define INCLUDED_FILEUTILS
 
 #include <reccdefaults.h>
+#include <set>
 #include <string>
 #include <sys/stat.h>
 #include <vector>
@@ -109,7 +110,11 @@ struct FileUtils {
      * Note that this isn't just "is_subdirectory_of": /a/ is a prefix of
      * /a/../b/.
      */
-    static bool has_path_prefix(const std::string &path, std::string prefix);
+    static bool has_path_prefix(const std::string &path,
+                                const std::string &prefix);
+
+    static bool has_path_prefixes(const std::string &path,
+                                  const std::set<std::string> &prefixes);
 
     /**
      * Make the given path relative to the given working directory.

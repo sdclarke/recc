@@ -262,7 +262,8 @@ std::string FileUtils::normalize_path(const char *path)
     return result;
 }
 
-bool FileUtils::has_path_prefix(const std::string &path, std::string prefix)
+bool FileUtils::has_path_prefix(const std::string &path,
+                                const std::string &prefix)
 {
     /* A path can never have the empty path as a prefix */
     if (prefix.empty()) {
@@ -276,11 +277,24 @@ bool FileUtils::has_path_prefix(const std::string &path, std::string prefix)
      * Make sure prefix ends in a slash.
      * This is so we don't return true if path = /foo and prefix = /foobar
      */
-    if (prefix.back() != '/') {
-        prefix.push_back('/');
+    std::string tmpPrefix(prefix);
+    if (tmpPrefix.back() != '/') {
+        tmpPrefix.push_back('/');
     }
 
-    return path.substr(0, prefix.length()) == prefix;
+    return path.substr(0, tmpPrefix.length()) == tmpPrefix;
+}
+
+bool FileUtils::has_path_prefixes(const std::string &path,
+                                  const std::set<std::string> &pathPrefixes)
+{
+    for (const auto &prefix : pathPrefixes) {
+        if (FileUtils::has_path_prefix(path, prefix)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 std::string FileUtils::make_path_relative(std::string path,

@@ -193,6 +193,13 @@ extern std::set<std::string> RECC_OUTPUT_FILES_OVERRIDE;
  */
 extern std::set<std::string> RECC_OUTPUT_DIRECTORIES_OVERRIDE;
 
+/**
+ * A comma-separated list of directory prefixes to be excluded from the input
+ * dependency list. The immediate usage for this allows recc to not include
+ * system header files as part of the input root
+ */
+extern std::set<std::string> RECC_DEPS_EXCLUDE_PATHS;
+
 // Maps are given by passing an environment variable for each item in the map.
 // For example, RECC_REMOTE_ENV_PATH=/usr/bin could be used to specify the PATH
 // passed to the remote build server.

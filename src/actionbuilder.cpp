@@ -83,17 +83,20 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
                 TIMER_NAME_BUILD_MERKLE_TREE, RECC_ENABLE_METRICS);
 
             RECC_LOG_VERBOSE("Building Merkle tree");
+
             int parentsNeeded = 0;
             for (const auto &dep : deps) {
                 parentsNeeded =
                     std::max(parentsNeeded,
                              FileUtils::parent_directory_levels(dep.c_str()));
             }
+
             for (const auto &product : products) {
                 parentsNeeded = std::max(
                     parentsNeeded,
                     FileUtils::parent_directory_levels(product.c_str()));
             }
+
             commandWorkingDirectory =
                 FileUtils::last_n_segments(cwd.c_str(), parentsNeeded);
 
@@ -108,6 +111,13 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
                     merklePath = commandWorkingDirectory + "/" + dep;
                 }
                 merklePath = FileUtils::normalize_path(merklePath.c_str());
+
+                // don't include a dependency if it's exclusion is requested
+                if (FileUtils::has_path_prefixes(merklePath,
+                                                 RECC_DEPS_EXCLUDE_PATHS)) {
+                    RECC_LOG_DEBUG("Skipping  \"" << merklePath << "\"");
+                    continue;
+                }
 
                 std::shared_ptr<ReccFile> file =
                     ReccFileFactory::createFile(dep.c_str());
