@@ -134,7 +134,7 @@ CommandFileInfo Deps::get_file_info(const ParsedCommand &parsedCommand)
     CommandFileInfo result;
     bool is_clang = parsedCommand.is_clang();
     auto subprocessResult =
-        SubProcess::execute(parsedCommand.get_dependencies_command(), true,
+        Subprocess::execute(parsedCommand.get_dependencies_command(), true,
                             is_clang, RECC_DEPS_ENV);
 
     if (subprocessResult.d_exitCode != 0) {

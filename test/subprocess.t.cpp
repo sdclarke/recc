@@ -24,21 +24,21 @@ using namespace BloombergLP::recc;
 TEST(SubprocessTest, True)
 {
     std::vector<std::string> command = {"true"};
-    auto result = SubProcess::execute(command);
+    auto result = Subprocess::execute(command);
     EXPECT_EQ(result.d_exitCode, 0);
 }
 
 TEST(SubprocessTest, False)
 {
     std::vector<std::string> command = {"false"};
-    auto result = SubProcess::execute(command);
+    auto result = Subprocess::execute(command);
     EXPECT_NE(result.d_exitCode, 0);
 }
 
 TEST(SubprocessTest, CommandNotFound)
 {
     std::vector<std::string> command = {"this-command-does-not-exist-1234"};
-    auto result = SubProcess::execute(command);
+    auto result = Subprocess::execute(command);
     EXPECT_EQ(result.d_exitCode, 127); // "command not found" error
 }
 
@@ -51,7 +51,7 @@ TEST(SubprocessTest, CommandIsNotAnExecutable)
     file.close();
 
     std::vector<std::string> command = {file_path};
-    auto result = SubProcess::execute(command);
+    auto result = Subprocess::execute(command);
     EXPECT_EQ(result.d_exitCode, 126);
     // "Command invoked cannot execute" error
 }
@@ -59,7 +59,7 @@ TEST(SubprocessTest, CommandIsNotAnExecutable)
 TEST(SubprocessTest, OutputPipes)
 {
     std::vector<std::string> command = {"echo", "hello", "world"};
-    auto result = SubProcess::execute(command, true, true);
+    auto result = Subprocess::execute(command, true, true);
     EXPECT_EQ(result.d_exitCode, 0);
     EXPECT_EQ(result.d_stdOut, "hello world\n");
     EXPECT_EQ(result.d_stdErr, "");
@@ -70,7 +70,7 @@ TEST(SubprocessTest, Environment)
     std::vector<std::string> command = {"env"};
     std::map<std::string, std::string> env = {
         {"RECC_SUBPROCESS_TEST_VAR", "value123456"}};
-    auto result = SubProcess::execute(command, true, true, env);
+    auto result = Subprocess::execute(command, true, true, env);
     EXPECT_TRUE(result.d_stdOut.find("RECC_SUBPROCESS_TEST_VAR=value123456") !=
                 std::string::npos);
     EXPECT_EQ(result.d_exitCode, 0);

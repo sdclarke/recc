@@ -583,5 +583,5 @@ TEST(NestedDirectoryTest, EmptyDirTest)
     EXPECT_EQ(emptydir->second.d_symlinks.size(), 0);
 
     const std::vector<std::string> rmCommand = {"rm", "-rf", dirPath};
-    SubProcess::execute(rmCommand);
+    Subprocess::execute(rmCommand);
 }

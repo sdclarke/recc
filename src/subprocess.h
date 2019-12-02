@@ -22,7 +22,7 @@
 namespace BloombergLP {
 namespace recc {
 
-struct SubProcess {
+struct Subprocess {
     /**
      * Represents the result of executing a subprocess.
      */

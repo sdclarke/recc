@@ -44,8 +44,8 @@ static std::array<int, 2> createPipe()
 
 } // namespace
 
-SubProcess::SubprocessResult
-SubProcess::execute(const std::vector<std::string> &command, bool pipeStdOut,
+Subprocess::SubprocessResult
+Subprocess::execute(const std::vector<std::string> &command, bool pipeStdOut,
                     bool pipeStdErr,
                     const std::map<std::string, std::string> &env)
 {
