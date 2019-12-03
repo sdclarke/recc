@@ -45,13 +45,13 @@ if (CMAKE_SYSTEM_NAME MATCHES "SunOS")
     target_link_libraries(remoteexecution socket nsl)
 endif ()
 
-add_executable(recc bin/recc.cpp)
+add_executable(recc bin/recc.m.cpp)
 target_link_libraries(recc remoteexecution)
 
-add_executable(casupload bin/casupload.cpp)
+add_executable(casupload bin/casupload.m.cpp)
 target_link_libraries(casupload remoteexecution)
 
-add_executable(deps deps.cpp bin/deps.cpp)
+add_executable(deps deps.cpp bin/deps.m.cpp)
 target_link_libraries(deps remoteexecution)
 
 install(TARGETS recc RUNTIME DESTINATION bin)

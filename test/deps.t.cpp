@@ -34,76 +34,82 @@ std::set<std::string> normalize_all(const std::set<std::string> &paths)
 // get the dependencies properly. So parse the env for these tests
 TEST(DepsTest, Empty)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.", "empty.c"};
     std::set<std::string> expectedDeps = {"empty.c"};
     EXPECT_EQ(expectedDeps,
-              normalize_all(get_file_info(command).d_dependencies));
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, SimpleInclude)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c"};
     std::set<std::string> expected = {"includes_empty.c", "empty.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, RecursiveDependency)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_includes_empty.c"};
     std::set<std::string> expected = {"includes_includes_empty.c",
                                       "includes_empty.h", "empty.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, MultiFile)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_includes_empty.c", "includes_empty.c"};
     std::set<std::string> expected = {"includes_includes_empty.c",
                                       "includes_empty.c", "includes_empty.h",
                                       "empty.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, EdgeCases)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "edge_cases.c"};
     std::set<std::string> expected = {"edge_cases.c", "empty.h",
                                       "header with spaces.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, OutputArgument)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c",     "-o", "/dev/null"};
     std::set<std::string> expected = {"includes_empty.c", "empty.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, OutputArgumentNoSpace)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "includes_empty.c", "-o/dev/null"};
     std::set<std::string> expected = {"includes_empty.c", "empty.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, PreprocessorOutputArgument)
@@ -113,25 +119,26 @@ TEST(DepsTest, PreprocessorOutputArgument)
                                  "includes_empty.c", "-Wp,-MMD,'/dev/null'"};
         std::set<std::string> expected = {"includes_empty.c", "empty.h"};
         EXPECT_EQ(expected,
-                  normalize_all(get_file_info(command).d_dependencies));
+                  normalize_all(Deps::get_file_info(command).d_dependencies));
     }
 }
 
 TEST(DepsTest, Subdirectory)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                              "-Isubdirectory", "includes_from_subdirectory.c"};
     std::set<std::string> expected = {"includes_from_subdirectory.c",
                                       "subdirectory/header.h"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, SystemSubdirectory)
 {
     if (command_basename(RECC_PLATFORM_COMPILER) == "gcc") {
-        parse_config_variables();
+        Env::parse_config_variables();
         RECC_DEPS_GLOBAL_PATHS = 0;
         ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                                  "-isystemsubdirectory",
@@ -139,38 +146,41 @@ TEST(DepsTest, SystemSubdirectory)
         std::set<std::string> expected = {"includes_from_subdirectory.c",
                                           "subdirectory/header.h"};
         EXPECT_EQ(expected,
-                  normalize_all(get_file_info(command).d_dependencies));
+                  normalize_all(Deps::get_file_info(command).d_dependencies));
     }
 }
 
 TEST(DepsTest, InputInSubdirectory)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c",
                              "subdirectory/empty.c"};
     std::set<std::string> expected = {"subdirectory/empty.c"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, SubprocessFailure)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "empty.c",
                              "--clearly-invalid-option", "invalid_file.c"};
-    EXPECT_THROW(get_file_info(command), subprocess_failed_error);
+    EXPECT_THROW(Deps::get_file_info(command), subprocess_failed_error);
 }
 
 TEST(DepsTest, GlobalPathsAllowed)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "ctype_include.c"};
     std::set<std::string> expected = {"ctype_include.c"};
-    EXPECT_EQ(expected, normalize_all(get_file_info(command).d_dependencies));
+    EXPECT_EQ(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 
     RECC_DEPS_GLOBAL_PATHS = 1;
-    EXPECT_NE(expected, normalize_all(get_file_info(command).d_dependencies));
+    EXPECT_NE(expected,
+              normalize_all(Deps::get_file_info(command).d_dependencies));
 }
 
 TEST(DepsTest, ClangCrtbegin)
@@ -200,54 +210,54 @@ TEST(DepsTest, ClangCrtbegin)
 
     std::string expected_dot =
         "/usr/lib/gcc/x86_64-linux-gnu/5.4.0/crtbegin.o";
-    std::string found = crtbegin_from_clang_v(clang_v_dot);
+    std::string found = Deps::crtbegin_from_clang_v(clang_v_dot);
     EXPECT_EQ(expected_dot, found);
 
     std::string expected_foo =
         "/usr/lib/gcc/x86_64-linux-gnu/5.4.0/foo/crtbegin.o";
-    found = crtbegin_from_clang_v(clang_v_foo);
+    found = Deps::crtbegin_from_clang_v(clang_v_foo);
     EXPECT_EQ(expected_foo, found);
 }
 
 TEST(ProductsTest, OutputArgument)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-o",
                              "some_output.exe", "empty.c"};
 
-    auto products = get_file_info(command).d_possibleProducts;
+    auto products = Deps::get_file_info(command).d_possibleProducts;
 
     EXPECT_EQ(1, products.count(std::string("some_output.exe")));
 }
 
 TEST(ProductsTest, NormalizesPath)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-o",
                              "out/subdir/../../../empty", "empty.c"};
 
-    auto products = get_file_info(command).d_possibleProducts;
+    auto products = Deps::get_file_info(command).d_possibleProducts;
 
     EXPECT_EQ(1, products.count(std::string("../empty")));
 }
 
 TEST(ProductsTest, OutputArgumentNoSpace)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-osome_output.exe",
                              "empty.c"};
 
-    auto products = get_file_info(command).d_possibleProducts;
+    auto products = Deps::get_file_info(command).d_possibleProducts;
 
     EXPECT_EQ(1, products.count(std::string("some_output.exe")));
 }
 
 TEST(ProductsTest, DefaultOutput)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "empty.c"};
 
-    auto products = get_file_info(command).d_possibleProducts;
+    auto products = Deps::get_file_info(command).d_possibleProducts;
 
     EXPECT_EQ(1, products.count(std::string("a.out")));
     EXPECT_EQ(1, products.count(std::string("empty.o")));
@@ -255,11 +265,11 @@ TEST(ProductsTest, DefaultOutput)
 
 TEST(ProductsTest, Subdirectory)
 {
-    parse_config_variables();
+    Env::parse_config_variables();
     ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c",
                              "subdirectory/empty.c"};
 
-    auto products = get_file_info(command).d_possibleProducts;
+    auto products = Deps::get_file_info(command).d_possibleProducts;
 
     EXPECT_EQ(1, products.count("empty.o"));
     EXPECT_EQ(1, products.count("subdirectory/empty.c.gch"));
@@ -272,7 +282,7 @@ TEST(ProductsTest, PreprocessorArgument)
                                  "-Wp,-MMD,'some/test.d'", "-o", "empty.o"};
         std::set<std::string> deps = {"empty.c"};
 
-        auto products = get_file_info(command).d_possibleProducts;
+        auto products = Deps::get_file_info(command).d_possibleProducts;
 
         EXPECT_EQ(1, products.count("empty.o"));
         EXPECT_EQ(1, products.count("some/test.d"));
@@ -289,7 +299,8 @@ TEST(DepsFromMakeRulesTest, GccStyleMakefile)
     std::set<std::string> expected = {"sample.c", "sample.h",
                                       "subdir/sample.h"};
 
-    auto dependencies = normalize_all(dependencies_from_make_rules(makeRules));
+    auto dependencies =
+        normalize_all(Deps::dependencies_from_make_rules(makeRules));
 
     EXPECT_EQ(expected, dependencies);
 }
@@ -306,7 +317,7 @@ TEST(DepsFromMakeRulesTest, SunStyleMakefile)
         "sample.c", "sample.h", "subdir/sample.h", "sample with spaces.c"};
 
     auto dependencies =
-        normalize_all(dependencies_from_make_rules(makeRules, true));
+        normalize_all(Deps::dependencies_from_make_rules(makeRules, true));
 
     EXPECT_EQ(expected, dependencies);
 }
@@ -317,7 +328,8 @@ TEST(DepsFromMakeRulesTest, LargeMakeOutput)
     std::set<std::string> expected = {"hello.c", "hello.h",
                                       "final_dependency.h"};
 
-    auto dependencies = normalize_all(dependencies_from_make_rules(makeRules));
+    auto dependencies =
+        normalize_all(Deps::dependencies_from_make_rules(makeRules));
 
     EXPECT_EQ(expected, dependencies);
 }

@@ -433,7 +433,8 @@ TEST(NestedDirectoryTest, TestPrefixOrder)
     const auto recc_prefix_string =
         "/nestdir/nestdir2/nestdir3=/nestdir:/nestdir/nestdir2/nestdir3=/nope";
 
-    RECC_PREFIX_REPLACEMENT = vector_from_delimited_string(recc_prefix_string);
+    RECC_PREFIX_REPLACEMENT =
+        Env::vector_from_delimited_string(recc_prefix_string);
     std::unordered_map<proto::Digest, std::string> fileMap;
 
     NestedDirectory nestdir;
@@ -461,7 +462,8 @@ TEST(NestedDirectoryTest, TestRootReplacement)
 
     // Replace the root with "hi"
     const auto recc_prefix_string = "/=/hi";
-    RECC_PREFIX_REPLACEMENT = vector_from_delimited_string(recc_prefix_string);
+    RECC_PREFIX_REPLACEMENT =
+        Env::vector_from_delimited_string(recc_prefix_string);
     const std::vector<std::pair<std::string, std::string>> test_vector = {
         {"/", "/hi"}};
     ASSERT_EQ(RECC_PREFIX_REPLACEMENT, test_vector);
@@ -581,5 +583,5 @@ TEST(NestedDirectoryTest, EmptyDirTest)
     EXPECT_EQ(emptydir->second.d_symlinks.size(), 0);
 
     const std::vector<std::string> rmCommand = {"rm", "-rf", dirPath};
-    execute(rmCommand);
+    Subprocess::execute(rmCommand);
 }

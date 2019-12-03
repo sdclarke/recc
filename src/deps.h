@@ -45,36 +45,40 @@ struct CommandFileInfo {
     std::set<std::string> d_possibleProducts;
 };
 
-/**
- * Returns the names of the files needed to run the command.
- *
- * The command must be a supported compiler command; if is_compiler_command
- * returns false, the result of calling get_file_info is undefined.
- *
- * Only paths local to the build directory are returned.
- */
-CommandFileInfo get_file_info(const ParsedCommand &command);
+struct Deps {
+    /**
+     * Returns the names of the files needed to run the command.
+     *
+     * The command must be a supported compiler command; if is_compiler_command
+     * returns false, the result of calling get_file_info is undefined.
+     *
+     * Only paths local to the build directory are returned.
+     */
+    static CommandFileInfo get_file_info(const ParsedCommand &command);
 
-/**
- * Parse the given Make rules and return a set containing their dependencies.
- */
-std::set<std::string>
-dependencies_from_make_rules(const std::string &rules,
-                             bool is_sun_format = false,
-                             bool include_global_paths = false);
+    /**
+     * Parse the given Make rules and return a set containing their
+     * dependencies.
+     */
+    static std::set<std::string>
+    dependencies_from_make_rules(const std::string &rules,
+                                 bool is_sun_format = false,
+                                 bool include_global_paths = false);
 
-/**
- * Given a set of dependencies, return a set of possible compilation outputs.
- */
-std::set<std::string>
-guess_products(const std::set<std::string> &dependencies);
+    /**
+     * Given a set of dependencies, return a set of possible compilation
+     * outputs.
+     */
+    static std::set<std::string>
+    guess_products(const std::set<std::string> &dependencies);
 
-/**
- * Determine the location of crtbegin.o that Clang has selected as its
- * GCC installation marker, from the stderr output of `clang -v`.
- * Returns an empty string if something went wrong.
- */
-std::string crtbegin_from_clang_v(const std::string &str);
+    /**
+     * Determine the location of crtbegin.o that Clang has selected as its
+     * GCC installation marker, from the stderr output of `clang -v`.
+     * Returns an empty string if something went wrong.
+     */
+    static std::string crtbegin_from_clang_v(const std::string &str);
+};
 
 } // namespace recc
 } // namespace BloombergLP

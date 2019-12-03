@@ -35,14 +35,14 @@ TEST(EnvTest, EnvMultipleConfigs)
 
     RECC_CONFIG_LOCATIONS.push_back(cwd_recc);
 
-    parse_config_variables();
+    Env::parse_config_variables();
 
     // should take value of file in /test/recc/recc.conf.
     EXPECT_EQ(RECC_SERVER, "localhost:99999");
 
     RECC_CONFIG_LOCATIONS.push_back(home);
 
-    parse_config_variables();
+    Env::parse_config_variables();
 
     // should take value of file in /test/.recc/recc.conf.
     EXPECT_EQ(RECC_SERVER, "localhost:10001");

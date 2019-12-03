@@ -134,11 +134,11 @@ void RemoteExecutionClient::read_operation(ReaderPointer &reader_ptr,
                                            OperationPointer &operation_ptr)
 {
     /* We need to block SIGINT so only this main thread catches it. */
-    block_sigint();
+    Signal::block_sigint();
 
     auto future = std::async(std::launch::async, read_operation_async,
                              reader_ptr, operation_ptr);
-    unblock_sigint();
+    Signal::unblock_sigint();
 
     /**
      * Wait for the operation to complete, handling the
@@ -200,7 +200,8 @@ RemoteExecutionClient::execute_action(const proto::Digest &actionDigest,
     *executeRequest.mutable_action_digest() = actionDigest;
     executeRequest.set_skip_cache_lookup(skipCache);
 
-    setup_signal_handler(SIGINT, RemoteExecutionClient::set_sigint_received);
+    Signal::setup_signal_handler(SIGINT,
+                                 RemoteExecutionClient::set_sigint_received);
 
     ReaderPointer reader_ptr;
     OperationPointer operation_ptr;

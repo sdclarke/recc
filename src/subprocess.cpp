@@ -30,6 +30,7 @@
 namespace BloombergLP {
 namespace recc {
 
+namespace {
 static std::array<int, 2> createPipe()
 {
     std::array<int, 2> pipe_fds = {0, 0};
@@ -41,9 +42,12 @@ static std::array<int, 2> createPipe()
     return pipe_fds;
 }
 
-SubprocessResult execute(const std::vector<std::string> &command,
-                         bool pipeStdOut, bool pipeStdErr,
-                         const std::map<std::string, std::string> &env)
+} // namespace
+
+Subprocess::SubprocessResult
+Subprocess::execute(const std::vector<std::string> &command, bool pipeStdOut,
+                    bool pipeStdErr,
+                    const std::map<std::string, std::string> &env)
 {
     // Convert the command to a char*[]
     size_t argc = command.size();

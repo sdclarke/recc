@@ -1,4 +1,4 @@
-// Copyright 2019 Bloomberg Finance L.P
+// Copyright 2018 Bloomberg Finance L.P
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,17 +18,28 @@
 
 using namespace BloombergLP::recc;
 
-TEST(EnvTest, DifferentActionCacheServerTest)
+TEST(EnvTest, CasDefaultsToServerTest)
 {
-    const char *testEnviron[] = {
-        "RECC_SERVER=somehost:1234", "RECC_CAS_SERVER=someotherhost:5678",
-        "RECC_ACTION_CACHE_SERVER=actioncachehost:9999", nullptr};
-    std::string expectedActionCacheServer = "actioncachehost:9999";
+    const char *testEnviron[] = {"RECC_SERVER=somehost:1234", nullptr};
+    std::string expectedReccServer = "somehost:1234";
 
-    parse_config_variables(testEnviron);
+    Env::parse_config_variables(testEnviron);
     // need this for testing, since we are calling parse_config_variables
     // directly.
-    handle_special_defaults();
+    Env::handle_special_defaults();
 
-    EXPECT_EQ(expectedActionCacheServer, RECC_ACTION_CACHE_SERVER);
+    EXPECT_EQ(expectedReccServer, RECC_SERVER);
+    EXPECT_EQ(expectedReccServer, RECC_CAS_SERVER);
+}
+
+TEST(EnvTest, CasDoNotGetCapabilitiesByDefault)
+{
+    const char *testEnviron[] = {"RECC_SERVER=somehost:1234", nullptr};
+
+    Env::parse_config_variables(testEnviron);
+    // need this for testing, since we are calling parse_config_variables
+    // directly.
+    Env::handle_special_defaults();
+
+    EXPECT_FALSE(RECC_CAS_GET_CAPABILITIES);
 }

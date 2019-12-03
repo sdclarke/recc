@@ -30,8 +30,8 @@ const std::string HELP(
 
 int main(int argc, char *argv[])
 {
-    set_config_locations();
-    parse_config_variables();
+    Env::set_config_locations();
+    Env::parse_config_variables();
     const std::string cwd = FileUtils::get_current_working_directory();
 
     if (argc <= 1 || strcmp(argv[1], "--help") == 0 ||
@@ -41,7 +41,8 @@ int main(int argc, char *argv[])
     }
     try {
         const auto deps =
-            get_file_info(ParsedCommand(&argv[1], cwd.c_str())).d_dependencies;
+            Deps::get_file_info(ParsedCommand(&argv[1], cwd.c_str()))
+                .d_dependencies;
         for (const auto &dep : deps) {
             RECC_LOG(dep);
         }

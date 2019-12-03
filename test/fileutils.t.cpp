@@ -367,7 +367,7 @@ TEST(MakePathAbsoluteTest, MoreComplexPaths)
 TEST(FileUtilsTest, GetCurrentWorkingDirectory)
 {
     const std::vector<std::string> command = {"pwd"};
-    const auto commandResult = execute(command, true);
+    const auto commandResult = Subprocess::execute(command, true);
     if (commandResult.d_exitCode == 0) {
         EXPECT_EQ(commandResult.d_stdOut,
                   FileUtils::get_current_working_directory() + "\n");

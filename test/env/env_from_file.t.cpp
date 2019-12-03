@@ -43,8 +43,8 @@ TEST(EnvTest, EnvFromFile)
     const std::string expectedDocker = "docker";
 
     // In this test use the usual config location list
-    set_config_locations();
-    parse_config_variables();
+    Env::set_config_locations();
+    Env::parse_config_variables();
 
     EXPECT_EQ(expectedReccServer, RECC_SERVER);
     EXPECT_EQ(expectedRecCasServer, RECC_CAS_SERVER);

@@ -18,9 +18,11 @@
 namespace BloombergLP {
 namespace recc {
 
-void setup_signal_handler(int signal, void (*handler)(int));
-void block_sigint();
-void unblock_sigint();
+struct Signal {
+    static void setup_signal_handler(int signal, void (*handler)(int));
+    static void block_sigint();
+    static void unblock_sigint();
+};
 
 } // namespace recc
 } // namespace BloombergLP

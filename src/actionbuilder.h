@@ -25,8 +25,7 @@
 namespace BloombergLP {
 namespace recc {
 
-class ActionBuilder {
-  public:
+struct ActionBuilder {
     /**
      * Build an action from the given ParsedCommand and working directory.
      *

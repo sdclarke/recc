@@ -23,7 +23,7 @@
 namespace BloombergLP {
 namespace recc {
 
-void setup_signal_handler(int signal, void (*handler)(int))
+void Signal::setup_signal_handler(int signal, void (*handler)(int))
 {
     /* Set up signal handling for the Execute() request */
     struct sigaction sa;
@@ -38,7 +38,7 @@ void setup_signal_handler(int signal, void (*handler)(int))
     }
 }
 
-void block_sigint()
+void Signal::block_sigint()
 {
     sigset_t signal_set;
     if (sigaddset(&signal_set, SIGINT) != 0) {
@@ -51,7 +51,7 @@ void block_sigint()
     }
 }
 
-void unblock_sigint()
+void Signal::unblock_sigint()
 {
     sigset_t signal_set;
     if (sigaddset(&signal_set, SIGINT) != 0) {

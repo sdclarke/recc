@@ -22,30 +22,35 @@
 namespace BloombergLP {
 namespace recc {
 
-/**
- * Represents the result of executing a subprocess.
- */
-struct SubprocessResult {
-    int d_exitCode;
-    std::string d_stdOut; // Only valid if pipeStdOut was true
-    std::string d_stdErr; // Only valid if pipeStdErr was true
+struct Subprocess {
+    /**
+     * Represents the result of executing a subprocess.
+     */
+    struct SubprocessResult {
+        int d_exitCode;
+        std::string d_stdOut; // Only valid if pipeStdOut was true
+        std::string d_stdErr; // Only valid if pipeStdErr was true
+    };
+
+    /**
+     * Execute the given command, returning a SubprocessResult.
+     *
+     * If pipeStdOut is true, standard output will be redirected and returned
+     * as part of the SubprocessResult. Similarly, pipeStdErr will redirect the
+     * standard error stream.
+     *
+     * The keys and values in env will be added to the given process's
+     * environment.
+     *
+     * If cwd is non-empty, it specifies the current working directory of the
+     * subprocess.
+     */
+    static SubprocessResult
+    execute(const std::vector<std::string> &command, bool pipeStdOut = false,
+            bool pipeStdErr = false,
+            const std::map<std::string, std::string> &env = {});
 };
 
-/**
- * Execute the given command, returning a SubprocessResult.
- *
- * If pipeStdOut is true, standard output will be redirected and returned as
- * part of the SubprocessResult. Similarly, pipeStdErr will redirect the
- * standard error stream.
- *
- * The keys and values in env will be added to the given process's environment.
- *
- * If cwd is non-empty, it specifies the current working directory of the
- * subprocess.
- */
-SubprocessResult execute(const std::vector<std::string> &command,
-                         bool pipeStdOut = false, bool pipeStdErr = false,
-                         const std::map<std::string, std::string> &env = {});
 } // namespace recc
 } // namespace BloombergLP
 

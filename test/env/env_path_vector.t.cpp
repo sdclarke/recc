@@ -24,7 +24,7 @@ TEST(EnvPathMap, MultipleInputs)
     std::string testString = "/hello=/recc:/hi=/be";
     vector_of_string_pairs test_vector = {std::make_pair("/hello", "/recc"),
                                           std::make_pair("/hi", "/be")};
-    auto return_vector = vector_from_delimited_string(testString);
+    auto return_vector = Env::vector_from_delimited_string(testString);
     ASSERT_EQ(test_vector, return_vector);
 }
 
@@ -32,7 +32,7 @@ TEST(EnvPathMap, TrailingColon)
 {
     auto testString = "/hello=/recc:";
     vector_of_string_pairs test_vector = {std::make_pair("/hello", "/recc")};
-    auto return_vector = vector_from_delimited_string(testString);
+    auto return_vector = Env::vector_from_delimited_string(testString);
     ASSERT_EQ(test_vector, return_vector);
 }
 
@@ -41,7 +41,7 @@ TEST(EnvPathMap, NoValueForKey)
     auto testString = "/usr/bin/path=/usr/bin:/usr";
     vector_of_string_pairs test_vector = {
         std::make_pair("/usr/bin/path", "/usr/bin")};
-    auto return_vector = vector_from_delimited_string(testString);
+    auto return_vector = Env::vector_from_delimited_string(testString);
     ASSERT_EQ(test_vector, return_vector);
 }
 
@@ -49,6 +49,6 @@ TEST(EnvPathMap, NotAbsolutePaths)
 {
     auto testString = "hello=recc";
     vector_of_string_pairs test_vector = {};
-    auto return_vector = vector_from_delimited_string(testString);
+    auto return_vector = Env::vector_from_delimited_string(testString);
     ASSERT_EQ(test_vector, return_vector);
 }
