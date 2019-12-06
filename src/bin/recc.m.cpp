@@ -289,23 +289,23 @@ int main(int argc, char *argv[])
                            << RECC_CAS_SERVER << "\": " << e.what());
             return -1;
         }
-    }
 
-    // And call `Execute()`:
-    try {
-        RECC_LOG_VERBOSE(
-            "Executing action... actionDigest: " << actionDigest.hash());
-        { // Timed block
-            reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-                TIMER_NAME_EXECUTE_ACTION, RECC_ENABLE_METRICS);
+        // And call `Execute()`:
+        try {
+            RECC_LOG_VERBOSE(
+                "Executing action... actionDigest: " << actionDigest.hash());
+            { // Timed block
+                reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+                    TIMER_NAME_EXECUTE_ACTION, RECC_ENABLE_METRICS);
 
-            result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
+                result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
+            }
         }
-    }
-    catch (const std::exception &e) {
-        RECC_LOG_ERROR("Error while calling `Execute()` on \""
-                       << RECC_SERVER << "\": " << e.what());
-        return -1;
+        catch (const std::exception &e) {
+            RECC_LOG_ERROR("Error while calling `Execute()` on \""
+                           << RECC_SERVER << "\": " << e.what());
+            return -1;
+        }
     }
 
     const int exitCode = result.d_exitCode;
