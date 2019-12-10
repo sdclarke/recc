@@ -45,6 +45,8 @@ typedef std::function<bool(std::vector<std::string> *, const char *,
                            bool *)>
     command_parser;
 
+template <typename T> void UnusedVar(const T &) {}
+
 #define COMMAND_PARSER_LAMBDA                                                 \
     [](std::vector<std::string> * command, const char *workingDirectory,      \
        std::vector<std::string> *depsCommand, std::set<std::string> *outputs, \
@@ -57,23 +59,27 @@ typedef std::function<bool(std::vector<std::string> *, const char *,
         if (i < command->size()) {                                            \
             auto argument = (*command)[i];                                    \
             const int argumentLength = 2;                                     \
+            UnusedVar(argumentLength);                                        \
             action                                                            \
         }                                                                     \
     }                                                                         \
     else if ((*command)[i].compare(0, strlen(option), option) == 0) {         \
         auto argument = (*command)[i].substr(strlen(option));                 \
         const int argumentLength = 1;                                         \
+        UnusedVar(argumentLength);                                            \
         action                                                                \
     }
 #define IF_EQUALS_OPTION_ARGUMENT(option, action)                             \
     if ((*command)[i] == option) {                                            \
         std::string argument;                                                 \
         const int argumentLength = 1;                                         \
+        UnusedVar(argumentLength);                                            \
         action                                                                \
     }                                                                         \
     else if ((*command)[i].compare(0, strlen(option) + 1, option "=") == 0) { \
         auto argument = (*command)[i].substr(strlen(option) + 1);             \
         const int argumentLength = 1;                                         \
+        UnusedVar(argumentLength);                                            \
         action                                                                \
     }
 #define REMOVE_OPTION_FROM_COMMAND                                            \
@@ -88,7 +94,7 @@ typedef std::function<bool(std::vector<std::string> *, const char *,
     {                                                                         \
         auto original_arg = argument;                                         \
         ARGUMENT_IS_PATH                                                      \
-        for (int j = i - argumentLength + 1; j < i + 1; j++) {                \
+        for (size_t j = i - argumentLength + 1; j < i + 1; j++) {             \
             depsCommand->push_back((*command)[j]);                            \
         }                                                                     \
         ARGUMENT_IS_SEARCH_PATH(original_arg);                                \
@@ -113,7 +119,8 @@ typedef std::function<bool(std::vector<std::string> *, const char *,
     }
 #define OPTIONS_START()                                                       \
     bool isCompileCommand = false;                                            \
-    for (int i = 0; i < command->size(); ++i) {                               \
+    UnusedVar(isCompileCommand);                                              \
+    for (size_t i = 0; i < command->size(); ++i) {                            \
         if (false) {                                                          \
         }
 #define OPTION_INTERFERES_WITH_DEPS(option)                                   \
