@@ -21,6 +21,7 @@
 
 #include <atomic>
 #include <map>
+#include <set>
 
 namespace BloombergLP {
 namespace recc {
@@ -30,7 +31,6 @@ typedef std::shared_ptr<
     ReaderPointer;
 
 typedef std::shared_ptr<google::longrunning::Operation> OperationPointer;
-typedef std::map<std::string, std::pair<proto::Digest, bool>> FileInfoMap;
 
 /**
  * Represents a blob returned by the Remote Execution service.
@@ -39,22 +39,26 @@ typedef std::map<std::string, std::pair<proto::Digest, bool>> FileInfoMap;
  * RemoteExecutionClient::get_outputblob.
  */
 struct OutputBlob {
+    bool d_executable; // Not valid for stdout/stderr.
     bool d_inlined;
     std::string d_blob; // Only valid if inlined.
     proto::Digest d_digest;
 
     OutputBlob() {}
-    OutputBlob(proto::Digest digest)
+    OutputBlob(const proto::Digest &digest)
         : d_inlined(digest.size_bytes() == 0), d_digest(digest)
     {
     }
-    OutputBlob(std::string blob, proto::Digest digest)
-        : d_inlined(!blob.empty() || digest.size_bytes() == 0), d_blob(blob),
+    OutputBlob(const std::string &blob, const proto::Digest &digest,
+               bool executable = false)
+        : d_executable(executable),
+          d_inlined(!blob.empty() || digest.size_bytes() == 0), d_blob(blob),
           d_digest(digest)
-
     {
     }
 };
+
+typedef std::map<std::string, OutputBlob> FileInfoMap;
 
 struct ActionResult {
     OutputBlob d_stdOut;
@@ -135,6 +139,7 @@ class RemoteExecutionClient final : public CASClient {
      *
      */
     bool fetch_from_action_cache(const proto::Digest &actionDigest,
+                                 const std::set<std::string> &outputs,
                                  const std::string &instanceName,
                                  ActionResult *result);
 

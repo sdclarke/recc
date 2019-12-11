@@ -255,7 +255,8 @@ int main(int argc, char *argv[])
                     TIMER_NAME_QUERY_ACTION_CACHE, RECC_ENABLE_METRICS);
 
                 action_in_cache = client.fetch_from_action_cache(
-                    actionDigest, RECC_INSTANCE, &result);
+                    actionDigest, command.get_products(), RECC_INSTANCE,
+                    &result);
                 if (action_in_cache) {
                     RECC_LOG_VERBOSE("Action cache hit for "
                                      << actionDigest.hash());

@@ -30,6 +30,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <signal.h>
 #include <unistd.h>
 
@@ -188,21 +189,21 @@ TEST_F(RemoteExecutionClientTestFixture, ExecuteActionTest)
     EXPECT_EQ(actionResult.d_stdErr.d_digest.hash(), stdErrDigest.hash());
 
     EXPECT_EQ(actionResult.d_outputFiles.at("some/path/with/slashes.txt")
-                  .first.hash(),
+                  .d_digest.hash(),
               "File hash goes here");
-    EXPECT_EQ(
-        actionResult.d_outputFiles.at("output/directory/out.txt").first.hash(),
-        "File hash goes here");
+    EXPECT_EQ(actionResult.d_outputFiles.at("output/directory/out.txt")
+                  .d_digest.hash(),
+              "File hash goes here");
     EXPECT_TRUE(
         actionResult.d_outputFiles.at("output/directory/subdirectory/a.out")
-            .second);
+            .d_executable);
     EXPECT_EQ(
         actionResult.d_outputFiles.at("output/directory/subdirectory/a.out")
-            .first.hash(),
+            .d_digest.hash(),
         "Executable file hash");
     EXPECT_EQ(actionResult.d_outputFiles
                   .at("output/directory/subdirectory/nested/q.mk")
-                  .first.hash(),
+                  .d_digest.hash(),
               "q.mk file hash");
 }
 
@@ -254,14 +255,14 @@ TEST_F(RemoteExecutionClientTestFixture, WriteFilesToDisk)
     proto::Digest d;
     d.set_hash("Test file hash");
     d.set_size_bytes(18);
-    auto testFile = std::pair<proto::Digest, bool>(d, true);
+    auto testFile = OutputBlob(std::string(), d, true);
     testResult.d_outputFiles["test.txt"] = testFile;
 
     // Allow the client to fetch the file from CAS.
     google::bytestream::ReadRequest expectedByteStreamRequest;
     expectedByteStreamRequest.set_resource_name(
-        "blobs/" + testFile.first.hash() + "/" +
-        std::to_string(testFile.first.size_bytes()));
+        "blobs/" + testFile.d_digest.hash() + "/" +
+        std::to_string(testFile.d_digest.size_bytes()));
     google::bytestream::ReadResponse readResponse;
     readResponse.set_data("Test file content!");
     EXPECT_CALL(*byteStreamStub,
@@ -397,9 +398,10 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestMiss)
     actionResult.d_exitCode = 123;
 
     ActionResult actionResultOut = actionResult;
+    std::set<std::string> outputs;
 
     const bool in_cache = client.fetch_from_action_cache(
-        actionDigest, std::string(), &actionResultOut);
+        actionDigest, outputs, std::string(), &actionResultOut);
 
     EXPECT_FALSE(in_cache);
     EXPECT_EQ(actionResultOut.d_exitCode, actionResult.d_exitCode);
@@ -415,9 +417,10 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestHit)
     actionResult.d_exitCode = 123;
 
     ActionResult actionResultOut = actionResult;
+    std::set<std::string> outputs;
 
     const bool in_cache = client.fetch_from_action_cache(
-        actionDigest, std::string(), &actionResultOut);
+        actionDigest, outputs, std::string(), &actionResultOut);
 
     EXPECT_TRUE(in_cache);
     EXPECT_EQ(actionResultOut.d_exitCode, 0);
@@ -431,8 +434,9 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestServerError)
     // All other server errors other than `NOT_FOUND` are thrown.
 
     ActionResult actionResultOut;
-    ASSERT_THROW(client.fetch_from_action_cache(actionDigest, std::string(),
-                                                &actionResultOut),
+    std::set<std::string> outputs;
+    ASSERT_THROW(client.fetch_from_action_cache(
+                     actionDigest, outputs, std::string(), &actionResultOut),
                  std::runtime_error);
 }
 
@@ -442,8 +446,9 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheTestMissNoActionResult)
         .WillOnce(Return(grpc::Status(grpc::NOT_FOUND, "not found")));
     // `NOT_FOUND` => return false and do not write the ActionResult parameter.
 
-    const bool in_cache =
-        client.fetch_from_action_cache(actionDigest, std::string(), nullptr);
+    std::set<std::string> outputs;
+    const bool in_cache = client.fetch_from_action_cache(
+        actionDigest, outputs, std::string(), nullptr);
 
     EXPECT_FALSE(in_cache);
 }
@@ -453,8 +458,10 @@ TEST_F(RemoteExecutionClientTestFixture, ActionCacheHitNoActionResult)
     EXPECT_CALL(*actionCacheStub, GetActionResult(_, _, _))
         .WillOnce(Return(grpc::Status::OK));
 
-    const bool in_cache =
-        client.fetch_from_action_cache(actionDigest, std::string(), nullptr);
+    std::set<std::string> outputs;
+
+    const bool in_cache = client.fetch_from_action_cache(
+        actionDigest, outputs, std::string(), nullptr);
 
     EXPECT_TRUE(in_cache);
 }
