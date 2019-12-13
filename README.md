@@ -284,7 +284,7 @@ Guidelines for replacement are:
 
 When using `RECC_DEPS_GLOBAL_PATHS`, paths to system files (/usr/include, /opt/rh/devtoolset-7, etc) are included as part of the input root. To avoid these system dependencies potential conflicting with downstream build environment dependencies, there is now a method to filter out dependencies based on a set of paths. Setting the `RECC_DEPS_EXCLUDE_PATHS` environment variable with a comma-delimited set of paths(used as path prefixes) will be used as a filter to exclude those dependencies:
 ```
-export RECC_DEPS_EXCLUDE_PATH=/usr/include,/opt/rh/devtoolset-7
+export RECC_DEPS_EXCLUDE_PATHS=/usr/include,/opt/rh/devtoolset-7
 ```
 
 ### Running `recc` against Google's RBE (Remote Build Execution) API
