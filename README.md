@@ -257,7 +257,7 @@ $ export RECC_SERVER=localhost:12345
 
 You may also want to set `RECC_VERBOSE=1` to enable verbose output.
 
-#### Additional variables needed on AIX
+#### Additional variables needed on AIX(deprecated as of Dec, 2019)
 
 On AIX, `recc` injects a dynamic library called [`libreccdevshim`][] to
 work around issues in `xlc`. You'll need to set two environment variables to
