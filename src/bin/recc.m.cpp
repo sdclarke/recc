@@ -52,6 +52,8 @@
 
 using namespace BloombergLP::recc;
 
+namespace {
+
 /**
  * NOTE: If a variable is intended to be used in a configuration file, omit the
  * "RECC_" prefix.
@@ -169,17 +171,29 @@ const std::string HELP(
     "                           Supported values: " +
     DigestGenerator::supportedDigestFunctionsList() + "\n");
 
+enum ReturnCode {
+    RC_OK = 0,
+    RC_USAGE = 100,
+    RC_EXEC_FAILURE = 101,
+    RC_INVALID_GRPC_CHANNELS = 102,
+    RC_INVALID_SERVER_CAPABILITIES = 103,
+    RC_EXEC_ACTIONS_FAILURE = 104,
+    RC_SAVING_OUTPUT_FAILURE = 105
+};
+
+} // namespace
+
 int main(int argc, char *argv[])
 {
     if (argc <= 1) {
         RECC_LOG_ERROR("USAGE: recc <command>");
         RECC_LOG_ERROR("(run \"recc --help\" for details)");
-        return 1;
+        return RC_USAGE;
     }
     else if (argc == 2 &&
              (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)) {
         RECC_LOG_WARNING(HELP);
-        return 0;
+        return RC_OK;
     }
     else if (argc == 2 && (strcmp(argv[1], "--version") == 0 ||
                            strcmp(argv[1], "-v") == 0)) {
@@ -187,7 +201,7 @@ int main(int argc, char *argv[])
             RequestMetadataGenerator::RECC_METADATA_TOOL_VERSION;
         const std::string versionMessage = "recc version: " + version;
         RECC_LOG_WARNING(versionMessage);
-        return 0;
+        return RC_OK;
     }
 
     Env::set_config_locations();
@@ -209,7 +223,7 @@ int main(int argc, char *argv[])
     if (!actionPtr) {
         execvp(argv[1], &argv[1]);
         RECC_LOG_PERROR(argv[1]);
-        exit(1);
+        return RC_EXEC_FAILURE;
     }
 
     const proto::Action action = *actionPtr;
@@ -227,7 +241,7 @@ int main(int argc, char *argv[])
     }
     catch (const std::runtime_error &e) {
         RECC_LOG_ERROR("Invalid argument in channel config: " << e.what());
-        return -1;
+        return RC_INVALID_GRPC_CHANNELS;
     }
 
     GrpcContext grpcContext;
@@ -288,7 +302,7 @@ int main(int argc, char *argv[])
         catch (const std::exception &e) {
             RECC_LOG_ERROR("Error while uploading resources to CAS at \""
                            << RECC_CAS_SERVER << "\": " << e.what());
-            return -1;
+            return RC_INVALID_SERVER_CAPABILITIES;
         }
 
         // And call `Execute()`:
@@ -305,7 +319,7 @@ int main(int argc, char *argv[])
         catch (const std::exception &e) {
             RECC_LOG_ERROR("Error while calling `Execute()` on \""
                            << RECC_SERVER << "\": " << e.what());
-            return -1;
+            return RC_EXEC_ACTIONS_FAILURE;
         }
     }
 
@@ -324,6 +338,6 @@ int main(int argc, char *argv[])
     }
     catch (const std::exception &e) {
         RECC_LOG_ERROR(e.what());
-        return (exitCode == 0 ? -1 : exitCode);
+        return (exitCode == 0 ? RC_SAVING_OUTPUT_FAILURE : exitCode);
     }
 }
