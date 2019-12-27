@@ -24,6 +24,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <grpcpp/create_channel.h>
 #include <grpcpp/security/credentials.h>
 #include <iostream>
@@ -32,8 +33,9 @@
 
 using namespace BloombergLP::recc;
 
-const std::string USAGE(
-    "USAGE: casupload  [--follow-symlinks | -f] [--dry-run | -d] <paths>\n");
+const std::string
+    USAGE("USAGE: casupload  [--follow-symlinks | -f] [--dry-run | -d] "
+          "[--output-digest-file=<FILE>] <paths>\n");
 
 const std::string HELP(
     USAGE +
@@ -58,7 +60,10 @@ const std::string HELP(
     "'--follow-symlinks' to alter this behavior\n"
     "\n"
     "If `--dry-run` is set, digests will be calculated and printed but \n"
-    "no transfers to the remote will take place.\n");
+    "no transfers to the remote will take place.\n"
+    "\n"
+    "If `--output-digest-file=<FILE>` is set, the output digest will be \n"
+    "written to <FILE> in the form \"<HASH>/<SIZE_BYTES>\".");
 
 void uploadDirectory(const std::string &path, const proto::Digest &digest,
                      const digest_string_umap &directoryBlobs,
@@ -160,12 +165,12 @@ int main(int argc, char *argv[])
 
     // User-provided arguments:
     bool followSymlinks = false;
-    bool dryRunMode = false; // If set, do not upload contents.
+    bool dryRunMode = false;             // If set, do not upload contents.
+    std::string output_digest_file = ""; // Output the digest to this file
     std::vector<std::string> paths;
 
     for (auto i = 1; i < argc; i++) {
         const std::string argument_value(argv[i]);
-
         if (argument_value == "--help" || argument_value == "-h") {
             RECC_LOG_WARNING(HELP);
             return 1;
@@ -176,6 +181,10 @@ int main(int argc, char *argv[])
         }
         else if (argument_value == "--dry-run" || argument_value == "-d") {
             dryRunMode = true;
+        }
+        else if (argument_value.rfind("--output-digest-file=", 0) == 0) {
+            std::string arg_prefix = "--output-digest-file=";
+            output_digest_file = argument_value.substr(arg_prefix.length());
         }
         else {
             paths.push_back(argument_value);
@@ -241,7 +250,14 @@ int main(int argc, char *argv[])
 
     try {
         casClient->upload_resources(blobs, digestToFileContents);
-        RECC_LOG("Files uploaded successfully");
+        RECC_LOG_VERBOSE("Files uploaded successfully");
+        if (output_digest_file.length() > 0) {
+            std::ofstream digest_file;
+            digest_file.open(output_digest_file);
+            digest_file << directoryDigest.hash() << "/"
+                        << directoryDigest.size_bytes();
+            digest_file.close();
+        }
         return 0;
     }
     catch (const std::runtime_error &e) {
