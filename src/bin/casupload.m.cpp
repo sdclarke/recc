@@ -94,8 +94,8 @@ void processDirectory(const std::string &path, const bool followSymlinks,
 
     // set project root to the fully resolved path of this directory
     // to ensure it's the root in the merkle tree
-    const std::string abspath = FileUtils::make_path_absolute(
-        path, FileUtils::get_current_working_directory());
+    const std::string abspath = FileUtils::makePathAbsolute(
+        path, FileUtils::getCurrentWorkingDirectory());
     RECC_PROJECT_ROOT = abspath.c_str();
     const auto singleNestedDirectory = make_nesteddirectory(
         abspath.c_str(), &directoryDigestToFilecontents, followSymlinks);
@@ -120,7 +120,7 @@ void processDirectory(const std::string &path, const bool followSymlinks,
 struct stat getStatOrExit(const bool followSymlinks, const std::string &path)
 {
     try {
-        return FileUtils::get_stat(path.c_str(), followSymlinks);
+        return FileUtils::getStat(path, followSymlinks);
     }
     catch (const std::system_error &) {
         exit(1); // `get_stat()` logged the error.

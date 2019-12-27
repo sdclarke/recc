@@ -120,7 +120,7 @@ TEST_F(CasClientFixture, AlreadyUploadedFile)
 {
     TemporaryDirectory tmpdir;
     std::string path = tmpdir.name() + std::string("/abc.txt");
-    FileUtils::write_file(path.c_str(), "abc");
+    FileUtils::writeFile(path, "abc");
 
     digest_string_umap digest_to_filecontents;
     digest_to_filecontents[make_digest(abc)] = path;
@@ -164,11 +164,11 @@ TEST_F(CasClientFixture, NewFileUpload)
 {
     TemporaryDirectory tmpdir;
     std::string path = tmpdir.name() + std::string("/abc.txt");
-    FileUtils::write_file(path.c_str(), "abc");
+    FileUtils::writeFile(path, "abc");
 
     digest_string_umap digest_to_filecontents;
     digest_to_filecontents[make_digest(abc)] =
-        FileUtils::get_file_contents(path.c_str());
+        FileUtils::getFileContents(path);
     proto::FindMissingBlobsResponse response;
     *response.add_missing_blob_digests() = make_digest(abc);
 

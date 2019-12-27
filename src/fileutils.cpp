@@ -50,27 +50,40 @@ TemporaryDirectory::~TemporaryDirectory()
     Subprocess::execute(rmCommand);
 }
 
-void FileUtils::create_directory_recursive(const char *path)
+void FileUtils::createDirectoryRecursive(const std::string &path)
 {
     RECC_LOG_VERBOSE("Creating directory at " << path);
-    if (mkdir(path, 0777) != 0) {
+    const char *path_p = path.c_str();
+    if (mkdir(path_p, 0777) != 0) {
         if (errno == EEXIST) {
             // The directory already exists, so return.
             return;
         }
         else if (errno == ENOENT) {
-            auto lastSlash = strrchr(path, '/');
+            auto lastSlash = strrchr(path_p, '/');
             if (lastSlash == nullptr) {
-                throw std::system_error(errno, std::system_category());
+                std::ostringstream error;
+                error << "no slash in \"" << path << "\"";
+                RECC_LOG_ERROR(error.str());
+                throw std::runtime_error(error.str());
             }
-            std::string parent(
-                path, static_cast<std::string::size_type>(lastSlash - path));
-            create_directory_recursive(parent.c_str());
-            if (mkdir(path, 0777) != 0) {
+            std::string parent(path_p, static_cast<std::string::size_type>(
+                                           lastSlash - path_p));
+            createDirectoryRecursive(parent);
+            if (mkdir(path_p, 0777) != 0) {
+                std::ostringstream error;
+                error << "error in mkdir for path \"" << path_p << "\""
+                      << ", errno = [" << errno << ":" << strerror(errno)
+                      << "]";
+                RECC_LOG_ERROR(error.str());
                 throw std::system_error(errno, std::system_category());
             }
         }
         else {
+            std::ostringstream error;
+            error << "error in mkdir for path \"" << path_p << "\""
+                  << ", errno = [" << errno << ":" << strerror(errno) << "]";
+            RECC_LOG_ERROR(error.str());
             throw std::system_error(errno, std::system_category());
         }
     }
@@ -81,17 +94,18 @@ bool FileUtils::isRegularFileOrSymlink(const struct stat &s)
     return (S_ISREG(s.st_mode) || S_ISLNK(s.st_mode));
 }
 
-struct stat FileUtils::get_stat(const char *path, const bool followSymlinks)
+struct stat FileUtils::getStat(const std::string &path,
+                               const bool followSymlinks)
 {
-    if (path == nullptr || *path == 0) {
-        const std::string error = "invalid args: path is either null or empty";
+    if (path.empty()) {
+        const std::string error = "invalid args: path empty";
         RECC_LOG_ERROR(error);
         throw std::runtime_error(error);
     }
 
     struct stat statResult;
-    const int rc =
-        (followSymlinks ? stat(path, &statResult) : lstat(path, &statResult));
+    const int rc = (followSymlinks ? stat(path.c_str(), &statResult)
+                                   : lstat(path.c_str(), &statResult));
     if (rc < 0) {
         RECC_LOG_ERROR("Error calling "
                        << (followSymlinks ? "stat()" : "lstat()")
@@ -104,45 +118,45 @@ struct stat FileUtils::get_stat(const char *path, const bool followSymlinks)
     return statResult;
 }
 
-bool FileUtils::is_executable(const struct stat &s)
+bool FileUtils::isExecutable(const struct stat &s)
 {
     return s.st_mode & S_IXUSR;
 }
 
-bool FileUtils::is_executable(const char *path)
+bool FileUtils::isExecutable(const std::string &path)
 {
-    if (path == nullptr || *path == 0) {
-        std::ostringstream oss;
-        oss << "invalid args: path is either null or empty";
-        throw std::runtime_error(oss.str());
+    if (path.empty()) {
+        const std::string error = "invalid args: path empty";
+        RECC_LOG_ERROR(error);
+        throw std::runtime_error(error);
     }
 
     struct stat statResult;
-    if (stat(path, &statResult) == 0) {
+    if (stat(path.c_str(), &statResult) == 0) {
         return statResult.st_mode & S_IXUSR;
     }
     throw std::system_error(errno, std::system_category());
 }
 
-bool FileUtils::is_symlink(const struct stat &s) { return S_ISLNK(s.st_mode); }
+bool FileUtils::isSymlink(const struct stat &s) { return S_ISLNK(s.st_mode); }
 
-void FileUtils::make_executable(const char *path)
+void FileUtils::makeExecutable(const std::string &path)
 {
     struct stat statResult;
-    if (stat(path, &statResult) == 0) {
-        if (chmod(path, statResult.st_mode | S_IXUSR | S_IXGRP | S_IXOTH) ==
-            0) {
+    if (stat(path.c_str(), &statResult) == 0) {
+        if (chmod(path.c_str(),
+                  statResult.st_mode | S_IXUSR | S_IXGRP | S_IXOTH) == 0) {
             return;
         }
     }
     throw std::system_error(errno, std::system_category());
 }
 
-std::string FileUtils::get_symlink_contents(const char *path,
-                                            const struct stat &statResult)
+std::string FileUtils::getSymlinkContents(const std::string &path,
+                                          const struct stat &statResult)
 {
-    if (path == nullptr || *path == 0) {
-        const std::string error = "invalid args: path is either null or empty";
+    if (path.empty()) {
+        const std::string error = "invalid args: path is empty";
         RECC_LOG_ERROR(error);
         throw std::runtime_error(error);
     }
@@ -155,7 +169,7 @@ std::string FileUtils::get_symlink_contents(const char *path,
     }
 
     std::string contents(statResult.st_size, '\0');
-    const int rc = readlink(path, &contents[0], contents.size());
+    const int rc = readlink(path.c_str(), &contents[0], contents.size());
     if (rc < 0) {
         std::ostringstream oss;
         oss << "readlink failed for \"" << path << "\", rc = " << rc
@@ -167,14 +181,14 @@ std::string FileUtils::get_symlink_contents(const char *path,
     return contents;
 }
 
-std::string FileUtils::get_file_contents(const char *path)
+std::string FileUtils::getFileContents(const std::string &path)
 {
-    struct stat statResult = FileUtils::get_stat(path, true);
-    return FileUtils::get_file_contents(path, statResult);
+    struct stat statResult = FileUtils::getStat(path, true);
+    return FileUtils::getFileContents(path, statResult);
 }
 
-std::string FileUtils::get_file_contents(const char *path,
-                                         const struct stat &statResult)
+std::string FileUtils::getFileContents(const std::string &path,
+                                       const struct stat &statResult)
 {
     if (!S_ISREG(statResult.st_mode)) {
         std::ostringstream oss;
@@ -186,7 +200,7 @@ std::string FileUtils::get_file_contents(const char *path,
     std::string contents;
     std::ifstream fileStream;
     fileStream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    fileStream.open(path, std::ios::in | std::ios::binary);
+    fileStream.open(path.c_str(), std::ios::in | std::ios::binary);
 
     auto start = fileStream.tellg();
     fileStream.seekg(0, std::ios::end);
@@ -203,38 +217,40 @@ std::string FileUtils::get_file_contents(const char *path,
     return contents;
 }
 
-void FileUtils::write_file(const char *path, const std::string &contents)
+void FileUtils::writeFile(const std::string &path, const std::string &contents)
 {
-    std::ofstream fileStream(path, std::ios::trunc | std::ios::binary);
+    const char *path_p = path.c_str();
+    std::ofstream fileStream(path_p, std::ios::trunc | std::ios::binary);
     if (!fileStream) {
-        const auto slash = strrchr(path, '/');
+        const auto slash = strrchr(path_p, '/');
         if (slash != nullptr) {
             std::string slashPath(
-                path, static_cast<std::string::size_type>(slash - path));
-            slashPath = normalize_path(slashPath.c_str());
-            create_directory_recursive(slashPath.c_str());
-            fileStream.open(path, std::ios::trunc | std::ios::binary);
+                path_p, static_cast<std::string::size_type>(slash - path_p));
+            slashPath = normalizePath(slashPath);
+            createDirectoryRecursive(slashPath);
+            fileStream.open(path_p, std::ios::trunc | std::ios::binary);
         }
     }
     fileStream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
     fileStream << contents << std::flush;
 }
 
-std::string FileUtils::normalize_path(const char *path)
+std::string FileUtils::normalizePath(const std::string &path)
 {
     std::vector<std::string> segments;
-    const bool global = path[0] == '/';
+    const char *path_p = path.c_str();
+    const bool global = path_p[0] == '/';
 
-    while (path[0] != '\0') {
-        const char *slash = strchr(path, '/');
+    while (path_p[0] != '\0') {
+        const char *slash = strchr(path_p, '/');
         std::string segment;
 
         if (slash == nullptr) {
-            segment = std::string(path);
+            segment = std::string(path_p);
         }
         else {
             segment = std::string(
-                path, static_cast<std::string::size_type>(slash - path));
+                path_p, static_cast<std::string::size_type>(slash - path_p));
         }
 
         if (segment == ".." && !segments.empty() && segments.back() != "..") {
@@ -248,7 +264,7 @@ std::string FileUtils::normalize_path(const char *path)
             break;
         }
         else {
-            path = slash + 1;
+            path_p = slash + 1;
         }
     }
 
@@ -262,8 +278,8 @@ std::string FileUtils::normalize_path(const char *path)
     return result;
 }
 
-bool FileUtils::has_path_prefix(const std::string &path,
-                                const std::string &prefix)
+bool FileUtils::hasPathPrefix(const std::string &path,
+                              const std::string &prefix)
 {
     /* A path can never have the empty path as a prefix */
     if (prefix.empty()) {
@@ -285,11 +301,11 @@ bool FileUtils::has_path_prefix(const std::string &path,
     return path.substr(0, tmpPrefix.length()) == tmpPrefix;
 }
 
-bool FileUtils::has_path_prefixes(const std::string &path,
-                                  const std::set<std::string> &pathPrefixes)
+bool FileUtils::hasPathPrefixes(const std::string &path,
+                                const std::set<std::string> &pathPrefixes)
 {
     for (const auto &prefix : pathPrefixes) {
-        if (FileUtils::has_path_prefix(path, prefix)) {
+        if (FileUtils::hasPathPrefix(path, prefix)) {
             return true;
         }
     }
@@ -297,12 +313,12 @@ bool FileUtils::has_path_prefixes(const std::string &path,
     return false;
 }
 
-std::string FileUtils::make_path_relative(std::string path,
-                                          const char *workingDirectory)
+std::string FileUtils::makePathRelative(std::string path,
+                                        const char *workingDirectory)
 {
     if (workingDirectory == nullptr || workingDirectory[0] == 0 ||
         path.length() == 0 || path[0] != '/' ||
-        !has_path_prefix(path, RECC_PROJECT_ROOT)) {
+        !hasPathPrefix(path, RECC_PROJECT_ROOT)) {
         return path;
     }
     if (workingDirectory[0] != '/') {
@@ -363,15 +379,15 @@ std::string FileUtils::make_path_relative(std::string path,
     return result;
 }
 
-std::string FileUtils::make_path_absolute(const std::string &path,
-                                          const std::string &cwd)
+std::string FileUtils::makePathAbsolute(const std::string &path,
+                                        const std::string &cwd)
 {
     if (path.empty() || path.front() == '/') {
         return path;
     }
 
     const std::string fullPath = cwd + '/' + path;
-    std::string normalizedPath = FileUtils::normalize_path(fullPath.c_str());
+    std::string normalizedPath = FileUtils::normalizePath(fullPath.c_str());
 
     /* normalize_path removes trailing slashes, so let's preserve them here
      */
@@ -381,8 +397,8 @@ std::string FileUtils::make_path_absolute(const std::string &path,
     return normalizedPath;
 }
 
-std::string FileUtils::join_normalize_path(const std::string &base,
-                                           const std::string &extension)
+std::string FileUtils::joinNormalizePath(const std::string &base,
+                                         const std::string &extension)
 {
     std::ostringstream catPath;
     catPath << base;
@@ -404,10 +420,10 @@ std::string FileUtils::join_normalize_path(const std::string &base,
 
     catPath << extension.substr(index);
     std::string catPathStr = catPath.str();
-    return normalize_path(catPathStr.c_str());
+    return normalizePath(catPathStr.c_str());
 }
 
-std::string FileUtils::expand_path(const std::string &path)
+std::string FileUtils::expandPath(const std::string &path)
 {
     std::string home = "";
     std::string newPath = path;
@@ -420,11 +436,11 @@ std::string FileUtils::expand_path(const std::string &path)
         }
         newPath = path.substr(1);
     }
-    std::string expandPath = join_normalize_path(home, newPath);
+    std::string expandPath = joinNormalizePath(home, newPath);
     return expandPath;
 }
 
-std::string FileUtils::get_current_working_directory()
+std::string FileUtils::getCurrentWorkingDirectory()
 {
     unsigned int bufferSize = 1024;
     while (true) {
@@ -445,22 +461,23 @@ std::string FileUtils::get_current_working_directory()
     }
 }
 
-int FileUtils::parent_directory_levels(const char *path)
+int FileUtils::parentDirectoryLevels(const std::string &path)
 {
     int currentLevel = 0;
     int lowestLevel = 0;
+    const char *path_p = path.c_str();
 
-    while (*path != 0) {
-        const char *slash = strchr(path, '/');
+    while (*path_p != 0) {
+        const char *slash = strchr(path_p, '/');
         if (!slash) {
             break;
         }
 
-        const auto segmentLength = slash - path;
-        if (segmentLength == 0 || (segmentLength == 1 && path[0] == '.')) {
+        const auto segmentLength = slash - path_p;
+        if (segmentLength == 0 || (segmentLength == 1 && path_p[0] == '.')) {
             // Empty or dot segments don't change the level.
         }
-        else if (segmentLength == 2 && path[0] == '.' && path[1] == '.') {
+        else if (segmentLength == 2 && path_p[0] == '.' && path_p[1] == '.') {
             currentLevel--;
             lowestLevel = std::min(lowestLevel, currentLevel);
         }
@@ -468,31 +485,32 @@ int FileUtils::parent_directory_levels(const char *path)
             currentLevel++;
         }
 
-        path = slash + 1;
+        path_p = slash + 1;
     }
-    if (strcmp(path, "..") == 0) {
+    if (strcmp(path_p, "..") == 0) {
         currentLevel--;
         lowestLevel = std::min(lowestLevel, currentLevel);
     }
     return -lowestLevel;
 }
 
-std::string FileUtils::last_n_segments(const char *path, int n)
+std::string FileUtils::lastNSegments(const std::string &path, const int n)
 {
     if (n == 0) {
         return "";
     }
 
-    const auto pathLength = strlen(path);
-    const char *substringStart = path + pathLength - 1;
+    const char *path_p = path.c_str();
+    const auto pathLength = strlen(path_p);
+    const char *substringStart = path_p + pathLength - 1;
     unsigned int substringLength = 1;
     int slashesSeen = 0;
 
-    if (path[pathLength - 1] == '/') {
+    if (path_p[pathLength - 1] == '/') {
         substringLength = 0;
     }
 
-    while (substringStart != path) {
+    while (substringStart != path_p) {
         if (*(substringStart - 1) == '/') {
             slashesSeen++;
             if (slashesSeen == n) {
@@ -505,17 +523,17 @@ std::string FileUtils::last_n_segments(const char *path, int n)
 
     // The path might only be one segment (no slashes)
     if (slashesSeen == 0 && n == 1) {
-        return std::string(path, pathLength);
+        return std::string(path_p, pathLength);
     }
     throw std::logic_error("Not enough segments in path");
 }
 
-bool FileUtils::is_absolute_path(const char *path)
+bool FileUtils::isAbsolutePath(const std::string &path)
 {
-    return path != nullptr && path[0] == '/';
+    return ((!path.empty()) && path[0] == '/');
 }
 
-std::string FileUtils::resolve_path_from_prefix_map(const std::string &path)
+std::string FileUtils::resolvePathFromPrefixMap(const std::string &path)
 {
     if (RECC_PREFIX_REPLACEMENT.empty()) {
         return path;
@@ -525,14 +543,14 @@ std::string FileUtils::resolve_path_from_prefix_map(const std::string &path)
     // value.
     for (const auto &pair : RECC_PREFIX_REPLACEMENT) {
         // Check if prefix is found in the path, and that it is a prefix.
-        if (FileUtils::has_path_prefix(path, pair.first)) {
+        if (FileUtils::hasPathPrefix(path, pair.first)) {
             // Append a trailing slash to the replacement, in cases of
             // replacing `/` Double slashes will get removed during
             // normalization.
             const std::string replaced_path =
                 pair.second + '/' + path.substr(pair.first.length());
             const std::string newPath =
-                FileUtils::normalize_path(replaced_path.c_str());
+                FileUtils::normalizePath(replaced_path);
             RECC_LOG_VERBOSE("Replacing and normalized path: ["
                              << path << "] with newpath: [" << newPath << "]");
             return newPath;
@@ -541,9 +559,9 @@ std::string FileUtils::resolve_path_from_prefix_map(const std::string &path)
     return path;
 }
 
-std::string FileUtils::path_basename(const char *path)
+std::string FileUtils::pathBasename(const std::string &path)
 {
-    return FileUtils::last_n_segments(path, 1);
+    return FileUtils::lastNSegments(path, 1);
 }
 
 std::vector<std::string> FileUtils::parseDirectories(const std::string &path)

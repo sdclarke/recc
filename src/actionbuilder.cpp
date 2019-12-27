@@ -86,19 +86,17 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
 
             int parentsNeeded = 0;
             for (const auto &dep : deps) {
-                parentsNeeded =
-                    std::max(parentsNeeded,
-                             FileUtils::parent_directory_levels(dep.c_str()));
+                parentsNeeded = std::max(
+                    parentsNeeded, FileUtils::parentDirectoryLevels(dep));
             }
 
             for (const auto &product : products) {
                 parentsNeeded = std::max(
-                    parentsNeeded,
-                    FileUtils::parent_directory_levels(product.c_str()));
+                    parentsNeeded, FileUtils::parentDirectoryLevels(product));
             }
 
             commandWorkingDirectory =
-                FileUtils::last_n_segments(cwd.c_str(), parentsNeeded);
+                FileUtils::lastNSegments(cwd, parentsNeeded);
 
             for (const auto &dep : deps) {
                 // If the dependency is an absolute path, leave
@@ -110,11 +108,11 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
                 else {
                     merklePath = commandWorkingDirectory + "/" + dep;
                 }
-                merklePath = FileUtils::normalize_path(merklePath.c_str());
+                merklePath = FileUtils::normalizePath(merklePath);
 
                 // don't include a dependency if it's exclusion is requested
-                if (FileUtils::has_path_prefixes(merklePath,
-                                                 RECC_DEPS_EXCLUDE_PATHS)) {
+                if (FileUtils::hasPathPrefixes(merklePath,
+                                               RECC_DEPS_EXCLUDE_PATHS)) {
                     RECC_LOG_DEBUG("Skipping  \"" << merklePath << "\"");
                     continue;
                 }
@@ -175,7 +173,7 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
     // prepended, and then normalized and replaced. If that is the case, and
     // the CWD contains a replaced prefix, then replace it.
     *commandProto.mutable_working_directory() =
-        FileUtils::resolve_path_from_prefix_map(commandWorkingDirectory);
+        FileUtils::resolvePathFromPrefixMap(commandWorkingDirectory);
     RECC_LOG_VERBOSE("Command: " << commandProto.ShortDebugString());
     const auto commandDigest = DigestGenerator::make_digest(commandProto);
     (*blobs)[commandDigest] = commandProto.SerializeAsString();

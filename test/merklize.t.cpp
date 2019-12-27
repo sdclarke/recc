@@ -244,8 +244,8 @@ TEST(NestedDirectoryTest, AddDirsToExistingNestedDirectory)
 TEST(NestedDirectoryTest, MakeNestedDirectory)
 {
     digest_string_umap fileMap;
-    RECC_PROJECT_ROOT = FileUtils::get_current_working_directory();
-    std::string cwd = FileUtils::get_current_working_directory();
+    RECC_PROJECT_ROOT = FileUtils::getCurrentWorkingDirectory();
+    std::string cwd = FileUtils::getCurrentWorkingDirectory();
     auto nestedDirectory = make_nesteddirectory(cwd.c_str(), &fileMap);
 
     EXPECT_EQ(3, nestedDirectory.d_subdirs->size());
@@ -338,7 +338,7 @@ TEST(NestedDirectoryTest, NestedDirectoryPathReplacement)
 {
     // Replace subdir located in $cwd/data/merklize with $cwd/hi
     // Get current working directory
-    std::string cwd = FileUtils::get_current_working_directory();
+    std::string cwd = FileUtils::getCurrentWorkingDirectory();
     RECC_PREFIX_REPLACEMENT = {{cwd + "/nestdir/nestdir2", cwd + "/hi"}};
     digest_string_umap fileMap;
     auto make_nested_dir = cwd + "/nestdir";
@@ -359,7 +359,7 @@ TEST(NestedDirectoryTest, NestedDirectoryPathReplacement)
 
 TEST(NestedDirectoryTest, NestedDirectoryMultipleNestedDirPathReplacement)
 {
-    std::string cwd = FileUtils::get_current_working_directory();
+    std::string cwd = FileUtils::getCurrentWorkingDirectory();
     RECC_PREFIX_REPLACEMENT = {
         {cwd + "/nestdir/nestdir2/nestdir3", cwd + "/nestdir"}};
     digest_string_umap fileMap;
@@ -381,8 +381,8 @@ TEST(NestedDirectoryTest, NestedDirectoryMultipleNestedDirPathReplacement)
 
 TEST(NestedDirectoryTest, NestedDirectoryNotAPrefix)
 {
-    RECC_PROJECT_ROOT = FileUtils::get_current_working_directory();
-    std::string cwd = FileUtils::get_current_working_directory();
+    RECC_PROJECT_ROOT = FileUtils::getCurrentWorkingDirectory();
+    std::string cwd = FileUtils::getCurrentWorkingDirectory();
     // not a prefix
     RECC_PREFIX_REPLACEMENT = {{cwd + "/nestdir/nestdir2", "/nestdir/hi"}};
     digest_string_umap fileMap;
@@ -403,7 +403,7 @@ TEST(NestedDirectoryTest, NestedDirectoryNotAPrefix)
 // Tests nestedDirectory construction with prefix replacement using add.
 TEST(NestedDirectoryTest, NestedDirectoryAddPrefixReplacement)
 {
-    std::string cwd = FileUtils::get_current_working_directory();
+    std::string cwd = FileUtils::getCurrentWorkingDirectory();
     RECC_PREFIX_REPLACEMENT = {{"/nestdir/nestdir2/nestdir3", "/nestdir"}};
     digest_string_umap fileMap;
 
@@ -427,7 +427,7 @@ TEST(NestedDirectoryTest, NestedDirectoryAddPrefixReplacement)
 TEST(NestedDirectoryTest, TestPrefixOrder)
 {
     // Test that paths are replaced in order specified.
-    std::string cwd = FileUtils::get_current_working_directory();
+    std::string cwd = FileUtils::getCurrentWorkingDirectory();
     // Set two of the same prefixes with different replacements, make sure that
     // the first one gets used.
     const auto recc_prefix_string =
@@ -458,7 +458,7 @@ TEST(NestedDirectoryTest, TestPrefixOrder)
 TEST(NestedDirectoryTest, TestRootReplacement)
 {
     // Test that paths are replaced in order specified.
-    std::string cwd = FileUtils::get_current_working_directory();
+    std::string cwd = FileUtils::getCurrentWorkingDirectory();
 
     // Replace the root with "hi"
     const auto recc_prefix_string = "/=/hi";
@@ -497,7 +497,7 @@ TEST(NestedDirectoryTest, SymlinkTest)
     RECC_PROJECT_ROOT = "";
 
     const std::string cwd =
-        FileUtils::get_current_working_directory() + "/symlinkdir";
+        FileUtils::getCurrentWorkingDirectory() + "/symlinkdir";
     digest_string_umap fileMap;
     const std::string subDir = "subdir";
     auto nestedDirectory = make_nesteddirectory(cwd.c_str(), &fileMap, false);
@@ -552,15 +552,14 @@ TEST(NestedDirectoryTest, SymlinkTest)
 
 TEST(NestedDirectoryTest, EmptyDirTest)
 {
-    std::string cwd = FileUtils::get_current_working_directory();
+    std::string cwd = FileUtils::getCurrentWorkingDirectory();
     std::string topDir = "nestedtmpdir";
     std::string subDir = "emptyDir";
     std::string dirTree = topDir + "/" + subDir;
     std::string filePath = topDir + "/hello.txt";
     std::string fileContents = "hello!";
-    FileUtils::create_directory_recursive((cwd + "/" + dirTree).c_str());
-    FileUtils::write_file((cwd + "/" + filePath).c_str(),
-                          fileContents.c_str());
+    FileUtils::createDirectoryRecursive((cwd + "/" + dirTree).c_str());
+    FileUtils::writeFile((cwd + "/" + filePath).c_str(), fileContents.c_str());
 
     std::string dirPath = cwd + "/" + topDir;
     digest_string_umap fileMap;

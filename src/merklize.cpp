@@ -40,19 +40,17 @@ namespace {
 // Do path replacement and normalize
 const std::string normalize_replace_root(const std::string path)
 {
-
     // If the path matches any in RECC_PATH_PREFIX, replace it if
     // necessary, and normalize path.
-    const std::string replacedRoot =
-        FileUtils::resolve_path_from_prefix_map(path.c_str());
+    const std::string replacedRoot = FileUtils::resolvePathFromPrefixMap(path);
 
     // Get the relativePath from the current PROJECT_ROOT.
     const std::string relativePath =
-        FileUtils::make_path_relative(replacedRoot, RECC_PROJECT_ROOT.c_str());
+        FileUtils::makePathRelative(replacedRoot, RECC_PROJECT_ROOT.c_str());
 
     // Normalize path
     const std::string normalizedReplacedRoot =
-        FileUtils::normalize_path(relativePath.c_str());
+        FileUtils::normalizePath(relativePath);
 
     return normalizedReplacedRoot;
 }
@@ -78,7 +76,7 @@ void NestedDirectory::add(std::shared_ptr<ReccFile> file,
     // directory path is avaliable.
     if (!checkedPrefix) {
         replacedDirectory =
-            FileUtils::resolve_path_from_prefix_map(std::string(relativePath));
+            FileUtils::resolvePathFromPrefixMap(std::string(relativePath));
         checkedPrefix = true;
     }
 
@@ -109,7 +107,7 @@ void NestedDirectory::addSymlink(const std::string &target,
     std::string replacedDirectory(relativePath);
     if (!checkedPrefix) {
         replacedDirectory =
-            FileUtils::resolve_path_from_prefix_map(std::string(relativePath));
+            FileUtils::resolvePathFromPrefixMap(std::string(relativePath));
         checkedPrefix = true;
     }
 
@@ -149,7 +147,7 @@ void NestedDirectory::addDirectory(const char *directory, bool checkedPrefix)
     // directory path is available.
     if (!checkedPrefix) {
         replacedDirectory =
-            FileUtils::resolve_path_from_prefix_map(std::string(directory));
+            FileUtils::resolvePathFromPrefixMap(std::string(directory));
         checkedPrefix = true;
     }
 
@@ -281,7 +279,7 @@ void make_nesteddirectoryhelper(
         const std::string entityPath = pathString + "/" + entityName;
 
         struct stat statResult =
-            FileUtils::get_stat(entityPath.c_str(), followSymlinks);
+            FileUtils::getStat(entityPath, followSymlinks);
         if (S_ISDIR(statResult.st_mode)) {
             make_nesteddirectoryhelper(entityPath.c_str(), fileMap,
                                        filePathMap, emptyDirSet,
