@@ -23,7 +23,7 @@ std::set<std::string> normalize_all(const std::set<std::string> &paths)
 {
     std::set<std::string> result;
     for (const auto &path : paths) {
-        result.insert(FileUtils::normalize_path(path.c_str()));
+        result.insert(FileUtils::normalizePath(path));
     }
     return result;
 }
@@ -324,7 +324,7 @@ TEST(DepsFromMakeRulesTest, SunStyleMakefile)
 
 TEST(DepsFromMakeRulesTest, LargeMakeOutput)
 {
-    auto makeRules = FileUtils::get_file_contents("giant_make_output.mk");
+    auto makeRules = FileUtils::getFileContents("giant_make_output.mk");
     std::set<std::string> expected = {"hello.c", "hello.h",
                                       "final_dependency.h"};
 

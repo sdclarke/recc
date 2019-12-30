@@ -24,8 +24,7 @@ using namespace BloombergLP::recc;
 
 class ActionBuilderTestFixture : public ::testing::Test {
   protected:
-    ActionBuilderTestFixture()
-        : cwd(FileUtils::get_current_working_directory())
+    ActionBuilderTestFixture() : cwd(FileUtils::getCurrentWorkingDirectory())
     {
     }
 
@@ -230,7 +229,7 @@ TEST_F(ActionBuilderTestFixture, AbsolutePathActionBuilt)
  */
 TEST_F(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
 {
-    cwd = FileUtils::get_current_working_directory();
+    cwd = FileUtils::getCurrentWorkingDirectory();
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
                           "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
@@ -253,7 +252,7 @@ TEST_F(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
 
 TEST_F(ActionBuilderTestFixture, ExcludePath)
 {
-    cwd = FileUtils::get_current_working_directory();
+    cwd = FileUtils::getCurrentWorkingDirectory();
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
                           "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
@@ -274,7 +273,7 @@ TEST_F(ActionBuilderTestFixture, ExcludePath)
 
 TEST_F(ActionBuilderTestFixture, ExcludePathMultipleMatchOne)
 {
-    cwd = FileUtils::get_current_working_directory();
+    cwd = FileUtils::getCurrentWorkingDirectory();
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
                           "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
@@ -295,7 +294,7 @@ TEST_F(ActionBuilderTestFixture, ExcludePathMultipleMatchOne)
 
 TEST_F(ActionBuilderTestFixture, ExcludePathNoMatch)
 {
-    cwd = FileUtils::get_current_working_directory();
+    cwd = FileUtils::getCurrentWorkingDirectory();
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
                           "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
@@ -319,7 +318,7 @@ TEST_F(ActionBuilderTestFixture, ExcludePathNoMatch)
 
 TEST_F(ActionBuilderTestFixture, ExcludePathSingleWithMultiInput)
 {
-    cwd = FileUtils::get_current_working_directory();
+    cwd = FileUtils::getCurrentWorkingDirectory();
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h",
                           "/usr/include/net/ethernet.h", "../deps/empty.c",
                           "hello.cpp"};
@@ -348,7 +347,7 @@ TEST_F(ActionBuilderTestFixture, ExcludePathSingleWithMultiInput)
  */
 TEST_F(ActionBuilderTestFixture, EmptyWorkingDirInputRoot)
 {
-    cwd = FileUtils::get_current_working_directory();
+    cwd = FileUtils::getCurrentWorkingDirectory();
     RECC_DEPS_OVERRIDE = {"../deps/empty.c"};
     std::vector<std::string> recc_args = {"gcc", "-c", "../deps/empty.c", "-o",
                                           "empty.o"};

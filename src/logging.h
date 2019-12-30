@@ -37,11 +37,14 @@
 
 #define RECC_LOG_PERROR(x) perror(x);
 
-#define RECC_LOG(x) std::cout << x << std::endl;
+#define RECC_LOG(x)                                                           \
+    std::cout << __FILE__ << ":" << __LINE__ << " " << x << std::endl;
 
-#define RECC_LOG_ERROR(x) std::cerr << x << "\n";
+#define RECC_LOG_ERROR(x)                                                     \
+    std::cerr << __FILE__ << ":" << __LINE__ << " " << x << "\n";
 
-#define RECC_LOG_WARNING(x) std::cerr << x << "\n";
+#define RECC_LOG_WARNING(x)                                                   \
+    std::cerr << __FILE__ << ":" << __LINE__ << " " << x << "\n";
 
 #define RECC_LOG_DEBUG(x)                                                     \
     std::clog << __FILE__ << ":" << __LINE__ << ":" << x << "\n";

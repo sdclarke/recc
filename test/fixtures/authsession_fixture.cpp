@@ -24,7 +24,7 @@ using BloombergLP::recc::JsonFileManager;
 
 void AuthSessionFiles::SetUpTestCase()
 {
-    const std::string currDir = FileUtils::get_current_working_directory();
+    const std::string currDir = FileUtils::getCurrentWorkingDirectory();
     s_clientFilePath = currDir + "/" + "clientToken";
 
     s_clientFile = new JsonFileManager(s_clientFilePath);

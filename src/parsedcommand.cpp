@@ -15,6 +15,7 @@
 #include <parsedcommand.h>
 
 #include <fileutils.h>
+#include <logging.h>
 
 #include <cstring>
 #include <functional>
@@ -111,11 +112,11 @@ template <typename T> void UnusedVar(const T &) {}
 #define ARGUMENT_IS_PATH                                                      \
     if (argument.length() > 0 && argument[0] == '/') {                        \
         REPLACE_ARGUMENT(                                                     \
-            FileUtils::make_path_relative(argument, workingDirectory));       \
+            FileUtils::makePathRelative(argument, workingDirectory));         \
     }
 #define ARGUMENT_IS_SEARCH_PATH(arg)                                          \
     if (arg.length() > 0) {                                                   \
-        REPLACE_ARGUMENT(FileUtils::resolve_path_from_prefix_map(arg));       \
+        REPLACE_ARGUMENT(FileUtils::resolvePathFromPrefixMap(arg));           \
     }
 #define OPTIONS_START()                                                       \
     bool isCompileCommand = false;                                            \
@@ -153,12 +154,12 @@ template <typename T> void UnusedVar(const T &) {}
     {                                                                         \
         std::string relative_command = (*command)[i];                         \
         if ((*command)[i].length() > 0 && (*command)[i][0] == '/') {          \
-            relative_command = FileUtils::make_path_relative(                 \
-                (*command)[i], workingDirectory);                             \
+            relative_command =                                                \
+                FileUtils::makePathRelative((*command)[i], workingDirectory); \
         }                                                                     \
         depsCommand->push_back(relative_command);                             \
-        (*command)[i] = FileUtils::make_path_relative(                        \
-            FileUtils::resolve_path_from_prefix_map((*command)[i]),           \
+        (*command)[i] = FileUtils::makePathRelative(                          \
+            FileUtils::resolvePathFromPrefixMap((*command)[i]),               \
             workingDirectory);                                                \
     }                                                                         \
     }

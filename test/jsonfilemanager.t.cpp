@@ -38,7 +38,7 @@ class TmpFile {
 // Fixture because the latter has a dependency on JsonFileManager
 TEST(JsonFileManagerTest, Read)
 {
-    const std::string currDir = FileUtils::get_current_working_directory();
+    const std::string currDir = FileUtils::getCurrentWorkingDirectory();
     std::string s_clientFilePath = currDir + "/" + "clientToken";
 
     JsonFileManager reader(s_clientFilePath);
@@ -50,7 +50,7 @@ TEST(JsonFileManagerTest, Read)
 
 TEST(JsonFileManagerTest, Write)
 {
-    const std::string currDir = FileUtils::get_current_working_directory();
+    const std::string currDir = FileUtils::getCurrentWorkingDirectory();
     std::string tmpFilePath = currDir + "/" + "FakeTmpFile.fake";
 
     TmpFile tmpStore(tmpFilePath);

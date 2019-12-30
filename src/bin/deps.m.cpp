@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 {
     Env::set_config_locations();
     Env::parse_config_variables();
-    const std::string cwd = FileUtils::get_current_working_directory();
+    const std::string cwd = FileUtils::getCurrentWorkingDirectory();
 
     if (argc <= 1 || strcmp(argv[1], "--help") == 0 ||
         strcmp(argv[1], "-h") == 0) {

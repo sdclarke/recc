@@ -267,9 +267,9 @@ void RemoteExecutionClient::write_files_to_disk(const ActionResult &result,
     for (const auto &fileIter : result.d_outputFiles) {
         const std::string path = std::string(root) + "/" + fileIter.first;
         RECC_LOG_VERBOSE("Writing " << path);
-        FileUtils::write_file(path.c_str(), get_outputblob(fileIter.second));
+        FileUtils::writeFile(path, get_outputblob(fileIter.second));
         if (fileIter.second.d_executable) {
-            FileUtils::make_executable(path.c_str());
+            FileUtils::makeExecutable(path);
         }
     }
 }
