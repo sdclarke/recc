@@ -215,9 +215,9 @@ int main(int argc, char *argv[])
     const proto::Action action = *actionPtr;
     const proto::Digest actionDigest = DigestGenerator::make_digest(action);
 
-    RECC_LOG_VERBOSE("Action Digest: " << actionDigest.ShortDebugString()
-                                       << " Action Contents: "
-                                       << action.ShortDebugString());
+    RECC_LOG_VERBOSE("Action Digest: "
+                     << actionDigest.hash() << "/" << actionDigest.size_bytes()
+                     << " Action Contents: " << action.ShortDebugString());
 
     // Setting up the gRPC connections:
     std::unique_ptr<GrpcChannels> returnChannels;
@@ -259,7 +259,8 @@ int main(int argc, char *argv[])
                     &result);
                 if (action_in_cache) {
                     RECC_LOG_VERBOSE("Action cache hit for "
-                                     << actionDigest.hash());
+                                     << actionDigest.hash() << "/"
+                                     << actionDigest.size_bytes());
                 }
             }
         }
@@ -293,8 +294,9 @@ int main(int argc, char *argv[])
 
         // And call `Execute()`:
         try {
-            RECC_LOG_VERBOSE(
-                "Executing action... actionDigest: " << actionDigest.hash());
+            RECC_LOG_VERBOSE("Executing action... actionDigest: "
+                             << actionDigest.hash() << "/"
+                             << actionDigest.size_bytes());
             { // Timed block
                 reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
                     TIMER_NAME_EXECUTE_ACTION, RECC_ENABLE_METRICS);
