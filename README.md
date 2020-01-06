@@ -257,6 +257,16 @@ $ export RECC_SERVER=localhost:12345
 
 You may also want to set `RECC_VERBOSE=1` to enable verbose output.
 
+#### Additional variables needed on AIX
+
+On AIX, `recc` injects a dynamic library called [`libreccdevshim`][] to
+work around issues in `xlc`. You'll need to set two environment variables to
+tell it where to find the library:
+
+```sh
+$ export RECC_DEPS_ENV_LDR_PRELOAD=/path/to/libreccdevshim.so
+$ export RECC_DEPS_ENV_LDR_PRELOAD64=/path/to/64bit/libreccdevshim.so
+```
 #### Support for dependency path replacement.
 
 A common problem that can hinder reproducibility and cacheabilty of remote builds, are dependencies that are local to the user, system, and set of machines the build command is sent from. To solve this issue, `recc` supports specifying the `RECC_PREFIX_MAP` configuration variable, allowing changing a prefix in a path, with another one. For example, replacing all paths with prefixes including `/usr/local/bin` with `/usr/bin` can be done by specifying:
