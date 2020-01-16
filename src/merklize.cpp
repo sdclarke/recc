@@ -45,10 +45,13 @@ const std::string normalize_replace_root(const std::string path)
     const std::string replacedRoot = FileUtils::resolvePathFromPrefixMap(path);
 
     // Get the relativePath from the current PROJECT_ROOT.
-    const std::string relativePath =
+    std::string relativePath =
         FileUtils::makePathRelative(replacedRoot, RECC_PROJECT_ROOT.c_str());
 
-    // Normalize path
+    // Prepend the RECC_WORKING_DIR_PREFIX if relative and normalize path
+    if (relativePath[0] != '/' && !RECC_WORKING_DIR_PREFIX.empty()) {
+        relativePath.insert(0, RECC_WORKING_DIR_PREFIX + "/");
+    }
     const std::string normalizedReplacedRoot =
         FileUtils::normalizePath(relativePath);
 

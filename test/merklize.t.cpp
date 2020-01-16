@@ -256,7 +256,36 @@ TEST(NestedDirectoryTest, MakeNestedDirectory)
     auto subdirectory = &(*nestedDirectory.d_subdirs)["subdir"];
     EXPECT_EQ(0, subdirectory->d_subdirs->size());
     EXPECT_EQ(1, subdirectory->d_files.size());
-    EXPECT_EQ("abc", fileMap[nestedDirectory.d_files["abc.txt"]->getDigest()]);
+    EXPECT_EQ("abc", fileMap[subdirectory->d_files["abc.txt"]->getDigest()]);
+}
+
+// Run the same test as above, but with a RECC_WORKING_DIR_PREFIX
+// set and make sure everything gets put under the prefix
+TEST(NestedDirectoryTest, MakeNestedDirectoryWorkDirPrefix)
+{
+    digest_string_umap fileMap;
+    RECC_PROJECT_ROOT = FileUtils::getCurrentWorkingDirectory();
+    std::string cwd = FileUtils::getCurrentWorkingDirectory();
+    auto old_working_dir_prefix = RECC_WORKING_DIR_PREFIX;
+    RECC_WORKING_DIR_PREFIX = "prefix";
+
+    auto nestedDirectory = make_nesteddirectory(cwd.c_str(), &fileMap);
+
+    EXPECT_EQ(1, nestedDirectory.d_subdirs->size());
+    EXPECT_EQ(0, nestedDirectory.d_files.size());
+
+    auto subdirectory = &(*nestedDirectory.d_subdirs)[RECC_WORKING_DIR_PREFIX];
+    EXPECT_EQ(3, subdirectory->d_subdirs->size());
+    EXPECT_EQ(2, subdirectory->d_files.size());
+
+    EXPECT_EQ("abc", fileMap[subdirectory->d_files["abc.txt"]->getDigest()]);
+
+    subdirectory = &(*subdirectory->d_subdirs)["subdir"];
+    EXPECT_EQ(0, subdirectory->d_subdirs->size());
+    EXPECT_EQ(1, subdirectory->d_files.size());
+    EXPECT_EQ("abc", fileMap[subdirectory->d_files["abc.txt"]->getDigest()]);
+
+    RECC_WORKING_DIR_PREFIX = old_working_dir_prefix;
 }
 
 // Make sure the digest is calculated correctly regardless of the order in

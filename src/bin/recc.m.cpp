@@ -169,7 +169,10 @@ const std::string HELP(
     "                           (By default, "
     "\"" DEFAULT_RECC_CAS_DIGEST_FUNCTION "\")\n"
     "                           Supported values: " +
-    DigestGenerator::supportedDigestFunctionsList() + "\n");
+    DigestGenerator::supportedDigestFunctionsList() +
+    "\n\n"
+    "RECC_WORKING_DIR_PREFIX - directory to prefix the command's working\n"
+    "                          directory, and input paths relative to it\n");
 
 enum ReturnCode {
     RC_OK = 0,

@@ -51,6 +51,7 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
         nestedDirectory =
             make_nesteddirectory(RECC_DEPS_DIRECTORY_OVERRIDE.c_str(),
                                  digest_to_filecontents, false);
+        commandWorkingDirectory = RECC_WORKING_DIR_PREFIX;
     }
     else {
         std::set<std::string> deps = RECC_DEPS_OVERRIDE;
@@ -95,8 +96,15 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
                     parentsNeeded, FileUtils::parentDirectoryLevels(product));
             }
 
+            // prefix all relative paths, including the working directory, with
+            // a prefix to keep actions from running in the root of the input
+            // root
             commandWorkingDirectory =
                 FileUtils::lastNSegments(cwd, parentsNeeded);
+            if (!RECC_WORKING_DIR_PREFIX.empty()) {
+                commandWorkingDirectory.insert(0,
+                                               RECC_WORKING_DIR_PREFIX + "/");
+            }
 
             for (const auto &dep : deps) {
                 // If the dependency is an absolute path, leave
@@ -133,6 +141,8 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
     }
 
     if (!commandWorkingDirectory.empty()) {
+        commandWorkingDirectory =
+            FileUtils::normalizePath(commandWorkingDirectory);
         nestedDirectory.addDirectory(commandWorkingDirectory.c_str());
     }
 
