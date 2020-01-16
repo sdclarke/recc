@@ -247,6 +247,12 @@ extern std::deque<std::string> RECC_CONFIG_LOCATIONS;
 extern std::string RECC_CORRELATED_INVOCATIONS_ID;
 
 /**
+ * Prefix directory to be prepended to the working directory, as well as
+ * all input paths relative to it.
+ */
+extern std::string RECC_WORKING_DIR_PREFIX;
+
+/**
  * The process environment.
  */
 extern "C" char **environ;
