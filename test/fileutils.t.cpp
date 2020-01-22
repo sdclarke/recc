@@ -101,12 +101,21 @@ TEST(NormalizePathTest, AlreadyNormalPaths)
     EXPECT_EQ("test.txt", FileUtils::normalizePath("test.txt"));
     EXPECT_EQ("subdir/hello", FileUtils::normalizePath("subdir/hello"));
     EXPECT_EQ("/usr/bin/gcc", FileUtils::normalizePath("/usr/bin/gcc"));
+    EXPECT_EQ(".", FileUtils::normalizePath("."));
 }
 
 TEST(NormalizePathTest, RemoveEmptySegments)
 {
     EXPECT_EQ("subdir/hello", FileUtils::normalizePath("subdir///hello//"));
     EXPECT_EQ("/usr/bin/gcc", FileUtils::normalizePath("/usr/bin/./gcc"));
+    EXPECT_EQ(".", FileUtils::normalizePath("./"));
+}
+
+TEST(NormalizePathTest, CurrentDirectory)
+{
+    EXPECT_EQ(".", FileUtils::normalizePath("foo/.."));
+    EXPECT_EQ(".", FileUtils::normalizePath("foo/bar/../.."));
+    EXPECT_EQ(".", FileUtils::normalizePath("foo/../bar/.."));
 }
 
 TEST(NormalizePathTest, RemoveUnneededDotDot)
@@ -443,8 +452,8 @@ TEST(FileUtilsTest, JoinNormalizePath)
     EXPECT_EQ(FileUtils::joinNormalizePath(base, ""), base.substr(0, bLast));
     // base empty, should just normalize extension
     EXPECT_EQ(FileUtils::joinNormalizePath("", extension), extension);
-    // both empty, should return empty string
-    EXPECT_EQ(FileUtils::joinNormalizePath("", ""), "");
+    // both empty, should return the current directory
+    EXPECT_EQ(FileUtils::joinNormalizePath("", ""), ".");
 }
 
 TEST(FileUtilsTest, ExpandPath)
@@ -462,7 +471,7 @@ TEST(FileUtilsTest, ExpandPath)
     ASSERT_THROW(FileUtils::expandPath("~/"), std::runtime_error);
     EXPECT_EQ(FileUtils::expandPath("fake_dir/fake_file"),
               "fake_dir/fake_file");
-    EXPECT_EQ(FileUtils::expandPath(""), "");
+    EXPECT_EQ(FileUtils::expandPath(""), ".");
     // make sure $HOME is reset so other tests don't break
     setenv("HOME", home.c_str(), true);
     EXPECT_EQ(getenv("HOME"), home);
