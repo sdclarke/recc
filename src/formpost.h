@@ -25,7 +25,7 @@ class Post {
     virtual std::string generate_post(std::string refresh_token) = 0;
 };
 
-class FormPost : public Post {
+class FormPost final : public Post {
   public:
     std::string generate_post(std::string refresh_token);
 };
