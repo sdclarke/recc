@@ -121,7 +121,7 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
                 // don't include a dependency if it's exclusion is requested
                 if (FileUtils::hasPathPrefixes(merklePath,
                                                RECC_DEPS_EXCLUDE_PATHS)) {
-                    RECC_LOG_DEBUG("Skipping \"" << merklePath << "\"");
+                    RECC_LOG_VERBOSE("Skipping \"" << merklePath << "\"");
                     continue;
                 }
 
