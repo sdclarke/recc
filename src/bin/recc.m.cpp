@@ -97,7 +97,8 @@ const std::string HELP(
     "                          defaults to " DEFAULT_RECC_JWT_JSON_FILE_PATH
     " (JSON format expected)\n"
     "\n"
-    "RECC_INSTANCE - the instance name to pass to the server\n"
+    "RECC_INSTANCE - the instance name to pass to the server (defaults "
+    "to \"" DEFAULT_RECC_INSTANCE "\") \n"
     "\n"
     "RECC_VERBOSE - enable verbose output\n"
     "\n"
