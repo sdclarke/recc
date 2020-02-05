@@ -150,9 +150,6 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
 {
 
     if (!command.is_compiler_command() && !RECC_FORCE_REMOTE) {
-        RECC_LOG_VERBOSE("Not a compiler command, so running locally.");
-        RECC_LOG_VERBOSE(
-            "(use RECC_FORCE_REMOTE=1 to force remote execution)");
         return nullptr;
     }
 

@@ -220,10 +220,20 @@ int main(int argc, char *argv[])
     digest_string_umap blobs;
     digest_string_umap digest_to_filecontents;
 
-    // Trying to build an `Action`:
-    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                      &digest_to_filecontents);
-    // If that fails, we defer to running the command locally:
+    std::shared_ptr<proto::Action> actionPtr;
+    if (command.is_compiler_command() || RECC_FORCE_REMOTE) {
+        // Trying to build an `Action`:
+        actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                               &digest_to_filecontents);
+    }
+    else {
+        RECC_LOG_VERBOSE("Not a compiler command, so running locally.");
+        RECC_LOG_VERBOSE(
+            "(use RECC_FORCE_REMOTE=1 to force remote execution)");
+    }
+
+    // If we don't need to build an `Action` or if the process fails, we defer
+    // to running the command locally:
     if (!actionPtr) {
         execvp(argv[1], &argv[1]);
         RECC_LOG_PERROR(argv[1]);
