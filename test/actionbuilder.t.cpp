@@ -23,7 +23,8 @@
 using namespace BloombergLP::recc;
 
 class ActionBuilderTestFixture
-    : public ::testing::TestWithParam<const char *> {
+    : public ActionBuilder,
+      public ::testing::TestWithParam<const char *> {
   protected:
     ActionBuilderTestFixture() : cwd(FileUtils::getCurrentWorkingDirectory())
     {
@@ -62,6 +63,89 @@ class ActionBuilderTestFixture
     bool d_previous_deps_global_path;
     std::string d_previous_working_dir_prefix;
 };
+
+TEST_F(ActionBuilderTestFixture, BuildSimpleCommand)
+{
+    const std::vector<std::string> command_arguments = {
+        "gcc", "-c", "hello.cpp", "-o", "hello.o"};
+    const std::set<std::string> output_files = {"hello.o"};
+    const std::string working_directory = ".";
+
+    const proto::Command command_proto = this->generateCommandProto(
+        command_arguments, output_files, {}, {}, {}, working_directory);
+
+    ASSERT_TRUE(std::equal(command_arguments.cbegin(),
+                           command_arguments.cend(),
+                           command_proto.arguments().cbegin()));
+
+    ASSERT_TRUE(std::equal(output_files.cbegin(), output_files.cend(),
+                           command_proto.output_files().cbegin()));
+
+    ASSERT_EQ(command_proto.working_directory(), working_directory);
+
+    ASSERT_TRUE(command_proto.environment_variables().empty());
+    ASSERT_TRUE(command_proto.platform().properties().empty());
+    ASSERT_TRUE(command_proto.output_directories().empty());
+}
+
+TEST_F(ActionBuilderTestFixture, OutputPaths)
+{
+    const std::set<std::string> output_files = {"hello.o", "foo.o", "bar.o"};
+    const std::set<std::string> output_directories = {"export/"};
+
+    const proto::Command command_proto = this->generateCommandProto(
+        {}, output_files, output_directories, {}, {}, "");
+
+    ASSERT_TRUE(std::equal(output_files.cbegin(), output_files.cend(),
+                           command_proto.output_files().cbegin()));
+
+    ASSERT_TRUE(std::equal(output_directories.cbegin(),
+                           output_directories.cend(),
+                           command_proto.output_directories().cbegin()));
+}
+
+TEST_F(ActionBuilderTestFixture, EnvironmentVariables)
+{
+    std::map<std::string, std::string> environment;
+    environment["PATH"] = "/usr/bin:/opt/bin:/bin";
+    environment["GREETING"] = "hello!";
+
+    const proto::Command command_proto =
+        this->generateCommandProto({}, {}, {}, environment, {}, "");
+
+    ASSERT_EQ(command_proto.environment_variables_size(), 2);
+    for (const auto &variable : command_proto.environment_variables()) {
+        ASSERT_TRUE(environment.count(variable.name()));
+        ASSERT_EQ(variable.value(), environment.at(variable.name()));
+    }
+}
+
+TEST_F(ActionBuilderTestFixture, PlatformProperties)
+{
+    std::map<std::string, std::string> platform_properties;
+    platform_properties["OS"] = "linux";
+    platform_properties["ISA"] = "x86";
+
+    const proto::Command command_proto =
+        this->generateCommandProto({}, {}, {}, {}, platform_properties, "");
+
+    ASSERT_EQ(command_proto.platform().properties_size(), 2);
+    for (const auto &property : command_proto.platform().properties()) {
+        ASSERT_TRUE(platform_properties.count(property.name()));
+        ASSERT_EQ(property.value(), platform_properties.at(property.name()));
+    }
+}
+
+TEST_F(ActionBuilderTestFixture, WorkingDirectory)
+{
+    // Working directories are not manipulated:
+    const auto paths = {"..", "/home/user/dev", "./subdir1/subdir2"};
+    for (const auto &working_directory : paths) {
+        const proto::Command command_proto =
+            this->generateCommandProto({}, {}, {}, {}, {}, working_directory);
+        ASSERT_EQ(working_directory, command_proto.working_directory());
+    }
+}
 
 // This is a representation of a flat merkle tree, where things are stored in
 // the required order of traversal.

@@ -27,19 +27,59 @@ namespace recc {
 
 struct ActionBuilder {
     /**
-     * Build an action from the given ParsedCommand and working directory.
+     * Build an `Action` from the given `ParsedCommand` and working directory.
      *
-     * Returns a nullptr if an action could not be built due to invoking a
-     * non-compile command or trying to output files in directory unrelated
-     * to the current working directory.
+     * Returns `nullptr` if an action could not be built due to invoking a
+     * non-compile command or an output files in specified in a directory
+     * unrelated to the current working directory.
      *
-     * "digest_to_filecontents" and "blobs" are used to store parsed input and
+     * `digest_to_filecontents` and `blobs` are used to store parsed input and
      * output files, which will get uploaded to CAS by the caller.
      */
     static std::shared_ptr<proto::Action>
     BuildAction(const ParsedCommand &command, const std::string &cwd,
                 digest_string_umap *digest_to_filecontents,
                 digest_string_umap *blobs);
+
+  protected: // for unit testing
+    /**
+     * Populates a `Command` protobuf from a `ParsedCommand` and additional
+     * information.
+     *
+     * It sets the command's arguments, its output directories, the environment
+     * variables and platform properties for the remote.
+     */
+    static proto::Command generateCommandProto(
+        const std::vector<std::string> &command,
+        const std::set<std::string> &products,
+        const std::set<std::string> &outputDirectories,
+        const std::map<std::string, std::string> &remoteEnvironment,
+        const std::map<std::string, std::string> &platformProperties,
+        const std::string &workingDirectory);
+
+    /**
+     * Given a list of paths to dependency and output files, builds a
+     * Merkle tree.
+     *
+     * Adds the files to `NestedDirectory` and `digest_to_filecontents`.
+     *
+     * If necessary, modifies the contents of `commandWorkingDirectory`.
+     */
+    static void buildMerkleTree(const std::set<std::string> &dependencies,
+                                const std::set<std::string> &products,
+                                const std::string &cwd,
+                                NestedDirectory *nestedDirectory,
+                                digest_string_umap *digest_to_filecontents,
+                                std::string *commandWorkingDirectory);
+
+    /**
+     * Gathers the `CommandFileInfo` belonging to the given `command` and
+     * populates its dependency and product list (the latter only if no
+     * overrides are set).
+     */
+    static void getDependencies(const ParsedCommand &command,
+                                std::set<std::string> *dependencies,
+                                std::set<std::string> *products);
 };
 
 } // namespace recc

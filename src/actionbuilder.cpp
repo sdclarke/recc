@@ -27,6 +27,122 @@
 namespace BloombergLP {
 namespace recc {
 
+proto::Command ActionBuilder::generateCommandProto(
+    const std::vector<std::string> &command,
+    const std::set<std::string> &outputFiles,
+    const std::set<std::string> &outputDirectories,
+    const std::map<std::string, std::string> &remoteEnvironment,
+    const std::map<std::string, std::string> &platformProperties,
+    const std::string &workingDirectory)
+{
+    proto::Command commandProto;
+
+    for (const auto &arg : command) {
+        commandProto.add_arguments(arg);
+    }
+
+    for (const auto &envIter : remoteEnvironment) {
+        auto envVar = commandProto.add_environment_variables();
+        envVar->set_name(envIter.first);
+        envVar->set_value(envIter.second);
+    }
+
+    for (const auto &file : outputFiles) {
+        commandProto.add_output_files(file);
+    }
+
+    for (const auto &directory : outputDirectories) {
+        commandProto.add_output_directories(directory);
+    }
+
+    for (const auto &platformIter : platformProperties) {
+        auto property = commandProto.mutable_platform()->add_properties();
+        property->set_name(platformIter.first);
+        property->set_value(platformIter.second);
+    }
+
+    commandProto.set_working_directory(workingDirectory);
+
+    return commandProto;
+}
+
+void ActionBuilder::buildMerkleTree(const std::set<std::string> &dependencies,
+                                    const std::set<std::string> &products,
+                                    const std::string &cwd,
+                                    NestedDirectory *nestedDirectory,
+                                    digest_string_umap *digest_to_filecontents,
+                                    std::string *commandWorkingDirectory)
+{ // Timed function
+    reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+        TIMER_NAME_BUILD_MERKLE_TREE, RECC_ENABLE_METRICS);
+
+    RECC_LOG_VERBOSE("Building Merkle tree");
+
+    int parentsNeeded = 0;
+    for (const auto &dep : dependencies) {
+        parentsNeeded =
+            std::max(parentsNeeded, FileUtils::parentDirectoryLevels(dep));
+    }
+
+    for (const auto &product : products) {
+        parentsNeeded =
+            std::max(parentsNeeded, FileUtils::parentDirectoryLevels(product));
+    }
+
+    // prefix all relative paths, including the working directory, with
+    // a prefix to keep actions from running in the root of the input
+    // root
+    *commandWorkingDirectory = FileUtils::lastNSegments(cwd, parentsNeeded);
+    if (!RECC_WORKING_DIR_PREFIX.empty()) {
+        commandWorkingDirectory->insert(0, RECC_WORKING_DIR_PREFIX + "/");
+    }
+
+    for (const auto &dep : dependencies) {
+        // If the dependency is an absolute path, leave the merklePath
+        // untouched
+        std::string merklePath =
+            (dep[0] == '/') ? dep : *commandWorkingDirectory + "/" + dep;
+        merklePath = FileUtils::normalizePath(merklePath);
+
+        // don't include a dependency if it's exclusion is requested
+        if (FileUtils::hasPathPrefixes(merklePath, RECC_DEPS_EXCLUDE_PATHS)) {
+            RECC_LOG_VERBOSE("Skipping \"" << merklePath << "\"");
+            continue;
+        }
+
+        std::shared_ptr<ReccFile> file =
+            ReccFileFactory::createFile(dep.c_str());
+        if (!file) {
+            RECC_LOG_VERBOSE("Encountered unsupported file \""
+                             << dep << "\", skipping...");
+            continue;
+        }
+        nestedDirectory->add(file, merklePath.c_str());
+        // Store the digest to the file content.
+        (*digest_to_filecontents)[file->getDigest()] = file->getFileContents();
+    }
+}
+
+void ActionBuilder::getDependencies(const ParsedCommand &command,
+                                    std::set<std::string> *dependencies,
+                                    std::set<std::string> *products)
+{
+    RECC_LOG_VERBOSE("Getting dependencies");
+    CommandFileInfo fileInfo;
+    { // Timed block
+        reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+            TIMER_NAME_COMPILER_DEPS, RECC_ENABLE_METRICS);
+        fileInfo = Deps::get_file_info(command);
+    }
+
+    *dependencies = fileInfo.d_dependencies;
+
+    if (RECC_OUTPUT_DIRECTORIES_OVERRIDE.empty() &&
+        RECC_OUTPUT_FILES_OVERRIDE.empty()) {
+        *products = fileInfo.d_possibleProducts;
+    }
+}
+
 std::shared_ptr<proto::Action>
 ActionBuilder::BuildAction(const ParsedCommand &command,
                            const std::string &cwd, digest_string_umap *blobs,
@@ -54,90 +170,22 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
         commandWorkingDirectory = RECC_WORKING_DIR_PREFIX;
     }
     else {
-        std::set<std::string> deps = RECC_DEPS_OVERRIDE;
-
+        std::set<std::string> deps;
         if (RECC_DEPS_OVERRIDE.empty() && !RECC_FORCE_REMOTE) {
-            RECC_LOG_VERBOSE("Getting dependencies");
-
-            CommandFileInfo fileInfo;
-
-            try { // Timed block
-                reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-                    TIMER_NAME_COMPILER_DEPS, RECC_ENABLE_METRICS);
-                fileInfo = Deps::get_file_info(command);
+            try {
+                getDependencies(command, &deps, &products);
             }
-            catch (const subprocess_failed_error &e) {
-                RECC_LOG_VERBOSE("Running locally, to display the error.");
+            catch (const subprocess_failed_error &) {
+                RECC_LOG_VERBOSE("Running locally to display the error.");
                 return nullptr;
             }
-
-            deps = fileInfo.d_dependencies;
-
-            if (RECC_OUTPUT_DIRECTORIES_OVERRIDE.empty() &&
-                RECC_OUTPUT_FILES_OVERRIDE.empty()) {
-                products = fileInfo.d_possibleProducts;
-            }
+        }
+        else {
+            deps = RECC_DEPS_OVERRIDE;
         }
 
-        { // Timed block
-            reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-                TIMER_NAME_BUILD_MERKLE_TREE, RECC_ENABLE_METRICS);
-
-            RECC_LOG_VERBOSE("Building Merkle tree");
-
-            int parentsNeeded = 0;
-            for (const auto &dep : deps) {
-                parentsNeeded = std::max(
-                    parentsNeeded, FileUtils::parentDirectoryLevels(dep));
-            }
-
-            for (const auto &product : products) {
-                parentsNeeded = std::max(
-                    parentsNeeded, FileUtils::parentDirectoryLevels(product));
-            }
-
-            // prefix all relative paths, including the working directory, with
-            // a prefix to keep actions from running in the root of the input
-            // root
-            commandWorkingDirectory =
-                FileUtils::lastNSegments(cwd, parentsNeeded);
-            if (!RECC_WORKING_DIR_PREFIX.empty()) {
-                commandWorkingDirectory.insert(0,
-                                               RECC_WORKING_DIR_PREFIX + "/");
-            }
-
-            for (const auto &dep : deps) {
-                // If the dependency is an absolute path, leave
-                // the merklePath untouched
-                std::string merklePath;
-                if (dep[0] == '/') {
-                    merklePath = dep;
-                }
-                else {
-                    merklePath = commandWorkingDirectory + "/" + dep;
-                }
-                merklePath = FileUtils::normalizePath(merklePath);
-
-                // don't include a dependency if it's exclusion is requested
-                if (FileUtils::hasPathPrefixes(merklePath,
-                                               RECC_DEPS_EXCLUDE_PATHS)) {
-                    RECC_LOG_VERBOSE("Skipping \"" << merklePath << "\"");
-                    continue;
-                }
-
-                std::shared_ptr<ReccFile> file =
-                    ReccFileFactory::createFile(dep.c_str());
-                if (!file) {
-                    RECC_LOG_VERBOSE("Encountered unsupported file \""
-                                     << dep << "\", skipping...");
-                    continue;
-                }
-                nestedDirectory.add(file, merklePath.c_str());
-                // Store the digest to the file content.
-                (*digest_to_filecontents)[file->getDigest()] =
-                    file->getFileContents();
-            }
-        }
+        buildMerkleTree(deps, products, cwd, &nestedDirectory,
+                        digest_to_filecontents, &commandWorkingDirectory);
     }
 
     if (!commandWorkingDirectory.empty()) {
@@ -151,47 +199,34 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
             RECC_LOG_VERBOSE("Command produces file in a location unrelated "
                              "to the current directory, so running locally.");
             RECC_LOG_VERBOSE(
-                "(use RECC_OUTPUT_[FILES|DIRECTORIES]_OVERRIDE to override)");
+                "(use RECC_OUTPUT_[FILES|DIRECTORIES]_OVERRIDE to "
+                "override)");
             return nullptr;
         }
     }
 
     const auto directoryDigest = nestedDirectory.to_digest(blobs);
 
-    proto::Command commandProto;
-
-    for (const auto &arg : command.get_command()) {
-        commandProto.add_arguments(arg);
-    }
-    for (const auto &envIter : RECC_REMOTE_ENV) {
-        auto envVar = commandProto.add_environment_variables();
-        envVar->set_name(envIter.first);
-        envVar->set_value(envIter.second);
-    }
-    for (const auto &product : products) {
-        commandProto.add_output_files(product);
-    }
-    for (const auto &directory : RECC_OUTPUT_DIRECTORIES_OVERRIDE) {
-        commandProto.add_output_directories(directory);
-    }
-    for (const auto &platformIter : RECC_REMOTE_PLATFORM) {
-        auto property = commandProto.mutable_platform()->add_properties();
-        property->set_name(platformIter.first);
-        property->set_value(platformIter.second);
-    }
-    // If deps paths aren't absolute, they are made absolute by having the CWD
-    // prepended, and then normalized and replaced. If that is the case, and
-    // the CWD contains a replaced prefix, then replace it.
-    *commandProto.mutable_working_directory() =
+    // If dependency paths aren't absolute, they are made absolute by having
+    // the CWD prepended, and then normalized and replaced.
+    // If that is the case, and the CWD contains a replaced prefix, then
+    // replace it.
+    const auto resolvedWorkingDirectory =
         FileUtils::resolvePathFromPrefixMap(commandWorkingDirectory);
+
+    const proto::Command commandProto = generateCommandProto(
+        command.get_command(), products, RECC_OUTPUT_DIRECTORIES_OVERRIDE,
+        RECC_REMOTE_ENV, RECC_REMOTE_PLATFORM, resolvedWorkingDirectory);
     RECC_LOG_VERBOSE("Command: " << commandProto.ShortDebugString());
+
     const auto commandDigest = DigestGenerator::make_digest(commandProto);
     (*blobs)[commandDigest] = commandProto.SerializeAsString();
 
     proto::Action action;
-    *action.mutable_command_digest() = commandDigest;
-    *action.mutable_input_root_digest() = directoryDigest;
+    action.mutable_command_digest()->CopyFrom(commandDigest);
+    action.mutable_input_root_digest()->CopyFrom(directoryDigest);
     action.set_do_not_cache(RECC_ACTION_UNCACHEABLE);
+
     return std::make_shared<proto::Action>(action);
 }
 
