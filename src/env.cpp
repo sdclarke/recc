@@ -102,7 +102,7 @@ std::map<std::string, std::string> RECC_REMOTE_ENV = DEFAULT_RECC_REMOTE_ENV;
 std::map<std::string, std::string> RECC_REMOTE_PLATFORM =
     DEFAULT_RECC_REMOTE_PLATFORM;
 
-// Keep this empty initially and have set_default_locations() populate it
+// Keep this empty initially and have set_config_locations() populate it
 std::deque<std::string> RECC_CONFIG_LOCATIONS = {};
 
 namespace {
