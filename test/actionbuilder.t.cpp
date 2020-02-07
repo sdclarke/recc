@@ -38,6 +38,7 @@ class ActionBuilderTestFixture
         d_previous_deps_global_path = RECC_DEPS_GLOBAL_PATHS;
         d_previous_deps_exclude_paths = RECC_DEPS_EXCLUDE_PATHS;
         d_previous_working_dir_prefix = RECC_WORKING_DIR_PREFIX;
+        d_previous_prefix_placement = RECC_PREFIX_REPLACEMENT;
     }
 
     void TearDown() override
@@ -48,6 +49,7 @@ class ActionBuilderTestFixture
         RECC_DEPS_GLOBAL_PATHS = d_previous_deps_global_path;
         RECC_DEPS_EXCLUDE_PATHS = d_previous_deps_exclude_paths;
         RECC_WORKING_DIR_PREFIX = d_previous_working_dir_prefix;
+        RECC_PREFIX_REPLACEMENT = d_previous_prefix_placement;
     }
 
     digest_string_umap blobs;
@@ -62,6 +64,8 @@ class ActionBuilderTestFixture
     bool d_previous_force_remote;
     bool d_previous_deps_global_path;
     std::string d_previous_working_dir_prefix;
+    std::vector<std::pair<std::string, std::string>>
+        d_previous_prefix_placement;
 };
 
 TEST_F(ActionBuilderTestFixture, BuildSimpleCommand)
@@ -147,33 +151,175 @@ TEST_F(ActionBuilderTestFixture, WorkingDirectory)
     }
 }
 
+TEST_F(ActionBuilderTestFixture, PathsArePrefixed)
+{
+    RECC_PREFIX_REPLACEMENT = {{"/usr/bin", "/opt"}};
+    const auto working_directory = "/usr/bin";
+
+    const proto::Command command_proto =
+        this->generateCommandProto({}, {}, {}, {}, {}, working_directory);
+
+    ASSERT_EQ(command_proto.working_directory(), "/opt");
+}
+
+TEST_F(ActionBuilderTestFixture, CommonAncestorPath1)
+{
+    const std::set<std::string> dependencies = {"dep.c"};
+    const std::set<std::string> output_paths = {"../build/"};
+    const std::string working_directory = "/tmp/workspace/";
+
+    const auto commonAncestor =
+        commonAncestorPath(dependencies, output_paths, working_directory);
+    ASSERT_EQ(commonAncestor, "workspace");
+}
+
+TEST_F(ActionBuilderTestFixture, CommonAncestorPath2)
+{
+    const std::set<std::string> dependencies = {"dep.c"};
+    const std::set<std::string> output_paths = {"../../build/"};
+    const std::string working_directory = "/tmp/workspace/";
+
+    const auto commonAncestor =
+        commonAncestorPath(dependencies, output_paths, working_directory);
+    ASSERT_EQ(commonAncestor, "tmp/workspace");
+}
+
+TEST_F(ActionBuilderTestFixture, CommonAncestorPath3)
+{
+    const std::set<std::string> dependencies = {"src/dep.c"};
+    const std::set<std::string> output_paths = {"build/out/"};
+    const std::string working_directory = "/tmp/workspace/";
+
+    const auto commonAncestor =
+        commonAncestorPath(dependencies, output_paths, working_directory);
+    ASSERT_EQ(commonAncestor, "");
+}
+
+TEST_F(ActionBuilderTestFixture, WorkingDirectoryPrefixEmptyPrefix)
+{
+    for (const auto &path : {"dir/", "/tmp/subdir"}) {
+        ASSERT_EQ(path, prefixWorkingDirectory(path, ""));
+    }
+}
+
+TEST_F(ActionBuilderTestFixture, WorkingDirectoryPrefix)
+{
+    const auto prefix = "/home/user/dev";
+
+    ASSERT_EQ(prefixWorkingDirectory("dir/", prefix), "/home/user/dev/dir/");
+    ASSERT_EQ(prefixWorkingDirectory("tmp/subdir", prefix),
+              "/home/user/dev/tmp/subdir");
+}
+
+TEST_P(ActionBuilderTestFixture, ActionContainsExpectedCompileCommand)
+{
+    const std::string working_dir_prefix = GetParam();
+    RECC_WORKING_DIR_PREFIX = working_dir_prefix;
+
+    const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                                "hello.o"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+
+    ASSERT_NE(actionPtr, nullptr);
+
+    proto::Command expected_command;
+    for (const auto &arg : recc_args) {
+        expected_command.add_arguments(arg);
+    }
+    expected_command.add_output_files("hello.o");
+    expected_command.set_working_directory(working_dir_prefix);
+
+    ASSERT_EQ(actionPtr->command_digest(),
+              DigestGenerator::make_digest(expected_command));
+}
+
+TEST_P(ActionBuilderTestFixture, ActionCompileCommandGoldenDigests)
+{
+    /* [!] WARNING [!]
+     * Changes that make this test fail will produce caches misses.
+     */
+
+    const std::string working_dir_prefix = GetParam();
+    RECC_WORKING_DIR_PREFIX = working_dir_prefix;
+
+    const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                                "hello.o"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+    ASSERT_NE(actionPtr, nullptr);
+
+    /** Modifying these hash values should be done carefully and only if
+     * absolutely required.
+     */
+    if (working_dir_prefix.empty()) {
+        EXPECT_EQ(
+            "37db471e0c1faf092b9026586891cde0daefbdd8e5a05853360e7539179c8371",
+            actionPtr->command_digest().hash());
+    }
+    else {
+        EXPECT_EQ(
+            "c80a0f815fd896c301aeab7e4a24c86d73a2893fbc6bffdd651459c157ed5b3f",
+            actionPtr->command_digest().hash());
+    }
+}
+
+TEST_P(ActionBuilderTestFixture, ActionNonCompileCommandGoldenDigests)
+{
+    /* [!] WARNING [!]
+     * Changes that make this test fail will produce caches misses.
+     */
+
+    const std::string working_dir_prefix = GetParam();
+    if (!working_dir_prefix.empty()) {
+        RECC_WORKING_DIR_PREFIX = working_dir_prefix;
+    }
+
+    RECC_FORCE_REMOTE = true;
+
+    const std::vector<std::string> recc_args = {"ls"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+
+    /** Modifying these hash values should be done carefully and only if
+     * absolutely required.
+     */
+    if (working_dir_prefix.empty()) {
+        EXPECT_EQ(
+            "011cf8e3cb5ebadcb43b4088f1c5e7c76ddb2812ab6e3afc062922d80b937110",
+            actionPtr->command_digest().hash());
+    }
+    else {
+        EXPECT_EQ(
+            "5fad9bc2846b1fa419e66b9614643cc3e384889b9e9626b98a40bc125861bc45",
+            actionPtr->command_digest().hash());
+    }
+}
+
 // This is a representation of a flat merkle tree, where things are stored in
 // the required order of traversal.
 typedef std::vector<std::unordered_map<std::string, std::vector<std::string>>>
     MerkleTree;
 
-void fail_to_build_action(const std::vector<std::string> &recc_args)
-{
-    std::stringstream ss;
-    for (const auto &arg : recc_args) {
-        ss << arg << " ";
-    }
-    FAIL() << "Test was unable to build action for '" << ss.str() << "'";
-}
-
 // Recursively verify that a merkle tree matches an expected input layout.
 // This doesn't look at the hashes, just that the declared layout matches
-void verify_merkle_tree(proto::Digest digest, MerkleTree &expected, int &index,
-                        int end, digest_string_umap blobs)
+void verify_merkle_tree(const proto::Digest &digest,
+                        const MerkleTree &expected, size_t &index, size_t end,
+                        const digest_string_umap &blobs)
 {
     ASSERT_LE(index, end) << "Reached end of expected output early";
     auto currentLevel = expected[index];
-    proto::Directory directory;
-    auto current_blob = blobs.find(digest);
+    const auto current_blob = blobs.find(digest);
     ASSERT_NE(current_blob, blobs.end())
         << "No blob found for digest " << digest.hash();
 
-    directory.ParseFromString(current_blob->second);
+    proto::Directory directory;
+    ASSERT_TRUE(directory.ParseFromString(current_blob->second));
 
     // Exit early if there are more/less files or dirs in the given tree than
     // expected
@@ -183,21 +329,23 @@ void verify_merkle_tree(proto::Digest digest, MerkleTree &expected, int &index,
               currentLevel["directories"].size())
         << "Wrong number of directories at current level";
 
-    int f_index = 0;
-    for (auto &file : directory.files()) {
+    size_t f_index = 0;
+    for (const auto &file : directory.files()) {
         ASSERT_EQ(file.name(), currentLevel["files"][f_index])
             << "Wrong file found";
         f_index++;
     }
-    int d_index = 0;
-    for (auto &subdirectory : directory.directories()) {
+
+    size_t d_index = 0;
+    for (const auto &subdirectory : directory.directories()) {
         ASSERT_EQ(subdirectory.name(), currentLevel["directories"][d_index])
             << "Wrong directory found";
         d_index++;
     }
+
     // All the files/directories at this level are correct, now check all the
     // subdirectories
-    for (auto &subdirectory : directory.directories()) {
+    for (const auto &subdirectory : directory.directories()) {
         verify_merkle_tree(subdirectory.digest(), expected, ++index, end,
                            blobs);
     }
@@ -209,31 +357,28 @@ void verify_merkle_tree(proto::Digest digest, MerkleTree &expected, int &index,
  */
 TEST_P(ActionBuilderTestFixture, ActionBuilt)
 {
-    std::string working_dir_prefix = GetParam();
+    const std::string working_dir_prefix = GetParam();
+
     if (!working_dir_prefix.empty()) {
         RECC_WORKING_DIR_PREFIX = working_dir_prefix;
     }
-    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
-                                          "hello.o"};
-    ParsedCommand command(recc_args, cwd.c_str());
 
-    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                &digest_to_filecontents);
+    const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                                "hello.o"};
+    const ParsedCommand command(recc_args, cwd.c_str());
 
-    if (!actionPtr) {
-        fail_to_build_action(recc_args);
-    }
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+
+    ASSERT_NE(actionPtr, nullptr);
+
     MerkleTree expected_tree;
     if (working_dir_prefix.empty()) {
-        EXPECT_EQ(
-            "37db471e0c1faf092b9026586891cde0daefbdd8e5a05853360e7539179c8371",
-            actionPtr->command_digest().hash());
-
         EXPECT_EQ(
             "05a73e8a93752c197cb58e4bdb43bd1d696fa02ecff899a339c4ecacbab2c14b",
             actionPtr->input_root_digest().hash());
 
-        auto digest = DigestGenerator::make_digest(*actionPtr);
+        const auto digest = DigestGenerator::make_digest(*actionPtr);
         EXPECT_EQ(140, digest.size_bytes());
         EXPECT_EQ(
             "4137c380ea4c2ccf8aba9a252926bdb884d16185506e644e1df0e8a76dbd3d94",
@@ -244,14 +389,10 @@ TEST_P(ActionBuilderTestFixture, ActionBuilt)
     }
     else {
         EXPECT_EQ(
-            "c80a0f815fd896c301aeab7e4a24c86d73a2893fbc6bffdd651459c157ed5b3f",
-            actionPtr->command_digest().hash());
-
-        EXPECT_EQ(
             "edd3e49326719324c5af290089e30ec58f11dd9eb2feb029930c95fb8ca32eea",
             actionPtr->input_root_digest().hash());
 
-        auto digest = DigestGenerator::make_digest(*actionPtr);
+        const auto digest = DigestGenerator::make_digest(*actionPtr);
         EXPECT_EQ(140, digest.size_bytes());
         EXPECT_EQ(
             "f77bd8c2492fee3f9c8655381c6912e2dbbd264672a88fe81b18aa77fd1f7707",
@@ -263,7 +404,7 @@ TEST_P(ActionBuilderTestFixture, ActionBuilt)
                          {{"files", {"hello.cpp"}}}};
     }
     // Check the layout of the input_root is what we expect
-    int startIndex = 0;
+    size_t startIndex = 0;
     verify_merkle_tree(actionPtr->input_root_digest(), expected_tree,
                        startIndex, expected_tree.size(), blobs);
 }
@@ -274,15 +415,17 @@ TEST_P(ActionBuilderTestFixture, ActionBuilt)
  */
 TEST_P(ActionBuilderTestFixture, NonCompileCommand)
 {
-    std::string working_dir_prefix = GetParam();
+    const std::string working_dir_prefix = GetParam();
     if (!working_dir_prefix.empty()) {
         RECC_WORKING_DIR_PREFIX = working_dir_prefix;
     }
+
     RECC_FORCE_REMOTE = false;
-    std::vector<std::string> recc_args = {"ls"};
-    ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                &digest_to_filecontents);
+
+    const std::vector<std::string> recc_args = {"ls"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
 
     ASSERT_EQ(actionPtr, nullptr);
 }
@@ -292,30 +435,26 @@ TEST_P(ActionBuilderTestFixture, NonCompileCommand)
  */
 TEST_P(ActionBuilderTestFixture, NonCompileCommandForceRemote)
 {
-    std::string working_dir_prefix = GetParam();
+    const std::string working_dir_prefix = GetParam();
     if (!working_dir_prefix.empty()) {
         RECC_WORKING_DIR_PREFIX = working_dir_prefix;
     }
-    RECC_FORCE_REMOTE = true;
-    std::vector<std::string> recc_args = {"ls"};
-    ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                &digest_to_filecontents);
 
-    if (!actionPtr) {
-        fail_to_build_action(recc_args);
-    }
+    RECC_FORCE_REMOTE = true;
+
+    const std::vector<std::string> recc_args = {"ls"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+    ASSERT_NE(actionPtr, nullptr);
+
     MerkleTree expected_tree;
     if (working_dir_prefix.empty()) {
-        EXPECT_EQ(
-            "011cf8e3cb5ebadcb43b4088f1c5e7c76ddb2812ab6e3afc062922d80b937110",
-            actionPtr->command_digest().hash());
-
         EXPECT_EQ(
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             actionPtr->input_root_digest().hash());
 
-        auto digest = DigestGenerator::make_digest(*actionPtr);
+        const auto digest = DigestGenerator::make_digest(*actionPtr);
 
         EXPECT_EQ(138, digest.size_bytes());
         EXPECT_EQ(
@@ -327,14 +466,10 @@ TEST_P(ActionBuilderTestFixture, NonCompileCommandForceRemote)
     }
     else {
         EXPECT_EQ(
-            "5fad9bc2846b1fa419e66b9614643cc3e384889b9e9626b98a40bc125861bc45",
-            actionPtr->command_digest().hash());
-
-        EXPECT_EQ(
             "eadd312151cd61b24291b3f0d4ec461476354e8147379246c7024903cf17cdbb",
             actionPtr->input_root_digest().hash());
 
-        auto digest = DigestGenerator::make_digest(*actionPtr);
+        const auto digest = DigestGenerator::make_digest(*actionPtr);
 
         EXPECT_EQ(140, digest.size_bytes());
         EXPECT_EQ(
@@ -345,8 +480,9 @@ TEST_P(ActionBuilderTestFixture, NonCompileCommandForceRemote)
         expected_tree = {{{"directories", {working_dir_prefix}}},
                          {{"files", {}}}};
     }
+
     // Check the layout of the input_root is what we expect
-    int startIndex = 0;
+    size_t startIndex = 0;
     verify_merkle_tree(actionPtr->input_root_digest(), expected_tree,
                        startIndex, expected_tree.size(), blobs);
 }
@@ -358,7 +494,8 @@ TEST_P(ActionBuilderTestFixture, NonCompileCommandForceRemote)
  */
 TEST_P(ActionBuilderTestFixture, AbsolutePathActionBuilt)
 {
-    std::string working_dir_prefix = GetParam();
+    const std::string working_dir_prefix = GetParam();
+
     MerkleTree expected_tree;
     if (working_dir_prefix.empty()) {
         expected_tree = {{{"files", {"hello.cpp"}}, {"directories", {"usr"}}},
@@ -374,18 +511,20 @@ TEST_P(ActionBuilderTestFixture, AbsolutePathActionBuilt)
     }
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
-    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
-                                          "hello.o"};
-    ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                &digest_to_filecontents);
+
+    const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                                "hello.o"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+    ASSERT_NE(actionPtr, nullptr);
 
     // Since this test unfortunately relies on the hash of a system installed
     // file, it can't compare the input root digest. Instead go through the
     // merkle tree and verify each level has the correct layout.
 
-    auto current_digest = actionPtr->input_root_digest();
-    int startIndex = 0;
+    const auto current_digest = actionPtr->input_root_digest();
+    size_t startIndex = 0;
     verify_merkle_tree(current_digest, expected_tree, startIndex,
                        expected_tree.size(), blobs);
 }
@@ -397,7 +536,8 @@ TEST_P(ActionBuilderTestFixture, AbsolutePathActionBuilt)
  */
 TEST_P(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
 {
-    std::string working_dir_prefix = GetParam();
+    const std::string working_dir_prefix = GetParam();
+
     MerkleTree expected_tree;
     if (working_dir_prefix.empty()) {
         expected_tree = {{{"directories", {"actionbuilder", "deps", "usr"}}},
@@ -419,21 +559,24 @@ TEST_P(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
                           "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
-    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
-                                          "hello.o"};
-    ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                &digest_to_filecontents);
 
-    auto current_digest = actionPtr->input_root_digest();
-    int startIndex = 0;
+    const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                                "hello.o"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+    ASSERT_NE(actionPtr, nullptr);
+
+    const auto current_digest = actionPtr->input_root_digest();
+    size_t startIndex = 0;
     verify_merkle_tree(current_digest, expected_tree, startIndex,
                        expected_tree.size(), blobs);
 }
 
 TEST_P(ActionBuilderTestFixture, ExcludePath)
 {
-    std::string working_dir_prefix = GetParam();
+    const std::string working_dir_prefix = GetParam();
+
     MerkleTree expected_tree;
     if (working_dir_prefix.empty()) {
         expected_tree = {{{"directories", {"actionbuilder", "deps"}}},
@@ -452,21 +595,24 @@ TEST_P(ActionBuilderTestFixture, ExcludePath)
                           "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
     RECC_DEPS_EXCLUDE_PATHS = {"/usr/include"};
-    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
-                                          "hello.o"};
-    ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                &digest_to_filecontents);
 
-    auto current_digest = actionPtr->input_root_digest();
-    int startIndex = 0;
+    const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                                "hello.o"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+    ASSERT_NE(actionPtr, nullptr);
+
+    const auto current_digest = actionPtr->input_root_digest();
+    size_t startIndex = 0;
     verify_merkle_tree(current_digest, expected_tree, startIndex,
                        expected_tree.size(), blobs);
 }
 
 TEST_P(ActionBuilderTestFixture, ExcludePathMultipleMatchOne)
 {
-    std::string working_dir_prefix = GetParam();
+    const std::string working_dir_prefix = GetParam();
+
     MerkleTree expected_tree;
     if (working_dir_prefix.empty()) {
         expected_tree = {{{"directories", {"actionbuilder", "deps"}}},
@@ -480,26 +626,30 @@ TEST_P(ActionBuilderTestFixture, ExcludePathMultipleMatchOne)
                          {{"files", {"hello.cpp"}}},
                          {{"files", {"empty.c"}}}};
     }
+
     cwd = FileUtils::getCurrentWorkingDirectory();
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "../deps/empty.c",
                           "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
     RECC_DEPS_EXCLUDE_PATHS = {"/foo/bar", "/usr/include"};
+
     std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
                                           "hello.o"};
-    ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                &digest_to_filecontents);
+    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+    ASSERT_NE(actionPtr, nullptr);
 
-    auto current_digest = actionPtr->input_root_digest();
-    int startIndex = 0;
+    const auto current_digest = actionPtr->input_root_digest();
+    size_t startIndex = 0;
     verify_merkle_tree(current_digest, expected_tree, startIndex,
                        expected_tree.size(), blobs);
 }
 
 TEST_P(ActionBuilderTestFixture, ExcludePathNoMatch)
 {
-    std::string working_dir_prefix = GetParam();
+    const std::string working_dir_prefix = GetParam();
+
     MerkleTree expected_tree;
     if (working_dir_prefix.empty()) {
         expected_tree = {{{"directories", {"actionbuilder", "deps", "usr"}}},
@@ -522,21 +672,24 @@ TEST_P(ActionBuilderTestFixture, ExcludePathNoMatch)
                           "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
     RECC_DEPS_EXCLUDE_PATHS = {"/foo/bar"};
-    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
-                                          "hello.o"};
-    ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                &digest_to_filecontents);
 
-    auto current_digest = actionPtr->input_root_digest();
-    int startIndex = 0;
+    const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                                "hello.o"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+    ASSERT_NE(actionPtr, nullptr);
+
+    const auto current_digest = actionPtr->input_root_digest();
+    size_t startIndex = 0;
     verify_merkle_tree(current_digest, expected_tree, startIndex,
                        expected_tree.size(), blobs);
 }
 
 TEST_P(ActionBuilderTestFixture, ExcludePathSingleWithMultiInput)
 {
-    std::string working_dir_prefix = GetParam();
+    const std::string working_dir_prefix = GetParam();
+
     MerkleTree expected_tree;
     if (working_dir_prefix.empty()) {
         expected_tree = {{{"directories", {"actionbuilder", "deps", "usr"}}},
@@ -554,20 +707,22 @@ TEST_P(ActionBuilderTestFixture, ExcludePathSingleWithMultiInput)
                          {{"directories", {"include"}}},
                          {{"files", {"ctype.h"}}}};
     }
+
     cwd = FileUtils::getCurrentWorkingDirectory();
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h",
                           "/usr/include/net/ethernet.h", "../deps/empty.c",
                           "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
     RECC_DEPS_EXCLUDE_PATHS = {"/usr/include/net"};
-    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
-                                          "hello.o"};
-    ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                &digest_to_filecontents);
 
-    auto current_digest = actionPtr->input_root_digest();
-    int startIndex = 0;
+    const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                                "hello.o"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+
+    const auto current_digest = actionPtr->input_root_digest();
+    size_t startIndex = 0;
     verify_merkle_tree(current_digest, expected_tree, startIndex,
                        expected_tree.size(), blobs);
 }
@@ -594,15 +749,17 @@ TEST_P(ActionBuilderTestFixture, EmptyWorkingDirInputRoot)
     }
     cwd = FileUtils::getCurrentWorkingDirectory();
     RECC_DEPS_OVERRIDE = {"../deps/empty.c"};
-    std::vector<std::string> recc_args = {"gcc", "-c", "../deps/empty.c", "-o",
-                                          "empty.o"};
-    ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                &digest_to_filecontents);
 
-    auto current_digest = actionPtr->input_root_digest();
+    const std::vector<std::string> recc_args = {"gcc", "-c", "../deps/empty.c",
+                                                "-o", "empty.o"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+    ASSERT_NE(actionPtr, nullptr);
 
-    int startIndex = 0;
+    const auto current_digest = actionPtr->input_root_digest();
+
+    size_t startIndex = 0;
     verify_merkle_tree(current_digest, expected_tree, startIndex,
                        expected_tree.size(), blobs);
 }
@@ -613,15 +770,15 @@ TEST_P(ActionBuilderTestFixture, EmptyWorkingDirInputRoot)
  */
 TEST_P(ActionBuilderTestFixture, UnrelatedOutputDirectory)
 {
-    std::string working_dir_prefix = GetParam();
+    const std::string working_dir_prefix = GetParam();
     if (!working_dir_prefix.empty()) {
         RECC_WORKING_DIR_PREFIX = working_dir_prefix;
     }
-    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
-                                          "/fakedirname/hello.o"};
-    ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                &digest_to_filecontents);
+    const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                                "/fakedirname/hello.o"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
 
     ASSERT_EQ(actionPtr, nullptr);
 }
@@ -632,7 +789,8 @@ TEST_P(ActionBuilderTestFixture, UnrelatedOutputDirectory)
  */
 TEST_P(ActionBuilderTestFixture, SimplePathReplacement)
 {
-    std::string working_dir_prefix = GetParam();
+    const std::string working_dir_prefix = GetParam();
+
     MerkleTree expected_tree;
     if (working_dir_prefix.empty()) {
         expected_tree = {{{"files", {"hello.cpp"}}, {"directories", {"usr"}}},
@@ -644,19 +802,22 @@ TEST_P(ActionBuilderTestFixture, SimplePathReplacement)
                          {{"files", {"hello.cpp"}}},
                          {{"files", {"ctype.h"}}}};
     }
+
     // Replace all paths to /usr/include to /usr
     RECC_PREFIX_REPLACEMENT = {{"/usr/include", "/usr"}};
 
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
-    std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
-                                          "hello.o"};
-    ParsedCommand command(recc_args, cwd.c_str());
-    auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                                &digest_to_filecontents);
 
-    auto current_digest = actionPtr->input_root_digest();
-    int startIndex = 0;
+    const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                                "hello.o"};
+    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+    ASSERT_NE(actionPtr, nullptr);
+
+    const auto current_digest = actionPtr->input_root_digest();
+    size_t startIndex = 0;
     verify_merkle_tree(current_digest, expected_tree, startIndex,
                        expected_tree.size(), blobs);
 }

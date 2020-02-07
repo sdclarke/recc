@@ -27,7 +27,7 @@
 namespace BloombergLP {
 namespace recc {
 
-proto::Command ActionBuilder::generateCommandProto(
+proto::Command ActionBuilder::populateCommandProto(
     const std::vector<std::string> &command,
     const std::set<std::string> &outputFiles,
     const std::set<std::string> &outputDirectories,
@@ -66,18 +66,11 @@ proto::Command ActionBuilder::generateCommandProto(
     return commandProto;
 }
 
-void ActionBuilder::buildMerkleTree(const std::set<std::string> &dependencies,
-                                    const std::set<std::string> &products,
-                                    const std::string &cwd,
-                                    NestedDirectory *nestedDirectory,
-                                    digest_string_umap *digest_to_filecontents,
-                                    std::string *commandWorkingDirectory)
-{ // Timed function
-    reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-        TIMER_NAME_BUILD_MERKLE_TREE, RECC_ENABLE_METRICS);
-
-    RECC_LOG_VERBOSE("Building Merkle tree");
-
+std::string
+ActionBuilder::commonAncestorPath(const std::set<std::string> &dependencies,
+                                  const std::set<std::string> &products,
+                                  const std::string &workingDirectory)
+{
     int parentsNeeded = 0;
     for (const auto &dep : dependencies) {
         parentsNeeded =
@@ -89,19 +82,34 @@ void ActionBuilder::buildMerkleTree(const std::set<std::string> &dependencies,
             std::max(parentsNeeded, FileUtils::parentDirectoryLevels(product));
     }
 
-    // prefix all relative paths, including the working directory, with
-    // a prefix to keep actions from running in the root of the input
-    // root
-    *commandWorkingDirectory = FileUtils::lastNSegments(cwd, parentsNeeded);
-    if (!RECC_WORKING_DIR_PREFIX.empty()) {
-        commandWorkingDirectory->insert(0, RECC_WORKING_DIR_PREFIX + "/");
+    return FileUtils::lastNSegments(workingDirectory, parentsNeeded);
+}
+
+std::string
+ActionBuilder::prefixWorkingDirectory(const std::string &workingDirectory,
+                                      const std::string &prefix)
+{
+    if (prefix.empty()) {
+        return workingDirectory;
     }
+
+    return prefix + "/" + workingDirectory;
+}
+
+void ActionBuilder::buildMerkleTree(const std::set<std::string> &dependencies,
+                                    const std::string &cwd,
+                                    NestedDirectory *nestedDirectory,
+                                    digest_string_umap *digest_to_filecontents)
+{ // Timed function
+    reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
+        TIMER_NAME_BUILD_MERKLE_TREE, RECC_ENABLE_METRICS);
+
+    RECC_LOG_VERBOSE("Building Merkle tree");
 
     for (const auto &dep : dependencies) {
         // If the dependency is an absolute path, leave the merklePath
         // untouched
-        std::string merklePath =
-            (dep[0] == '/') ? dep : *commandWorkingDirectory + "/" + dep;
+        std::string merklePath = (dep[0] == '/') ? dep : cwd + "/" + dep;
         merklePath = FileUtils::normalizePath(merklePath);
 
         // don't include a dependency if it's exclusion is requested
@@ -181,8 +189,12 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
             deps = RECC_DEPS_OVERRIDE;
         }
 
-        buildMerkleTree(deps, products, cwd, &nestedDirectory,
-                        digest_to_filecontents, &commandWorkingDirectory);
+        const auto commonAncestor = commonAncestorPath(deps, products, cwd);
+        commandWorkingDirectory =
+            prefixWorkingDirectory(commonAncestor, RECC_WORKING_DIR_PREFIX);
+
+        buildMerkleTree(deps, commandWorkingDirectory, &nestedDirectory,
+                        digest_to_filecontents);
     }
 
     if (!commandWorkingDirectory.empty()) {
@@ -204,16 +216,9 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
 
     const auto directoryDigest = nestedDirectory.to_digest(blobs);
 
-    // If dependency paths aren't absolute, they are made absolute by having
-    // the CWD prepended, and then normalized and replaced.
-    // If that is the case, and the CWD contains a replaced prefix, then
-    // replace it.
-    const auto resolvedWorkingDirectory =
-        FileUtils::resolvePathFromPrefixMap(commandWorkingDirectory);
-
     const proto::Command commandProto = generateCommandProto(
         command.get_command(), products, RECC_OUTPUT_DIRECTORIES_OVERRIDE,
-        RECC_REMOTE_ENV, RECC_REMOTE_PLATFORM, resolvedWorkingDirectory);
+        RECC_REMOTE_ENV, RECC_REMOTE_PLATFORM, commandWorkingDirectory);
     RECC_LOG_VERBOSE("Command: " << commandProto.ShortDebugString());
 
     const auto commandDigest = DigestGenerator::make_digest(commandProto);
@@ -225,6 +230,27 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
     action.set_do_not_cache(RECC_ACTION_UNCACHEABLE);
 
     return std::make_shared<proto::Action>(action);
+}
+
+build::bazel::remote::execution::v2::Command
+ActionBuilder::generateCommandProto(
+    const std::vector<std::string> &command,
+    const std::set<std::string> &products,
+    const std::set<std::string> &outputDirectories,
+    const std::map<std::string, std::string> &remoteEnvironment,
+    const std::map<std::string, std::string> &platformProperties,
+    const std::string &workingDirectory)
+{
+    // If dependency paths aren't absolute, they are made absolute by having
+    // the CWD prepended, and then normalized and replaced.
+    // If that is the case, and the CWD contains a replaced prefix, then
+    // replace it.
+    const auto resolvedWorkingDirectory =
+        FileUtils::resolvePathFromPrefixMap(workingDirectory);
+
+    return ActionBuilder::populateCommandProto(
+        command, products, outputDirectories, remoteEnvironment,
+        platformProperties, resolvedWorkingDirectory);
 }
 
 } // namespace recc

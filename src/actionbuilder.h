@@ -42,6 +42,14 @@ struct ActionBuilder {
                 digest_string_umap *blobs);
 
   protected: // for unit testing
+    static proto::Command generateCommandProto(
+        const std::vector<std::string> &command,
+        const std::set<std::string> &products,
+        const std::set<std::string> &outputDirectories,
+        const std::map<std::string, std::string> &remoteEnvironment,
+        const std::map<std::string, std::string> &platformProperties,
+        const std::string &workingDirectory);
+
     /**
      * Populates a `Command` protobuf from a `ParsedCommand` and additional
      * information.
@@ -49,7 +57,7 @@ struct ActionBuilder {
      * It sets the command's arguments, its output directories, the environment
      * variables and platform properties for the remote.
      */
-    static proto::Command generateCommandProto(
+    static proto::Command populateCommandProto(
         const std::vector<std::string> &command,
         const std::set<std::string> &products,
         const std::set<std::string> &outputDirectories,
@@ -66,11 +74,9 @@ struct ActionBuilder {
      * If necessary, modifies the contents of `commandWorkingDirectory`.
      */
     static void buildMerkleTree(const std::set<std::string> &dependencies,
-                                const std::set<std::string> &products,
                                 const std::string &cwd,
                                 NestedDirectory *nestedDirectory,
-                                digest_string_umap *digest_to_filecontents,
-                                std::string *commandWorkingDirectory);
+                                digest_string_umap *digest_to_filecontents);
 
     /**
      * Gathers the `CommandFileInfo` belonging to the given `command` and
@@ -80,6 +86,22 @@ struct ActionBuilder {
     static void getDependencies(const ParsedCommand &command,
                                 std::set<std::string> *dependencies,
                                 std::set<std::string> *products);
+
+    /** Scans the list of dependencies and output files and strips
+     * `workingDirectory` to the level of the common ancestor.
+     */
+    static std::string
+    commonAncestorPath(const std::set<std::string> &dependencies,
+                       const std::set<std::string> &products,
+                       const std::string &workingDirectory);
+
+    /**
+     * If prefix is not empty, prepends it to the working directory path.
+     * Otherwise `workingDirectory` is return unmodified.
+     */
+    static std::string
+    prefixWorkingDirectory(const std::string &workingDirectory,
+                           const std::string &prefix);
 };
 
 } // namespace recc
