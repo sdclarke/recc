@@ -17,19 +17,21 @@
 
 #include <iostream>
 
+#include <buildboxcommonmetrics_durationmetricvalue.h>
+#include <buildboxcommonmetrics_publisherguard.h>
+#include <buildboxcommonmetrics_statsdpublisher.h>
+#include <buildboxcommonmetrics_totaldurationmetricvalue.h>
 #include <env.h>
-#include <reccmetrics/durationmetricvalue.h>
-#include <reccmetrics/publisherguard.h>
-#include <reccmetrics/statsdpublisher.h>
-#include <reccmetrics/totaldurationmetricvalue.h>
 
 namespace BloombergLP {
 namespace recc {
+
 // This typedef here specifies the Metric ValueTypes
 // we want the publisher to publish
 typedef decltype(
-    reccmetrics::StatsDPublisher<reccmetrics::DurationMetricValue,
-                                 reccmetrics::TotalDurationMetricValue>())
+    buildboxcommon::buildboxcommonmetrics::StatsDPublisher<
+        buildboxcommon::buildboxcommonmetrics::DurationMetricValue,
+        buildboxcommon::buildboxcommonmetrics::TotalDurationMetricValue>())
     StatsDPublisherType;
 
 StatsDPublisherType get_statsdpublisher_from_config();

@@ -40,12 +40,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <reccmetrics/durationmetrictimer.h>
-#include <reccmetrics/durationmetricvalue.h>
-#include <reccmetrics/metricguard.h>
-#include <reccmetrics/publisherguard.h>
-#include <reccmetrics/statsdpublisher.h>
-#include <reccmetrics/totaldurationmetricvalue.h>
+#include <buildboxcommonmetrics_durationmetrictimer.h>
+#include <buildboxcommonmetrics_durationmetricvalue.h>
+#include <buildboxcommonmetrics_metricguard.h>
+#include <buildboxcommonmetrics_publisherguard.h>
+#include <buildboxcommonmetrics_statsdpublisher.h>
+#include <buildboxcommonmetrics_totaldurationmetricvalue.h>
 
 #define TIMER_NAME_EXECUTE_ACTION "recc.execute_action"
 #define TIMER_NAME_QUERY_ACTION_CACHE "recc.query_action_cache"
@@ -211,8 +211,9 @@ int main(int argc, char *argv[])
     Env::set_config_locations();
     Env::parse_config_variables();
 
-    reccmetrics::PublisherGuard<StatsDPublisherType> statsDPublisherGuard(
-        RECC_ENABLE_METRICS, get_statsdpublisher_from_config());
+    buildboxcommon::buildboxcommonmetrics::PublisherGuard<StatsDPublisherType>
+        statsDPublisherGuard(RECC_ENABLE_METRICS,
+                             get_statsdpublisher_from_config());
 
     const std::string cwd = FileUtils::getCurrentWorkingDirectory();
     ParsedCommand command(&argv[1], cwd.c_str());
@@ -279,8 +280,9 @@ int main(int argc, char *argv[])
     if (!RECC_SKIP_CACHE) {
         try {
             { // Timed block
-                reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-                    TIMER_NAME_QUERY_ACTION_CACHE, RECC_ENABLE_METRICS);
+                buildboxcommon::buildboxcommonmetrics::MetricGuard<
+                    buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
+                    mt(TIMER_NAME_QUERY_ACTION_CACHE, RECC_ENABLE_METRICS);
 
                 action_in_cache = client.fetch_from_action_cache(
                     actionDigest, command.get_products(), RECC_INSTANCE,
@@ -326,8 +328,9 @@ int main(int argc, char *argv[])
                              << actionDigest.hash() << "/"
                              << actionDigest.size_bytes());
             { // Timed block
-                reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-                    TIMER_NAME_EXECUTE_ACTION, RECC_ENABLE_METRICS);
+                buildboxcommon::buildboxcommonmetrics::MetricGuard<
+                    buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
+                    mt(TIMER_NAME_EXECUTE_ACTION, RECC_ENABLE_METRICS);
 
                 result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
             }

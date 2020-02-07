@@ -1,4 +1,4 @@
-// Copyright 2018 Bloomberg Finance L.P
+// Copyright 2020 Bloomberg Finance L.P
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,13 +13,13 @@
 // limitations under the License.
 
 #include <actionbuilder.h>
+#include <buildboxcommonmetrics_durationmetrictimer.h>
+#include <buildboxcommonmetrics_metricguard.h>
 #include <digestgenerator.h>
 #include <env.h>
 #include <fileutils.h>
 #include <logging.h>
 #include <reccdefaults.h>
-#include <reccmetrics/durationmetrictimer.h>
-#include <reccmetrics/metricguard.h>
 
 #define TIMER_NAME_COMPILER_DEPS "recc.compiler_deps"
 #define TIMER_NAME_BUILD_MERKLE_TREE "recc.build_merkle_tree"
@@ -101,8 +101,9 @@ void ActionBuilder::buildMerkleTree(const std::set<std::string> &dependencies,
                                     NestedDirectory *nestedDirectory,
                                     digest_string_umap *digest_to_filecontents)
 { // Timed function
-    reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-        TIMER_NAME_BUILD_MERKLE_TREE, RECC_ENABLE_METRICS);
+    buildboxcommon::buildboxcommonmetrics::MetricGuard<
+        buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
+        mt(TIMER_NAME_BUILD_MERKLE_TREE, RECC_ENABLE_METRICS);
 
     RECC_LOG_VERBOSE("Building Merkle tree");
 
@@ -138,8 +139,9 @@ void ActionBuilder::getDependencies(const ParsedCommand &command,
     RECC_LOG_VERBOSE("Getting dependencies");
     CommandFileInfo fileInfo;
     { // Timed block
-        reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-            TIMER_NAME_COMPILER_DEPS, RECC_ENABLE_METRICS);
+        buildboxcommon::buildboxcommonmetrics::MetricGuard<
+            buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
+            mt(TIMER_NAME_COMPILER_DEPS, RECC_ENABLE_METRICS);
         fileInfo = Deps::get_file_info(command);
     }
 

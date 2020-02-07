@@ -19,21 +19,22 @@ namespace recc {
 
 StatsDPublisherType get_statsdpublisher_from_config()
 {
-    reccmetrics::StatsDPublisherOptions::PublishMethod publishMethod =
-        reccmetrics::StatsDPublisherOptions::PublishMethod::StdErr;
+    buildboxcommon::buildboxcommonmetrics::StatsDPublisherOptions::
+        PublishMethod publishMethod = buildboxcommon::buildboxcommonmetrics::
+            StatsDPublisherOptions::PublishMethod::StdErr;
 
     std::string publishPath = "";
     int publishPort = 0;
 
     if (RECC_METRICS_UDP_SERVER.size()) {
-        publishMethod =
-            reccmetrics::StatsDPublisherOptions::PublishMethod::UDP;
+        publishMethod = buildboxcommon::buildboxcommonmetrics::
+            StatsDPublisherOptions::PublishMethod::UDP;
         Env::parse_host_port_string(RECC_METRICS_UDP_SERVER, publishPath,
                                     &publishPort);
     }
     else if (RECC_METRICS_FILE.size()) {
-        publishMethod =
-            reccmetrics::StatsDPublisherOptions::PublishMethod::File;
+        publishMethod = buildboxcommon::buildboxcommonmetrics::
+            StatsDPublisherOptions::PublishMethod::File;
         publishPath = RECC_METRICS_FILE;
     }
 

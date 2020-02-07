@@ -1,5 +1,5 @@
 
-image: grpc/cxx:1.12.0 # default image runs debian:stretch
+image: registry.gitlab.com/buildgrid/buildbox/buildbox-common:latest
 
 stages:
     - build

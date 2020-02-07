@@ -5,6 +5,12 @@ project(recc CXX)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+find_package(BuildboxCommon REQUIRED)
+
+if(NOT BuildboxCommon_FOUND)
+        message(FATAL_ERROR "recc requires linking against the buildbox-common library. Please build and install it first.")
+endif()
+
 # gcc on AIX can't deal with -isystem that contains C++ .h files
 if(${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED ON)

@@ -15,9 +15,9 @@
 #include <casclient.h>
 #include <digestgenerator.h>
 
+#include <buildboxcommonmetrics_durationmetrictimer.h>
+#include <buildboxcommonmetrics_metricguard.h>
 #include <grpcretry.h>
-#include <reccmetrics/durationmetrictimer.h>
-#include <reccmetrics/metricguard.h>
 
 #include <random>
 #include <sstream>
@@ -273,8 +273,9 @@ proto::FindMissingBlobsResponse CASClient::findMissingBlobs(
     };
 
     { // Timed block
-        reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-            TIMER_NAME_FIND_MISSING_BLOBS, RECC_ENABLE_METRICS);
+        buildboxcommon::buildboxcommonmetrics::MetricGuard<
+            buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
+            mt(TIMER_NAME_FIND_MISSING_BLOBS, RECC_ENABLE_METRICS);
 
         grpc_retry(missing_blobs_lambda, d_grpcContext);
     }
@@ -383,8 +384,9 @@ void CASClient::batchUpdateBlobs(
 
     if (!batchUpdateRequest.requests().empty()) {
         // Timed block
-        reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-            TIMER_NAME_UPLOAD_MISSING_BLOBS, RECC_ENABLE_METRICS);
+        buildboxcommon::buildboxcommonmetrics::MetricGuard<
+            buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
+            mt(TIMER_NAME_UPLOAD_MISSING_BLOBS, RECC_ENABLE_METRICS);
 
         RECC_LOG_VERBOSE("Sending final update request");
         batchUpdateBlobs(batchUpdateRequest);

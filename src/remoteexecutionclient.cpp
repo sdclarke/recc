@@ -14,13 +14,13 @@
 
 #include <remoteexecutionclient.h>
 
+#include <buildboxcommonmetrics_durationmetrictimer.h>
+#include <buildboxcommonmetrics_metricguard.h>
 #include <digestgenerator.h>
 #include <fileutils.h>
 #include <grpcretry.h>
 #include <logging.h>
 #include <reccdefaults.h>
-#include <reccmetrics/durationmetrictimer.h>
-#include <reccmetrics/metricguard.h>
 #include <remoteexecutionsignals.h>
 
 #include <signal.h>
@@ -261,8 +261,9 @@ void RemoteExecutionClient::write_files_to_disk(const ActionResult &result,
                                                 const char *root)
 {
     // Timed function
-    reccmetrics::MetricGuard<reccmetrics::DurationMetricTimer> mt(
-        TIMER_NAME_FETCH_WRITE_RESULTS, RECC_ENABLE_METRICS);
+    buildboxcommon::buildboxcommonmetrics::MetricGuard<
+        buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
+        mt(TIMER_NAME_FETCH_WRITE_RESULTS, RECC_ENABLE_METRICS);
 
     for (const auto &fileIter : result.d_outputFiles) {
         const std::string path = std::string(root) + "/" + fileIter.first;

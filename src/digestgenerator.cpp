@@ -14,9 +14,9 @@
 
 #include <digestgenerator.h>
 
+#include <buildboxcommonmetrics_metricguard.h>
+#include <buildboxcommonmetrics_totaldurationmetrictimer.h>
 #include <env.h>
-#include <reccmetrics/metricguard.h>
-#include <reccmetrics/totaldurationmetrictimer.h>
 
 #include <iomanip>
 #include <sstream>
@@ -130,8 +130,9 @@ proto::Digest DigestGenerator::make_digest(const std::string &blob)
 
     std::string hash;
     { // Timed block
-        reccmetrics::MetricGuard<reccmetrics::TotalDurationMetricTimer> mt(
-            TIMER_NAME_CALCULATE_DIGESTS_TOTAL, RECC_ENABLE_METRICS);
+        buildboxcommon::buildboxcommonmetrics::MetricGuard<
+            buildboxcommon::buildboxcommonmetrics::TotalDurationMetricTimer>
+            mt(TIMER_NAME_CALCULATE_DIGESTS_TOTAL, RECC_ENABLE_METRICS);
 
         // Initialize context:
         EVP_MD_CTX_ptr hashContext = createDigestContext(hashAlgorithm);

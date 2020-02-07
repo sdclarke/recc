@@ -17,8 +17,6 @@
 #include <digestgenerator.h>
 #include <fileutils.h>
 #include <logging.h>
-#include <reccmetrics/metricguard.h>
-#include <reccmetrics/totaldurationmetrictimer.h>
 
 #include <cerrno>
 #include <cstring>

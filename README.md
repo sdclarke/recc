@@ -17,6 +17,7 @@ For information regarding contributing to this project, please read the [Contrib
 ## Dependencies
 Currently recc relies on:
 
+* [buildbox-common][]
 * [gRPC][]
 * [Protobuf][]
 * [OpenSSL][]
@@ -24,7 +25,11 @@ Currently recc relies on:
 * [GoogleTest][]
 * [pkg-config][]
 
-Some package managers (apt) include all these dependencies while others (brew) require manual installation of some. Please follow the relevant guides for your OS.
+### Installing buildbox-common
+
+Follow the instructions to install buildbox-common using the README located here: https://gitlab.com/BuildGrid/buildbox/buildbox-common
+
+Once buildbox-common is installed, you should have the necessary dependencies to run recc. If not, please continue with a relevant section below.
 
 <!-- # OSX -->
 
@@ -104,20 +109,6 @@ $ [sudo] apt-get update && [sudo] apt-get upgrade
 
 Clone `recc` and follow the instructions in either the [Installing on Debian section](#installing-on-debian-based-linux-distributions) or [Installing on Ubuntu section](#installing-on-Ubuntu).
 
-<!-- Reference links -->
-[grpc]: https://grpc.io/
-[protobuf]: https://github.com/google/protobuf/
-[openssl]: https://www.openssl.org/
-[cmake]: https://cmake.org/
-[googletest]: https://github.com/google/googletest
-[googletest source]: https://github.com/google/googletest/archive/release-1.8.1.zip
-[pkg-config]: https://www.freedesktop.org/wiki/Software/pkg-config/
-[remoteex]: https://docs.bazel.build/versions/master/remote-execution.html
-[buildgrid]: http://buildgrid.build/
-[buildbox-worker]: https://gitlab.com/BuildGrid/buildbox/buildbox-worker
-[presentation]: https://www.youtube.com/watch?v=w1ZA4Rrf91I
-[blog post]: https://www.codethink.com/articles/2018/introducing-buildgrid/
-[techat]: https://www.techatbloomberg.com/
 
 ## Compiling
 Once you've [installed the dependencies](#dependencies), you can compile `recc` using the following commands:
@@ -348,3 +339,19 @@ them in the `bin` subdirectory of the project root.
 
 - `casupload [files]` - Upload the given files to CAS, then print the digest
   hash and size of the resulting Directory message.
+
+<!-- Reference links -->
+[buildbox-common]: https://gitlab.com/BuildGrid/buildbox/buildbox-common
+[grpc]: https://grpc.io/
+[protobuf]: https://github.com/google/protobuf/
+[openssl]: https://www.openssl.org/
+[cmake]: https://cmake.org/
+[googletest]: https://github.com/google/googletest
+[googletest source]: https://github.com/google/googletest/archive/release-1.8.1.zip
+[pkg-config]: https://www.freedesktop.org/wiki/Software/pkg-config/
+[remoteex]: https://docs.bazel.build/versions/master/remote-execution.html
+[buildgrid]: http://buildgrid.build/
+[buildbox-worker]: https://gitlab.com/BuildGrid/buildbox/buildbox-worker
+[presentation]: https://www.youtube.com/watch?v=w1ZA4Rrf91I
+[blog post]: https://www.codethink.com/articles/2018/introducing-buildgrid/
+[techat]: https://www.techatbloomberg.com/
