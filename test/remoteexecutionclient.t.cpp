@@ -14,10 +14,11 @@
 
 #include <digestgenerator.h>
 #include <env.h>
-#include <fileutils.h>
 #include <grpccontext.h>
 #include <logging.h>
 #include <remoteexecutionclient.h>
+
+#include <buildboxcommon_temporarydirectory.h>
 
 #include <build/bazel/remote/execution/v2/remote_execution_mock.grpc.pb.h>
 #include <gmock/gmock.h>
@@ -249,7 +250,7 @@ TEST_F(RemoteExecutionClientTestFixture, RpcRetryTest)
 
 TEST_F(RemoteExecutionClientTestFixture, WriteFilesToDisk)
 {
-    TemporaryDirectory tempDir;
+    buildboxcommon::TemporaryDirectory tempDir;
 
     ActionResult testResult;
     proto::Digest d;

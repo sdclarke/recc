@@ -16,7 +16,8 @@
 
 #include <fstream>
 
-#include <fileutils.h>
+#include <buildboxcommon_temporarydirectory.h>
+
 #include <gtest/gtest.h>
 
 using namespace BloombergLP::recc;
@@ -45,7 +46,7 @@ TEST(SubprocessTest, CommandNotFound)
 TEST(SubprocessTest, CommandIsNotAnExecutable)
 {
     // Creating an empty file, which will fail when trying to execute it:
-    TemporaryDirectory temp_dir;
+    buildboxcommon::TemporaryDirectory temp_dir;
     const std::string file_path = std::string(temp_dir.name()) + "/file.txt";
     std::ofstream file(file_path);
     file.close();

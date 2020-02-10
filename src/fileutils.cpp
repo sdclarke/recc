@@ -35,21 +35,6 @@
 namespace BloombergLP {
 namespace recc {
 
-TemporaryDirectory::TemporaryDirectory(const char *prefix)
-{
-    d_name = TMPDIR + "/" + std::string(prefix) + "XXXXXX";
-    if (mkdtemp(&d_name[0]) == nullptr) {
-        throw std::system_error(errno, std::system_category());
-    }
-}
-
-TemporaryDirectory::~TemporaryDirectory()
-{
-    const std::vector<std::string> rmCommand = {"rm", "-rf", d_name};
-    // TODO: catch here so as to not throw from destructor
-    Subprocess::execute(rmCommand);
-}
-
 void FileUtils::createDirectoryRecursive(const std::string &path)
 {
     RECC_LOG_VERBOSE("Creating directory at " << path);

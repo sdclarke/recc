@@ -17,6 +17,8 @@
 #include <env.h>
 #include <subprocess.h>
 
+#include <buildboxcommon_temporarydirectory.h>
+
 #include <gtest/gtest.h>
 
 #include <cstdlib>
@@ -25,28 +27,9 @@
 
 using namespace BloombergLP::recc;
 
-TEST(FileUtilsTest, TemporaryDirectory)
-{
-    std::string name;
-    {
-        TemporaryDirectory tempDir("test-prefix");
-        name = std::string(tempDir.name());
-        EXPECT_NE(name.find("test-prefix"), std::string::npos);
-
-        // Verify that the directory exists and is a directory.
-        struct stat statResult;
-        ASSERT_EQ(stat(tempDir.name(), &statResult), 0);
-        ASSERT_TRUE(S_ISDIR(statResult.st_mode));
-    }
-
-    // Verify that the directory no longer exists.
-    struct stat statResult;
-    ASSERT_NE(stat(name.c_str(), &statResult), 0);
-}
-
 TEST(FileUtilsTest, CreateDirectoryRecursive)
 {
-    TemporaryDirectory tempDir;
+    buildboxcommon::TemporaryDirectory tempDir;
     const std::string name =
         tempDir.name() + std::string("/some/directory/path");
 
@@ -59,7 +42,7 @@ TEST(FileUtilsTest, CreateDirectoryRecursive)
 
 TEST(FileUtilsTest, Executable)
 {
-    TemporaryDirectory tempDir;
+    buildboxcommon::TemporaryDirectory tempDir;
     const std::string fileName = tempDir.name() + std::string("/testfile.txt");
 
     ASSERT_THROW(FileUtils::isExecutable(fileName), std::exception);
@@ -74,7 +57,7 @@ TEST(FileUtilsTest, Executable)
 
 TEST(FileUtilsTest, FileContents)
 {
-    TemporaryDirectory tempDir;
+    buildboxcommon::TemporaryDirectory tempDir;
     const std::string fileName = tempDir.name() + std::string("/testfile.txt");
 
     EXPECT_THROW(FileUtils::getFileContents(fileName), std::exception);
@@ -88,7 +71,7 @@ TEST(FileUtilsTest, FileContents)
 
 TEST(FileUtilsTest, FileContentsCreatesDirectory)
 {
-    TemporaryDirectory tempDir;
+    buildboxcommon::TemporaryDirectory tempDir;
     const std::string fileName =
         tempDir.name() + std::string("/some/subdirectory/file.txt");
 

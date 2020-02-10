@@ -24,25 +24,6 @@
 namespace BloombergLP {
 namespace recc {
 
-class TemporaryDirectory {
-  public:
-    /**
-     * Create a temporary directory on disk. If a prefix is specified, it
-     * will be included in the name of the temporary directory.
-     */
-    TemporaryDirectory(const char *prefix = DEFAULT_RECC_TMP_PREFIX);
-
-    /**
-     * Delete the temporary directory.
-     */
-    ~TemporaryDirectory();
-
-    const char *name() const { return d_name.c_str(); };
-
-  private:
-    std::string d_name;
-};
-
 struct FileUtils {
     /**
      * Create a directory if it doesn't already exist, creating parent
