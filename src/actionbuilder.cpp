@@ -103,7 +103,7 @@ void ActionBuilder::buildMerkleTree(const std::set<std::string> &dependencies,
 { // Timed function
     buildboxcommon::buildboxcommonmetrics::MetricGuard<
         buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
-        mt(TIMER_NAME_BUILD_MERKLE_TREE, RECC_ENABLE_METRICS);
+        mt(TIMER_NAME_BUILD_MERKLE_TREE);
 
     RECC_LOG_VERBOSE("Building Merkle tree");
 
@@ -141,7 +141,7 @@ void ActionBuilder::getDependencies(const ParsedCommand &command,
     { // Timed block
         buildboxcommon::buildboxcommonmetrics::MetricGuard<
             buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
-            mt(TIMER_NAME_COMPILER_DEPS, RECC_ENABLE_METRICS);
+            mt(TIMER_NAME_COMPILER_DEPS);
         fileInfo = Deps::get_file_info(command);
     }
 

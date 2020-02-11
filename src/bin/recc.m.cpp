@@ -282,7 +282,7 @@ int main(int argc, char *argv[])
             { // Timed block
                 buildboxcommon::buildboxcommonmetrics::MetricGuard<
                     buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
-                    mt(TIMER_NAME_QUERY_ACTION_CACHE, RECC_ENABLE_METRICS);
+                    mt(TIMER_NAME_QUERY_ACTION_CACHE);
 
                 action_in_cache = client.fetch_from_action_cache(
                     actionDigest, command.get_products(), RECC_INSTANCE,
@@ -330,7 +330,7 @@ int main(int argc, char *argv[])
             { // Timed block
                 buildboxcommon::buildboxcommonmetrics::MetricGuard<
                     buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
-                    mt(TIMER_NAME_EXECUTE_ACTION, RECC_ENABLE_METRICS);
+                    mt(TIMER_NAME_EXECUTE_ACTION);
 
                 result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
             }

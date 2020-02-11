@@ -275,7 +275,7 @@ proto::FindMissingBlobsResponse CASClient::findMissingBlobs(
     { // Timed block
         buildboxcommon::buildboxcommonmetrics::MetricGuard<
             buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
-            mt(TIMER_NAME_FIND_MISSING_BLOBS, RECC_ENABLE_METRICS);
+            mt(TIMER_NAME_FIND_MISSING_BLOBS);
 
         grpc_retry(missing_blobs_lambda, d_grpcContext);
     }
@@ -386,7 +386,7 @@ void CASClient::batchUpdateBlobs(
         // Timed block
         buildboxcommon::buildboxcommonmetrics::MetricGuard<
             buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
-            mt(TIMER_NAME_UPLOAD_MISSING_BLOBS, RECC_ENABLE_METRICS);
+            mt(TIMER_NAME_UPLOAD_MISSING_BLOBS);
 
         RECC_LOG_VERBOSE("Sending final update request");
         batchUpdateBlobs(batchUpdateRequest);

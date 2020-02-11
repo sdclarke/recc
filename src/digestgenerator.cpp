@@ -132,7 +132,7 @@ proto::Digest DigestGenerator::make_digest(const std::string &blob)
     { // Timed block
         buildboxcommon::buildboxcommonmetrics::MetricGuard<
             buildboxcommon::buildboxcommonmetrics::TotalDurationMetricTimer>
-            mt(TIMER_NAME_CALCULATE_DIGESTS_TOTAL, RECC_ENABLE_METRICS);
+            mt(TIMER_NAME_CALCULATE_DIGESTS_TOTAL);
 
         // Initialize context:
         EVP_MD_CTX_ptr hashContext = createDigestContext(hashAlgorithm);

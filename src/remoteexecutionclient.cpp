@@ -263,7 +263,7 @@ void RemoteExecutionClient::write_files_to_disk(const ActionResult &result,
     // Timed function
     buildboxcommon::buildboxcommonmetrics::MetricGuard<
         buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
-        mt(TIMER_NAME_FETCH_WRITE_RESULTS, RECC_ENABLE_METRICS);
+        mt(TIMER_NAME_FETCH_WRITE_RESULTS);
 
     for (const auto &fileIter : result.d_outputFiles) {
         const std::string path = std::string(root) + "/" + fileIter.first;
