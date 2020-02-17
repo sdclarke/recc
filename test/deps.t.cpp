@@ -14,6 +14,7 @@
 
 #include <deps.h>
 #include <fileutils.h>
+#include <parsedcommand.h>
 
 #include <gtest/gtest.h>
 
@@ -115,7 +116,7 @@ TEST(DepsTest, OutputArgumentNoSpace)
 
 TEST(DepsTest, PreprocessorOutputArgument)
 {
-    if (command_basename(RECC_PLATFORM_COMPILER) == "gcc") {
+    if (ParsedCommand::command_basename(RECC_PLATFORM_COMPILER) == "gcc") {
         ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
                                  "includes_empty.c", "-Wp,-MMD,'/dev/null'"};
         std::set<std::string> expected = {"includes_empty.c", "empty.h"};
@@ -138,7 +139,7 @@ TEST(DepsTest, Subdirectory)
 
 TEST(DepsTest, SystemSubdirectory)
 {
-    if (command_basename(RECC_PLATFORM_COMPILER) == "gcc") {
+    if (ParsedCommand::command_basename(RECC_PLATFORM_COMPILER) == "gcc") {
         Env::parse_config_variables();
         RECC_DEPS_GLOBAL_PATHS = 0;
         ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
@@ -278,7 +279,7 @@ TEST(ProductsTest, Subdirectory)
 
 TEST(ProductsTest, PreprocessorArgument)
 {
-    if (command_basename(RECC_PLATFORM_COMPILER) == "gcc") {
+    if (ParsedCommand::command_basename(RECC_PLATFORM_COMPILER) == "gcc") {
         ParsedCommand command = {RECC_PLATFORM_COMPILER,   "-c", "empty.c",
                                  "-Wp,-MMD,'some/test.d'", "-o", "empty.o"};
         std::set<std::string> deps = {"empty.c"};

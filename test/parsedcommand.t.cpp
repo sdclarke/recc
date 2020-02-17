@@ -41,38 +41,41 @@ TEST(VectorFromArgvTest, MultiItemArgv)
     EXPECT_EQ(vector_from_argv(argv), expected);
 }
 
-TEST(CommandBasenameTest, EmptyString) { EXPECT_EQ(command_basename(""), ""); }
+TEST(CommandBasenameTest, EmptyString)
+{
+    EXPECT_EQ(ParsedCommand::command_basename(""), "");
+}
 
 TEST(CommandBasenameTest, TrivialCommands)
 {
-    EXPECT_EQ(command_basename("gcc"), "gcc");
-    EXPECT_EQ(command_basename("g++"), "g++");
-    EXPECT_EQ(command_basename("CC"), "CC");
-    EXPECT_EQ(command_basename("clang"), "clang");
-    EXPECT_EQ(command_basename("clang++"), "clang++");
+    EXPECT_EQ(ParsedCommand::command_basename("gcc"), "gcc");
+    EXPECT_EQ(ParsedCommand::command_basename("g++"), "g++");
+    EXPECT_EQ(ParsedCommand::command_basename("CC"), "CC");
+    EXPECT_EQ(ParsedCommand::command_basename("clang"), "clang");
+    EXPECT_EQ(ParsedCommand::command_basename("clang++"), "clang++");
 }
 
 TEST(CommandBasenameTest, CommandsWithVersions)
 {
-    EXPECT_EQ(command_basename("gcc-4.7"), "gcc");
-    EXPECT_EQ(command_basename("CC++-99"), "CC++");
-    EXPECT_EQ(command_basename("clang-6.0"), "clang");
-    EXPECT_EQ(command_basename("clang++-6.0"), "clang++");
+    EXPECT_EQ(ParsedCommand::command_basename("gcc-4.7"), "gcc");
+    EXPECT_EQ(ParsedCommand::command_basename("CC++-99"), "CC++");
+    EXPECT_EQ(ParsedCommand::command_basename("clang-6.0"), "clang");
+    EXPECT_EQ(ParsedCommand::command_basename("clang++-6.0"), "clang++");
 }
 
 TEST(CommandBasenameTest, CommandsAtPaths)
 {
-    EXPECT_EQ(command_basename("/usr/bin/gcc"), "gcc");
-    EXPECT_EQ(command_basename("/usr/bin/g++"), "g++");
-    EXPECT_EQ(command_basename("/CC++-99"), "CC++");
-    EXPECT_EQ(command_basename("/usr/bin/clang"), "clang");
-    EXPECT_EQ(command_basename("/usr/bin/clang++"), "clang++");
+    EXPECT_EQ(ParsedCommand::command_basename("/usr/bin/gcc"), "gcc");
+    EXPECT_EQ(ParsedCommand::command_basename("/usr/bin/g++"), "g++");
+    EXPECT_EQ(ParsedCommand::command_basename("/CC++-99"), "CC++");
+    EXPECT_EQ(ParsedCommand::command_basename("/usr/bin/clang"), "clang");
+    EXPECT_EQ(ParsedCommand::command_basename("/usr/bin/clang++"), "clang++");
 }
 
 TEST(CommandBasenameTest, XlcVersions)
 {
-    EXPECT_EQ(command_basename("xlC128_r"), "xlC");
-    EXPECT_EQ(command_basename("xlc++_r7"), "xlc++");
+    EXPECT_EQ(ParsedCommand::command_basename("xlC128_r"), "xlC");
+    EXPECT_EQ(ParsedCommand::command_basename("xlc++_r7"), "xlc++");
 }
 
 TEST(IsCompilerTest, Empty)

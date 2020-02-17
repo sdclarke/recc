@@ -107,6 +107,12 @@ class ParsedCommand {
      */
     bool produces_sun_make_rules() const { return d_producesSunMakeRules; }
 
+    /**
+     * Converts a command path (e.g. "/usr/bin/gcc-4.7") to a command name
+     * (e.g. "gcc")
+     */
+    static std::string command_basename(const std::string &path);
+
   private:
     bool d_compilerCommand;
     bool d_isClang;
@@ -115,16 +121,6 @@ class ParsedCommand {
     std::set<std::string> d_commandProducts;
     bool d_producesSunMakeRules;
 };
-
-/**
- * Converts a command path (e.g. "/usr/bin/gcc-4.7") to a command name (e.g.
- * "gcc")
- */
-std::string command_basename(const char *path);
-inline std::string command_basename(std::string path)
-{
-    return command_basename(path.c_str());
-}
 
 } // namespace recc
 } // namespace BloombergLP

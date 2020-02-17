@@ -329,7 +329,7 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
     }},
     {{"cc", "c89", "c99"}, COMMAND_PARSER_LAMBDA {
 #ifdef RECC_PLATFORM_COMPILER
-        std::string compiler = command_basename(RECC_PLATFORM_COMPILER);
+        std::string compiler = ParsedCommand::command_basename(RECC_PLATFORM_COMPILER);
         if (commandParsers.count(compiler) > 0) {
             return commandParsers.at(compiler)(command,
                                                workingDirectory,
@@ -369,26 +369,28 @@ ParsedCommand::ParsedCommand(std::vector<std::string> command,
     this->d_command = command;
 }
 
-bool is_version_character(char character)
+std::string ParsedCommand::command_basename(const std::string &path)
 {
-    return (character >= '0' && character <= '9') || character == '.' ||
-           character == '-';
-}
+    const char *lastSlash = strrchr(path.c_str(), '/');
+    const char *basename = lastSlash == nullptr ? path.c_str() : lastSlash + 1;
+    auto length = strlen(basename);
 
-std::string command_basename(const char *path)
-{
-    const char *lastSlash = strrchr(path, '/');
-    const char *basename = lastSlash == nullptr ? path : lastSlash + 1;
-    int length = strlen(basename);
     if (basename[length - 2] == '_' && basename[length - 1] == 'r') {
         length -= 2;
     }
     else if (basename[length - 3] == '_' && basename[length - 2] == 'r') {
         length -= 3;
     }
+
+    const auto is_version_character = [](const char character) {
+        return (character >= '0' && character <= '9') || character == '.' ||
+               character == '-';
+    };
+
     while (is_version_character(basename[length - 1]) && length > 0) {
         --length;
     }
+
     return std::string(basename, length);
 }
 }
