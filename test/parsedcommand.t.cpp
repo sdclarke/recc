@@ -22,7 +22,8 @@ using namespace BloombergLP::recc;
 TEST(VectorFromArgvTest, EmptyArgv)
 {
     const char *argv[] = {nullptr};
-    EXPECT_EQ(vector_from_argv(argv), std::vector<std::string>());
+    EXPECT_EQ(ParsedCommand::vector_from_argv(argv),
+              std::vector<std::string>());
 }
 
 TEST(VectorFromArgvTest, OneItemArgv)
@@ -30,7 +31,7 @@ TEST(VectorFromArgvTest, OneItemArgv)
     const char *argv[] = {"gcc", nullptr};
     std::vector<std::string> expected = {"gcc"};
 
-    EXPECT_EQ(vector_from_argv(argv), expected);
+    EXPECT_EQ(ParsedCommand::vector_from_argv(argv), expected);
 }
 
 TEST(VectorFromArgvTest, MultiItemArgv)
@@ -38,7 +39,7 @@ TEST(VectorFromArgvTest, MultiItemArgv)
     const char *argv[] = {"test", "", "of long", "argv", nullptr};
     std::vector<std::string> expected = {"test", "", "of long", "argv"};
 
-    EXPECT_EQ(vector_from_argv(argv), expected);
+    EXPECT_EQ(ParsedCommand::vector_from_argv(argv), expected);
 }
 
 TEST(CommandBasenameTest, EmptyString)

@@ -25,27 +25,6 @@ namespace BloombergLP {
 namespace recc {
 
 /**
- * Convert a null-terminated list of C strings to a vector of C++ strings.
- */
-static std::vector<std::string> vector_from_argv(const char *const *argv)
-{
-    std::vector<std::string> result;
-    int i = 0;
-
-    RECC_LOG_VERBOSE("Parsing command: ");
-
-    while (argv[i] != nullptr) {
-        std::string argstr = std::string(argv[i]);
-        ++i;
-
-        RECC_LOG_VERBOSE("argv[" << i << "] = " << argstr);
-        result.push_back(argstr);
-    }
-
-    return result;
-}
-
-/**
  * Represents the result of parsing a compiler command.
  */
 class ParsedCommand {
@@ -112,6 +91,11 @@ class ParsedCommand {
      * (e.g. "gcc")
      */
     static std::string command_basename(const std::string &path);
+
+    /**
+     * Convert a null-terminated list of C strings to a vector of C++ strings.
+     */
+    static std::vector<std::string> vector_from_argv(const char *const *argv);
 
   private:
     bool d_compilerCommand;
