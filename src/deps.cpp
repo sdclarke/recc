@@ -14,8 +14,8 @@
 
 #include <deps.h>
 
+#include <buildboxcommon_fileutils.h>
 #include <env.h>
-#include <fileutils.h>
 #include <logging.h>
 #include <subprocess.h>
 
@@ -173,7 +173,8 @@ CommandFileInfo Deps::get_file_info(const ParsedCommand &parsedCommand)
     }
 
     for (const auto &product : products) {
-        result.d_possibleProducts.insert(FileUtils::normalizePath(product));
+        result.d_possibleProducts.insert(
+            buildboxcommon::FileUtils::normalizePath(product.c_str()));
     }
 
     return result;

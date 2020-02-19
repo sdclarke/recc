@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <buildboxcommon_fileutils.h>
 #include <digestgenerator.h>
 #include <fileutils.h>
 #include <logging.h>
@@ -64,10 +65,12 @@ ReccFileFactory::createFile(const char *path, const bool followSymlinks)
 
         const bool executable = FileUtils::isExecutable(statResult);
         const bool symlink = FileUtils::isSymlink(statResult);
-        const std::string file_name = FileUtils::pathBasename(path);
+        const std::string file_name =
+            buildboxcommon::FileUtils::pathBasename(path);
         const std::string file_contents =
-            (symlink ? FileUtils::getSymlinkContents(path, statResult)
-                     : FileUtils::getFileContents(path, statResult));
+            (symlink
+                 ? FileUtils::getSymlinkContents(path, statResult)
+                 : FileUtils::getFileContents(std::string(path), statResult));
 
         const proto::Digest file_digest =
             DigestGenerator::make_digest(file_contents);

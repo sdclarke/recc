@@ -14,6 +14,7 @@
 //
 
 #include <authsession.h>
+#include <buildboxcommon_fileutils.h>
 #include <fileutils.h>
 #include <jsonfilemanager.h>
 

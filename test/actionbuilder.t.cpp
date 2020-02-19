@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <actionbuilder.h>
+#include <buildboxcommon_fileutils.h>
 #include <buildboxcommonmetrics_durationmetrictimer.h>
 #include <buildboxcommonmetrics_testingutils.h>
 #include <digestgenerator.h>

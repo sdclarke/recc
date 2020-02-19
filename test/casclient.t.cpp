@@ -17,6 +17,7 @@
 #include <casclient.h>
 #include <digestgenerator.h>
 #include <env.h>
+#include <fileutils.h>
 #include <grpccontext.h>
 
 #include <buildboxcommon_temporarydirectory.h>
@@ -175,7 +176,7 @@ TEST_F(CasClientFixture, NewFileUpload)
 
     digest_string_umap digest_to_filecontents;
     digest_to_filecontents[make_digest(abc)] =
-        FileUtils::getFileContents(path);
+        buildboxcommon::FileUtils::getFileContents(path.c_str());
     proto::FindMissingBlobsResponse response;
     *response.add_missing_blob_digests() = make_digest(abc);
 

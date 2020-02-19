@@ -270,7 +270,7 @@ void RemoteExecutionClient::write_files_to_disk(const ActionResult &result,
         RECC_LOG_VERBOSE("Writing " << path);
         FileUtils::writeFile(path, get_outputblob(fileIter.second));
         if (fileIter.second.d_executable) {
-            FileUtils::makeExecutable(path);
+            buildboxcommon::FileUtils::makeExecutable(path.c_str());
         }
     }
 }

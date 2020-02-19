@@ -51,7 +51,7 @@ const std::string normalize_replace_root(const std::string path)
         relativePath.insert(0, RECC_WORKING_DIR_PREFIX + "/");
     }
     const std::string normalizedReplacedRoot =
-        FileUtils::normalizePath(relativePath);
+        buildboxcommon::FileUtils::normalizePath(relativePath.c_str());
 
     return normalizedReplacedRoot;
 }

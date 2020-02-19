@@ -12,25 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <buildboxcommon_fileutils.h>
 #include <fileutils.h>
 
-#include <env.h>
-#include <logging.h>
-#include <subprocess.h>
-
-#include <algorithm>
-#include <cerrno>
-#include <cstdio>
 #include <cstring>
+#include <env.h>
 #include <fstream>
-#include <memory>
+#include <logging.h>
 #include <sstream>
-#include <stdexcept>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <system_error>
 #include <unistd.h>
-#include <unordered_map>
 
 namespace BloombergLP {
 namespace recc {
@@ -108,34 +98,7 @@ bool FileUtils::isExecutable(const struct stat &s)
     return s.st_mode & S_IXUSR;
 }
 
-bool FileUtils::isExecutable(const std::string &path)
-{
-    if (path.empty()) {
-        const std::string error = "invalid args: path empty";
-        RECC_LOG_ERROR(error);
-        throw std::runtime_error(error);
-    }
-
-    struct stat statResult;
-    if (stat(path.c_str(), &statResult) == 0) {
-        return statResult.st_mode & S_IXUSR;
-    }
-    throw std::system_error(errno, std::system_category());
-}
-
 bool FileUtils::isSymlink(const struct stat &s) { return S_ISLNK(s.st_mode); }
-
-void FileUtils::makeExecutable(const std::string &path)
-{
-    struct stat statResult;
-    if (stat(path.c_str(), &statResult) == 0) {
-        if (chmod(path.c_str(),
-                  statResult.st_mode | S_IXUSR | S_IXGRP | S_IXOTH) == 0) {
-            return;
-        }
-    }
-    throw std::system_error(errno, std::system_category());
-}
 
 std::string FileUtils::getSymlinkContents(const std::string &path,
                                           const struct stat &statResult)
@@ -164,12 +127,6 @@ std::string FileUtils::getSymlinkContents(const std::string &path,
     }
 
     return contents;
-}
-
-std::string FileUtils::getFileContents(const std::string &path)
-{
-    struct stat statResult = FileUtils::getStat(path, true);
-    return FileUtils::getFileContents(path, statResult);
 }
 
 std::string FileUtils::getFileContents(const std::string &path,
@@ -211,61 +168,14 @@ void FileUtils::writeFile(const std::string &path, const std::string &contents)
         if (slash != nullptr) {
             std::string slashPath(
                 path_p, static_cast<std::string::size_type>(slash - path_p));
-            slashPath = normalizePath(slashPath);
+            slashPath =
+                buildboxcommon::FileUtils::normalizePath(slashPath.c_str());
             createDirectoryRecursive(slashPath);
             fileStream.open(path_p, std::ios::trunc | std::ios::binary);
         }
     }
     fileStream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
     fileStream << contents << std::flush;
-}
-
-std::string FileUtils::normalizePath(const std::string &path)
-{
-    std::vector<std::string> segments;
-    const char *path_p = path.c_str();
-    const bool global = path_p[0] == '/';
-
-    while (path_p[0] != '\0') {
-        const char *slash = strchr(path_p, '/');
-        std::string segment;
-
-        if (slash == nullptr) {
-            segment = std::string(path_p);
-        }
-        else {
-            segment = std::string(
-                path_p, static_cast<std::string::size_type>(slash - path_p));
-        }
-
-        if (segment == ".." && !segments.empty() && segments.back() != "..") {
-            segments.pop_back();
-        }
-        else if (segment != "." && segment != "") {
-            segments.push_back(segment);
-        }
-
-        if (slash == nullptr) {
-            break;
-        }
-        else {
-            path_p = slash + 1;
-        }
-    }
-
-    std::string result(global ? "/" : "");
-    if (segments.size() > 0) {
-        for (const auto &segment : segments) {
-            result += segment + "/";
-        }
-        result.pop_back();
-    }
-    else if (!global) {
-        // The normalized path for the current directory is `.`,
-        // not an empty string.
-        result = ".";
-    }
-    return result;
 }
 
 bool FileUtils::hasPathPrefix(const std::string &path,
@@ -369,24 +279,6 @@ std::string FileUtils::makePathRelative(std::string path,
     return result;
 }
 
-std::string FileUtils::makePathAbsolute(const std::string &path,
-                                        const std::string &cwd)
-{
-    if (path.empty() || path.front() == '/') {
-        return path;
-    }
-
-    const std::string fullPath = cwd + '/' + path;
-    std::string normalizedPath = FileUtils::normalizePath(fullPath.c_str());
-
-    /* normalize_path removes trailing slashes, so let's preserve them here
-     */
-    if (path.back() == '/' && normalizedPath.back() != '/') {
-        normalizedPath.push_back('/');
-    }
-    return normalizedPath;
-}
-
 std::string FileUtils::joinNormalizePath(const std::string &base,
                                          const std::string &extension)
 {
@@ -410,7 +302,7 @@ std::string FileUtils::joinNormalizePath(const std::string &base,
 
     catPath << extension.substr(index);
     std::string catPathStr = catPath.str();
-    return normalizePath(catPathStr.c_str());
+    return buildboxcommon::FileUtils::normalizePath(catPathStr.c_str());
 }
 
 std::string FileUtils::expandPath(const std::string &path)
@@ -540,18 +432,14 @@ std::string FileUtils::resolvePathFromPrefixMap(const std::string &path)
             const std::string replaced_path =
                 pair.second + '/' + path.substr(pair.first.length());
             const std::string newPath =
-                FileUtils::normalizePath(replaced_path);
+                buildboxcommon::FileUtils::normalizePath(
+                    replaced_path.c_str());
             RECC_LOG_VERBOSE("Replacing and normalized path: ["
                              << path << "] with newpath: [" << newPath << "]");
             return newPath;
         }
     }
     return path;
-}
-
-std::string FileUtils::pathBasename(const std::string &path)
-{
-    return FileUtils::lastNSegments(path, 1);
 }
 
 std::vector<std::string> FileUtils::parseDirectories(const std::string &path)

@@ -110,7 +110,7 @@ void addFileToMerkleTreeHelper(const std::string &dep, const std::string &cwd,
     // If the dependency is an absolute path, leave the merklePath
     // untouched
     std::string merklePath = (dep[0] == '/') ? dep : cwd + "/" + dep;
-    merklePath = FileUtils::normalizePath(merklePath);
+    merklePath = buildboxcommon::FileUtils::normalizePath(merklePath.c_str());
 
     // don't include a dependency if it's exclusion is requested
     if (FileUtils::hasPathPrefixes(merklePath, RECC_DEPS_EXCLUDE_PATHS)) {
@@ -235,8 +235,8 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
     }
 
     if (!commandWorkingDirectory.empty()) {
-        commandWorkingDirectory =
-            FileUtils::normalizePath(commandWorkingDirectory);
+        commandWorkingDirectory = buildboxcommon::FileUtils::normalizePath(
+            commandWorkingDirectory.c_str());
         nestedDirectory.addDirectory(commandWorkingDirectory.c_str());
     }
 

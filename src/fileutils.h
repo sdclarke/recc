@@ -45,16 +45,6 @@ struct FileUtils {
     static bool isSymlink(const struct stat &s);
 
     /**
-     * Return true if the given file path is executable.
-     */
-    static bool isExecutable(const std::string &path);
-
-    /**
-     * Make the given file executable.
-     */
-    static void makeExecutable(const std::string &path);
-
-    /**
      * Given the path to a symlink, return a std::string with its contents.
      *
      * The path must be a path to a symlink that exists on disk. It can be
@@ -69,7 +59,6 @@ struct FileUtils {
      * The path must be a path to a file that exists on disk. It can be
      * absolute or relative to the current directory.
      */
-    static std::string getFileContents(const std::string &path);
     static std::string getFileContents(const std::string &path,
                                        const struct stat &statResult);
 
@@ -78,14 +67,6 @@ struct FileUtils {
      */
     static void writeFile(const std::string &path,
                           const std::string &contents);
-
-    /**
-     * Simplify the given path.
-     *
-     * The returned path will not contain any empty or `.` segments, and any
-     * `..` segments will occur at the start of the path.
-     */
-    static std::string normalizePath(const std::string &path);
 
     /**
      * Returns true if "path" has "prefix" as a prefix.
@@ -110,12 +91,6 @@ struct FileUtils {
      */
     static std::string makePathRelative(std::string path,
                                         const char *workingDirectory);
-
-    /**
-     * Make the given path absolute, using the current working directory.
-     */
-    static std::string makePathAbsolute(const std::string &path,
-                                        const std::string &cwd);
 
     /**
      * Joins two paths, and removes an extraneous slash or adds one if needed
@@ -173,12 +148,6 @@ struct FileUtils {
      * PREFIX_REPLACEMENT_MAP.
      */
     static std::string resolvePathFromPrefixMap(const std::string &path);
-
-    /**
-     * Return a std::string containing the basename of a path. For example, if
-     * the path is a/b/c.txt return c.txt.
-     */
-    static std::string pathBasename(const std::string &path);
 
     static std::vector<std::string> parseDirectories(const std::string &path);
 };

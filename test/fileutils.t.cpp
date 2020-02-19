@@ -43,33 +43,20 @@ TEST(FileUtilsTest, CreateDirectoryRecursive)
     ASSERT_TRUE(S_ISDIR(statResult.st_mode));
 }
 
-TEST(FileUtilsTest, Executable)
-{
-    buildboxcommon::TemporaryDirectory tempDir;
-    const std::string fileName = tempDir.name() + std::string("/testfile.txt");
-
-    ASSERT_THROW(FileUtils::isExecutable(fileName), std::exception);
-    ASSERT_THROW(FileUtils::makeExecutable(fileName), std::exception);
-
-    FileUtils::writeFile(fileName, ""); // Create a test file.
-
-    EXPECT_FALSE(FileUtils::isExecutable(fileName));
-    FileUtils::makeExecutable(fileName);
-    EXPECT_TRUE(FileUtils::isExecutable(fileName));
-}
-
 TEST(FileUtilsTest, FileContents)
 {
     buildboxcommon::TemporaryDirectory tempDir;
     const std::string fileName = tempDir.name() + std::string("/testfile.txt");
 
-    EXPECT_THROW(FileUtils::getFileContents(fileName), std::exception);
-
+    EXPECT_THROW(buildboxcommon::FileUtils::getFileContents(fileName.c_str()),
+                 std::exception);
     FileUtils::writeFile(fileName, "File contents");
-    EXPECT_EQ(FileUtils::getFileContents(fileName), "File contents");
+    EXPECT_EQ(buildboxcommon::FileUtils::getFileContents(fileName.c_str()),
+              "File contents");
 
     FileUtils::writeFile(fileName, "Overwrite, don't append");
-    EXPECT_EQ(FileUtils::getFileContents(fileName), "Overwrite, don't append");
+    EXPECT_EQ(buildboxcommon::FileUtils::getFileContents(fileName.c_str()),
+              "Overwrite, don't append");
 }
 
 TEST(FileUtilsTest, FileContentsCreatesDirectory)
@@ -79,52 +66,8 @@ TEST(FileUtilsTest, FileContentsCreatesDirectory)
         tempDir.name() + std::string("/some/subdirectory/file.txt");
 
     FileUtils::writeFile(fileName, "File contents");
-    EXPECT_EQ(FileUtils::getFileContents(fileName), "File contents");
-}
-
-TEST(NormalizePathTest, AlreadyNormalPaths)
-{
-    EXPECT_EQ("test.txt", FileUtils::normalizePath("test.txt"));
-    EXPECT_EQ("subdir/hello", FileUtils::normalizePath("subdir/hello"));
-    EXPECT_EQ("/usr/bin/gcc", FileUtils::normalizePath("/usr/bin/gcc"));
-    EXPECT_EQ(".", FileUtils::normalizePath("."));
-}
-
-TEST(NormalizePathTest, RemoveEmptySegments)
-{
-    EXPECT_EQ("subdir/hello", FileUtils::normalizePath("subdir///hello//"));
-    EXPECT_EQ("/usr/bin/gcc", FileUtils::normalizePath("/usr/bin/./gcc"));
-    EXPECT_EQ(".", FileUtils::normalizePath("./"));
-}
-
-TEST(NormalizePathTest, CurrentDirectory)
-{
-    EXPECT_EQ(".", FileUtils::normalizePath("foo/.."));
-    EXPECT_EQ(".", FileUtils::normalizePath("foo/bar/../.."));
-    EXPECT_EQ(".", FileUtils::normalizePath("foo/../bar/.."));
-}
-
-TEST(NormalizePathTest, RemoveUnneededDotDot)
-{
-    EXPECT_EQ("subdir/hello",
-              FileUtils::normalizePath("subdir/subsubdir/../hello"));
-    EXPECT_EQ("/usr/bin/gcc",
-              FileUtils::normalizePath("/usr/local/lib/../../bin/.//gcc"));
-}
-
-TEST(NormalizePathTest, KeepNeededDotDot)
-{
-    EXPECT_EQ("../dir/hello", FileUtils::normalizePath("../dir/hello"));
-    EXPECT_EQ("../dir/hello",
-              FileUtils::normalizePath("subdir/../../dir/hello"));
-    EXPECT_EQ("../../dir/hello",
-              FileUtils::normalizePath("subdir/../../../dir/hello"));
-}
-
-TEST(NormalizePathTest, AlwaysRemoveTrailingSlash)
-{
-    EXPECT_EQ("/usr/bin", FileUtils::normalizePath("/usr/bin"));
-    EXPECT_EQ("/usr/bin", FileUtils::normalizePath("/usr/bin/"));
+    EXPECT_EQ(buildboxcommon::FileUtils::getFileContents(fileName.c_str()),
+              "File contents");
 }
 
 TEST(HasPathPrefixTest, AbsolutePaths)
@@ -319,40 +262,6 @@ TEST_F(MakePathRelativeTest, PathOutsideProjectRoot)
                                     "/home/nobody/test"));
 }
 
-TEST(MakePathAbsoluteTest, NoRewriting)
-{
-    EXPECT_EQ("", FileUtils::makePathAbsolute("", "/a/b/c/"));
-    EXPECT_EQ("/a/b/c/", FileUtils::makePathAbsolute("/a/b/c/", "/d/"));
-}
-
-TEST(MakePathAbsoluteTest, SimplePaths)
-{
-    EXPECT_EQ("/a/b/c/d", FileUtils::makePathAbsolute("d", "/a/b/c/"));
-    EXPECT_EQ("/a/b/c/d/", FileUtils::makePathAbsolute("d/", "/a/b/c/"));
-    EXPECT_EQ("/a/b", FileUtils::makePathAbsolute("..", "/a/b/c/"));
-    EXPECT_EQ("/a/b/", FileUtils::makePathAbsolute("../", "/a/b/c/"));
-    EXPECT_EQ("/a/b", FileUtils::makePathAbsolute("..", "/a/b/c"));
-    EXPECT_EQ("/a/b/", FileUtils::makePathAbsolute("../", "/a/b/c"));
-
-    EXPECT_EQ("/a/b/c", FileUtils::makePathAbsolute(".", "/a/b/c/"));
-    EXPECT_EQ("/a/b/c/", FileUtils::makePathAbsolute("./", "/a/b/c/"));
-    EXPECT_EQ("/a/b/c", FileUtils::makePathAbsolute(".", "/a/b/c"));
-    EXPECT_EQ("/a/b/c/", FileUtils::makePathAbsolute("./", "/a/b/c"));
-}
-
-TEST(MakePathAbsoluteTest, MoreComplexPaths)
-{
-    EXPECT_EQ("/a/b/d", FileUtils::makePathAbsolute("../d", "/a/b/c"));
-    EXPECT_EQ("/a/b/d", FileUtils::makePathAbsolute("../d", "/a/b/c/"));
-    EXPECT_EQ("/a/b/d/", FileUtils::makePathAbsolute("../d/", "/a/b/c"));
-    EXPECT_EQ("/a/b/d/", FileUtils::makePathAbsolute("../d/", "/a/b/c/"));
-
-    EXPECT_EQ("/a/b/d", FileUtils::makePathAbsolute("./.././d", "/a/b/c"));
-    EXPECT_EQ("/a/b/d", FileUtils::makePathAbsolute("./.././d", "/a/b/c/"));
-    EXPECT_EQ("/a/b/d/", FileUtils::makePathAbsolute("./.././d/", "/a/b/c"));
-    EXPECT_EQ("/a/b/d/", FileUtils::makePathAbsolute("./.././d/", "/a/b/c/"));
-}
-
 TEST(FileUtilsTest, GetCurrentWorkingDirectory)
 {
     const std::vector<std::string> command = {"pwd"};
@@ -506,12 +415,4 @@ TEST(PathRewriteTest, ComplicatedPathRewriting)
     test_path = "/bin/hello/file.txt";
     ASSERT_EQ("/hello/file.txt",
               FileUtils::resolvePathFromPrefixMap(test_path));
-}
-
-TEST(FileUtilsTest, BasenameTest)
-{
-    EXPECT_EQ("hello", FileUtils::pathBasename("a/b/hello"));
-    EXPECT_EQ("hello.txt", FileUtils::pathBasename("a/b/hello.txt"));
-    EXPECT_EQ("hello", FileUtils::pathBasename("//hello/a/b/hello"));
-    EXPECT_EQ("hello", FileUtils::pathBasename("a/b/../../hello"));
 }

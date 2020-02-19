@@ -16,6 +16,7 @@
 #include <buildboxcommonmetrics_testingutils.h>
 #include <digestgenerator.h>
 #include <env.h>
+#include <fileutils.h>
 #include <grpccontext.h>
 #include <logging.h>
 #include <remoteexecutionclient.h>
@@ -282,8 +283,9 @@ TEST_F(RemoteExecutionClientTestFixture, WriteFilesToDisk)
     client.write_files_to_disk(testResult, tempDir.name());
 
     const std::string expectedPath = std::string(tempDir.name()) + "/test.txt";
-    EXPECT_TRUE(FileUtils::isExecutable(expectedPath));
-    EXPECT_EQ(FileUtils::getFileContents(expectedPath), "Test file content!");
+    EXPECT_TRUE(buildboxcommon::FileUtils::isExecutable(expectedPath.c_str()));
+    EXPECT_EQ(buildboxcommon::FileUtils::getFileContents(expectedPath.c_str()),
+              "Test file content!");
 }
 
 TEST_F(RemoteExecutionClientTestFixture, VerifyMetricsWriteFilesToDisk)

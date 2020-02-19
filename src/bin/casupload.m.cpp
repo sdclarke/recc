@@ -94,7 +94,7 @@ void processDirectory(const std::string &path, const bool followSymlinks,
 
     // set project root to the fully resolved path of this directory
     // to ensure it's the root in the merkle tree
-    const std::string abspath = FileUtils::makePathAbsolute(
+    const std::string abspath = buildboxcommon::FileUtils::makePathAbsolute(
         path, FileUtils::getCurrentWorkingDirectory());
     RECC_PROJECT_ROOT = abspath.c_str();
     const auto singleNestedDirectory = make_nesteddirectory(

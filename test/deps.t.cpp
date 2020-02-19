@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <buildboxcommon_fileutils.h>
 #include <deps.h>
 #include <fileutils.h>
 #include <parsedcommand.h>
@@ -24,7 +25,7 @@ std::set<std::string> normalize_all(const std::set<std::string> &paths)
 {
     std::set<std::string> result;
     for (const auto &path : paths) {
-        result.insert(FileUtils::normalizePath(path));
+        result.insert(buildboxcommon::FileUtils::normalizePath(path.c_str()));
     }
     return result;
 }
@@ -326,7 +327,8 @@ TEST(DepsFromMakeRulesTest, SunStyleMakefile)
 
 TEST(DepsFromMakeRulesTest, LargeMakeOutput)
 {
-    auto makeRules = FileUtils::getFileContents("giant_make_output.mk");
+    auto makeRules =
+        buildboxcommon::FileUtils::getFileContents("giant_make_output.mk");
     std::set<std::string> expected = {"hello.c", "hello.h",
                                       "final_dependency.h"};
 

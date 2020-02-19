@@ -14,6 +14,7 @@
 
 #include <parsedcommand.h>
 
+#include <buildboxcommon_fileutils.h>
 #include <fileutils.h>
 #include <logging.h>
 

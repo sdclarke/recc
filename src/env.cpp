@@ -15,6 +15,7 @@
 #include <env.h>
 
 #include <algorithm>
+#include <buildboxcommon_fileutils.h>
 #include <cstring>
 #include <ctype.h>
 #include <digestgenerator.h>
@@ -373,7 +374,7 @@ void Env::handle_special_defaults()
                          << RECC_PROJECT_ROOT << ")");
     }
     else if (RECC_PROJECT_ROOT.front() != '/') {
-        RECC_PROJECT_ROOT = FileUtils::makePathAbsolute(
+        RECC_PROJECT_ROOT = buildboxcommon::FileUtils::makePathAbsolute(
             RECC_PROJECT_ROOT, FileUtils::getCurrentWorkingDirectory());
         RECC_LOG_WARNING("Warning: RECC_PROJECT_ROOT was set to a relative "
                          "path. "
@@ -482,10 +483,10 @@ Env::vector_from_delimited_string(std::string prefix_map,
         // Check if key/values are absolute paths
         std::string key = key_value.substr(0, equal_pos);
         std::string value = key_value.substr(equal_pos + 1);
-        key = FileUtils::normalizePath(key);
-        value = FileUtils::normalizePath(value);
-        if (!FileUtils::isAbsolutePath(key) &&
-            !FileUtils::isAbsolutePath(value)) {
+        key = buildboxcommon::FileUtils::normalizePath(key.c_str());
+        value = buildboxcommon::FileUtils::normalizePath(value.c_str());
+        if (!FileUtils::isAbsolutePath(key.c_str()) &&
+            !FileUtils::isAbsolutePath(value.c_str())) {
             RECC_LOG_WARNING("Input paths must be absolute: [" << key_value
                                                                << "]");
             return;
