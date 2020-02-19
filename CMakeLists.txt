@@ -75,7 +75,9 @@ add_subdirectory(src)
 
 include(CTest)
 if(BUILD_TESTING)
-    include(cmake/gtest.cmake)
-    include_directories(third_party/grpc/include)
-    add_subdirectory(test)
+  find_file(BuildboxGTestSetup BuildboxGTestSetup.cmake HINTS ${BuildboxCommon_DIR})
+  include(${BuildboxGTestSetup})
+
+  include_directories(third_party/grpc/include)
+  add_subdirectory(test)
 endif()
