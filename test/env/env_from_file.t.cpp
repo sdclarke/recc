@@ -41,6 +41,7 @@ TEST(EnvTest, EnvFromFile)
     const std::string expecteddepsHeader = "/usr/local/bin";
     const std::string expectedenvHeader = "/usr/bin";
     const std::string expectedDocker = "docker";
+    const std::string expectedUpperCaseProperty = "uppercase";
 
     // In this test use the usual config location list
     Env::set_config_locations();
@@ -55,4 +56,6 @@ TEST(EnvTest, EnvFromFile)
     EXPECT_EQ(expectedDocker, RECC_REMOTE_PLATFORM["Docker_Container"]);
     EXPECT_EQ(expecteddepsHeader, RECC_DEPS_ENV["Header"]);
     EXPECT_EQ(expectedenvHeader, RECC_REMOTE_ENV["Header"]);
+    EXPECT_EQ(expectedRemoteOS, RECC_REMOTE_PLATFORM["OSFamily"]);
+    EXPECT_EQ(expectedUpperCaseProperty, RECC_REMOTE_PLATFORM["test"]);
 }

@@ -223,14 +223,14 @@ line. Lines starting with a hash sign are comments. Blank lines are ignored.
 At minimum, you'll need to set `RECC_SERVER` to the URI of your Remote:
 ```
   # set execution server to localhost:12345
-  server = localhost:12345
+  server=localhost:12345
 ```
 
 Map configuration variables can be set similarly
 ```
   # set OS and compiler architecture targets for remote build.
-  remote_platform_OSFamily = linux
-  remote_platform_arch = x86_64
+  remote_platform_OSFamily=linux
+  remote_platform_arch=x86_64
 ```
 
 For a full list of the environment/configuration variables `recc` accepts and what they do, run

@@ -14,17 +14,18 @@
 
 #include <env.h>
 
-#include <digestgenerator.h>
-#include <fileutils.h>
-#include <logging.h>
-#include <reccdefaults.h>
-
 #include <algorithm>
 #include <cstring>
 #include <ctype.h>
+#include <digestgenerator.h>
 #include <env.h>
+#include <fileutils.h>
+
 #include <fstream>
+#include <functional>
 #include <iostream>
+#include <logging.h>
+#include <reccdefaults.h>
 #include <sstream>
 #include <stdio.h>
 #include <string>
@@ -106,18 +107,22 @@ std::map<std::string, std::string> RECC_REMOTE_PLATFORM =
 std::deque<std::string> RECC_CONFIG_LOCATIONS = {};
 
 namespace {
+
 /**
- * Convert each string character to uppercase until equal_pos length.
+ * Call "change_case" on each character in the string "value". By default
+ * converting each character to uppercase.
+ *
+ * Meant to be used with ::toupper and ::tolower
  */
-void to_upper(std::string *const value,
-              const std::string::size_type &start_pos,
-              const std::string::size_type &end_pos)
+void to_case(std::function<int(int)> change_case, std::string *const value,
+             const std::string::size_type &start_pos,
+             const std::string::size_type &end_pos)
 {
 
     transform(
         value->cbegin() + static_cast<std::string::difference_type>(start_pos),
         value->cbegin() + static_cast<std::string::difference_type>(end_pos),
-        value->begin(), ::toupper);
+        value->begin(), change_case);
 }
 
 /**
@@ -174,7 +179,9 @@ void format_config_string(std::string *const line)
 {
     std::string::size_type start_pos = 0;
     std::string::size_type end_pos = line->find('=');
-    const std::string map_key = Env::substring_until_nth_token(*line, "_", 2);
+    std::string map_key = Env::substring_until_nth_token(*line, "_", 2);
+    // Convert the map key to lowercase when checking for property names.
+    to_case(::tolower, &map_key, start_pos, map_key.size());
 
     // Handle map configuration variables. Only convert keys, not value.
     if (map_key == "remote_platform" || map_key == "deps_env" ||
@@ -182,7 +189,9 @@ void format_config_string(std::string *const line)
         end_pos = map_key.size();
     }
 
-    to_upper(line, start_pos, end_pos);
+    // Convert the entire key to uppercase as expected by
+    // parse_config_variables.
+    to_case(::toupper, line, start_pos, end_pos);
     const std::string tmpdirConfig = "TMPDIR";
 
     // prefix "RECC_" to name, unless name is TMPDIR
