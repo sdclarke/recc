@@ -49,7 +49,6 @@ A git pre-commit hook is provided with the repo to make it easy for all the cont
 automatically fix possible formatting issues. To install the pre-commit hook, simply run:
 
 ```sh
-cd /path/to/recc # Use appropriate path
-chmod +x scripts/install-hooks.sh && ./scripts/install-hooks.sh
+scripts/install-hooks.sh
 ```
 
