@@ -64,6 +64,9 @@ const std::string HELP(
     "If the given command is a compile command, runs it on a remote build\n"
     "server. Otherwise, runs it locally.\n"
     "\n"
+    "If the command is to be executed remotely, it must specify either a \n"
+    "relative or absolute path to an executable.\n"
+    "\n"
     "The following environment variables can be used to change recc's\n"
     "behavior. To set them in a recc.conf file, omit the \"RECC_\" prefix.\n"
     "\n"
@@ -224,8 +227,18 @@ int main(int argc, char *argv[])
     std::shared_ptr<proto::Action> actionPtr;
     if (command.is_compiler_command() || RECC_FORCE_REMOTE) {
         // Trying to build an `Action`:
-        actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
-                                               &digest_to_filecontents);
+        try {
+            actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                   &digest_to_filecontents);
+        }
+        catch (const std::invalid_argument &) {
+            RECC_LOG_ERROR(
+                "Invalid `argv[0]` value in command: \"" +
+                command.get_command().at(0) +
+                "\". The Remote Execution API requires it to specify "
+                "either a relative or absolute path to an executable.");
+            return RC_EXEC_FAILURE;
+        }
     }
     else {
         RECC_LOG_VERBOSE("Not a compiler command, so running locally.");

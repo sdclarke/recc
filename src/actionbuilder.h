@@ -30,8 +30,9 @@ struct ActionBuilder {
      * Build an `Action` from the given `ParsedCommand` and working directory.
      *
      * Returns `nullptr` if an action could not be built due to invoking a
-     * non-compile command or an output files in specified in a directory
-     * unrelated to the current working directory.
+     * non-compile command, an output files in specified in a directory
+     * unrelated to the current working directory, or a command that does not
+     * contain either a relative or absolute path to an executable.
      *
      * `digest_to_filecontents` and `blobs` are used to store parsed input and
      * output files, which will get uploaded to CAS by the caller.

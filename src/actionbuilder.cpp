@@ -163,6 +163,16 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
         return nullptr;
     }
 
+    // According to the REAPI:
+    // "[...] the path to the executable [...] must be either a relative
+    // path, in which case it is evaluated with respect to the input root,
+    // or an absolute path."
+    const auto executableName = command.get_command().front();
+    if (executableName.find('/') == std::string::npos) {
+        throw std::invalid_argument("Command does not contain a relative or "
+                                    "absolute path to an executable");
+    }
+
     std::string commandWorkingDirectory;
     NestedDirectory nestedDirectory;
 
@@ -243,10 +253,10 @@ ActionBuilder::generateCommandProto(
     const std::map<std::string, std::string> &platformProperties,
     const std::string &workingDirectory)
 {
-    // If dependency paths aren't absolute, they are made absolute by having
-    // the CWD prepended, and then normalized and replaced.
-    // If that is the case, and the CWD contains a replaced prefix, then
-    // replace it.
+    // If dependency paths aren't absolute, they are made absolute by
+    // having the CWD prepended, and then normalized and replaced. If that
+    // is the case, and the CWD contains a replaced prefix, then replace
+    // it.
     const auto resolvedWorkingDirectory =
         FileUtils::resolvePathFromPrefixMap(workingDirectory);
 
