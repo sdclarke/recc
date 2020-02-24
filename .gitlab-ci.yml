@@ -1,56 +1,54 @@
-
-image: registry.gitlab.com/buildgrid/buildbox/buildbox-common:latest
+image: docker:stable
+services:
+    - docker:19.03.5-dind # gitlab issue: https://gitlab.com/gitlab-com/support-forum/issues/5202
 
 stages:
     - build
     - test
     - release
 
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_DRIVER: overlay2
+
 build_only:
   stage: build
-  before_script:
-    - apt-get update && apt-get install -y make cmake build-essential pkg-config libssl-dev
   script:
-    - mkdir build
-    - cd build
-    - cmake -DBUILD_TESTING=OFF .. || exit 1
-    - make || exit 1
-  artifacts:
-    paths:
-      - build/bin/recc
-      - test/data/hello.cpp
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker build . --pull --build-arg ENABLE_TESTS= #Build without tests
 
 test_cover:
   stage: build
+  image: python:3-buster
   coverage: '/^TOTAL.*\ (\d+\.*\d+\%)$/'
   dependencies: []
   before_script:
-    - apt-get update && apt-get install -y make cmake build-essential pkg-config libssl-dev googletest
-    - apt-get install -y python3 python3-pip wget
     - pip3 install gcovr pycobertura
+    - curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+    - echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stable" > /etc/apt/sources.list.d/docker.list
+    - apt-get update && apt-get install --no-install-recommends docker-ce-cli
+    - export IMAGE_TAG="${CI_PROJECT_NAME}:${CI_COMMIT_SHORT_SHA}_coverage"
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker build -t "$IMAGE_TAG" . --pull --build-arg ENABLE_TESTS=1 --build-arg RUN_GCOV=1
   script:
-    - mkdir build
-    - cd build
-    - export COV_FLGS="-g -O0 -fprofile-arcs -ftest-coverage"
-    - cmake -DGTEST_SOURCE_ROOT=/usr/src/googletest -DCMAKE_CXX_FLAGS="${COV_FLGS}" -DCMAKE_EXE_LINKER_FLAGS="${COV_FLGS}" -DCMAKE_SHARED_LINKER_FLAGS="${COV_FLGS}" -DCMAKE_CXX_OUTPUT_EXTENSION_REPLACE="ON" .. || exit 1
-    - make || exit 1
-    - ctest --verbose || exit 1
-    - cd $CI_PROJECT_DIR
-    - echo Generating gcov files
-    - mkdir gcov && cd gcov
-    - find "$CI_PROJECT_DIR/" -type f -name "*.gcno" -exec gcov --branch-counts --branch-probabilities --preserve-paths {} \;
-    # remove gcov files that come from dependencies so that they don't show up on reports
-    - find "$CI_PROJECT_DIR/gcov/" -type f -name "#*#build#gen*" -exec rm "{}" \;
-    - find "$CI_PROJECT_DIR/gcov/" -type f -name "#*#third_party#*" -exec rm "{}" \;
-    - find "$CI_PROJECT_DIR/gcov/" -type f ! -name "#*#src#*" -exec rm "{}" \;
-    - cd "$CI_PROJECT_DIR"
-    - mkdir -p  public/coverage
+    - export MOUNT_DIR="/builds/$CI_PROJECT_PATH/mnt" # https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-workflow-with-docker-executor
+    - mkdir -p "$MOUNT_DIR"
+    - echo "Copying generated files to CI"
+    - export PROJECT_DIR="recc"
+    - docker run --rm -v "$MOUNT_DIR:/mnt" -t "$IMAGE_TAG" /bin/sh -c "cp -r /$PROJECT_DIR/ /mnt/"
+    # Copy the project with coverage data in the root directory
+    # so that the coverage reports show up with nicer paths to source.
+    - cp -r "$MOUNT_DIR/$PROJECT_DIR" "/"
+    - export BUILT_PROJECT_DIR="/$PROJECT_DIR/"
+    - export COVERAGE_DIR="$CI_PROJECT_DIR/public/coverage" # This is picked up as an artifact
+    - mkdir -p  "$COVERAGE_DIR"
+    - cd "$BUILT_PROJECT_DIR"
     - export LC_ALL=C.UTF-8 && export LANG=C.UTF-8
-    - gcovr --xml-pretty -g -k > public/coverage/gcovr.xml
-    - pycobertura show --format text --output public/coverage/report.txt -s "$CI_PROJECT_DIR" public/coverage/gcovr.xml
-    - echo >> public/coverage/report.txt
-    - pycobertura show --format html --output public/coverage/report.html -s "$CI_PROJECT_DIR" public/coverage/gcovr.xml
-    - cat public/coverage/report.txt # show the textual report here, also used by GitLab to pick-up coverage %
+    - gcovr --xml-pretty -g -k -s -o "$COVERAGE_DIR/gcovr.xml"
+    - pycobertura show --format text --output "$COVERAGE_DIR/report.txt" -s "$BUILT_PROJECT_DIR" "$COVERAGE_DIR/gcovr.xml"
+    - echo >> "$COVERAGE_DIR/report.txt"
+    - pycobertura show --format html --output "$COVERAGE_DIR/report.html" -s "$BUILT_PROJECT_DIR" "$COVERAGE_DIR/gcovr.xml"
+    - cat "$COVERAGE_DIR/report.txt" # show the textual report here, also used by GitLab to pick-up coverage %
   artifacts:
     paths:
       - public # name GitLab uses for Pages feature
