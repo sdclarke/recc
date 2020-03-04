@@ -13,6 +13,8 @@
 // limitations under the License.
 
 #include <actionbuilder.h>
+#include <buildboxcommonmetrics_durationmetrictimer.h>
+#include <buildboxcommonmetrics_testingutils.h>
 #include <digestgenerator.h>
 #include <env.h>
 #include <fileutils.h>
@@ -20,7 +22,11 @@
 
 #include <gtest/gtest.h>
 
+#define TIMER_NAME_COMPILER_DEPS "recc.compiler_deps"
+#define TIMER_NAME_BUILD_MERKLE_TREE "recc.build_merkle_tree"
+
 using namespace BloombergLP::recc;
+using namespace buildboxcommon::buildboxcommonmetrics;
 
 class ActionBuilderTestFixture
     : public ActionBuilder,
@@ -112,6 +118,26 @@ TEST_F(ActionBuilderTestFixture, IllegalCompileCommandThrows)
     EXPECT_THROW(ActionBuilder::BuildAction(command, cwd, &blobs,
                                             &digest_to_filecontents),
                  std::invalid_argument);
+}
+
+TEST_F(ActionBuilderTestFixture, BuildMerkleTreeVerifyMetricsCollection)
+{
+    std::set<std::string> deps;
+    buildMerkleTree(deps, "cwd", nullptr, nullptr);
+    EXPECT_TRUE(validateMetricCollection<DurationMetricTimer>(
+        TIMER_NAME_BUILD_MERKLE_TREE));
+}
+
+TEST_F(ActionBuilderTestFixture, GetDependenciesVerifyMetricsCollection)
+{
+    const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
+                                                "hello.o"};
+    std::set<std::string> deps;
+    std::set<std::string> prod;
+    const ParsedCommand command(recc_args, cwd.c_str());
+    getDependencies(command, &deps, &prod);
+    EXPECT_TRUE(validateMetricCollection<DurationMetricTimer>(
+        TIMER_NAME_COMPILER_DEPS));
 }
 
 TEST_F(ActionBuilderTestFixture, OutputPaths)

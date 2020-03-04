@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <buildboxcommonmetrics_testingutils.h>
+#include <buildboxcommonmetrics_totaldurationmetrictimer.h>
 #include <digestgenerator.h>
 #include <env.h>
 
@@ -19,7 +21,10 @@
 
 #include <gtest/gtest.h>
 
+#define TIMER_NAME_CALCULATE_DIGESTS_TOTAL "recc.calculate_digests_total"
+
 using namespace BloombergLP::recc;
+using namespace buildboxcommon::buildboxcommonmetrics;
 using proto::Digest;
 
 TEST(CASHashTest, EmptyStringDefaultFunction)
@@ -31,6 +36,13 @@ TEST(CASHashTest, EmptyStringDefaultFunction)
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 
     EXPECT_EQ(digest.size_bytes(), 0);
+}
+
+TEST(CASHashTest, VerifyMetricsCollected)
+{
+    DigestGenerator::make_digest("");
+    EXPECT_TRUE(validateMetricCollection<TotalDurationMetricTimer>(
+        TIMER_NAME_CALCULATE_DIGESTS_TOTAL));
 }
 
 TEST(DigestGeneratorTest, StringDefaultFunction)

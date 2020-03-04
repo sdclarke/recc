@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <buildboxcommonmetrics_durationmetrictimer.h>
+#include <buildboxcommonmetrics_testingutils.h>
 #include <casclient.h>
 #include <digestgenerator.h>
 #include <env.h>
@@ -28,7 +30,11 @@
 #include <gtest/gtest.h>
 #include <regex>
 
+#define TIMER_NAME_FIND_MISSING_BLOBS "recc.find_missing_blobs"
+#define TIMER_NAME_UPLOAD_MISSING_BLOBS "recc.upload_missing_blobs"
+
 using namespace BloombergLP::recc;
+using namespace buildboxcommon::buildboxcommonmetrics;
 using namespace testing;
 
 const std::string abc("abc");
@@ -372,4 +378,33 @@ TEST_F(CasClientFixture, FetchCapabilitiesFail)
 
     // A default limit is used:
     ASSERT_GT(casClient.maxTotalBatchSizeBytes(), 0);
+}
+
+TEST_F(CasClientFixture, VerifyMetricsCollection)
+{
+    digest_string_umap blobs;
+    blobs[make_digest(abc)] = abc;
+    blobs[make_digest(defg)] = defg;
+    proto::FindMissingBlobsResponse response;
+    *response.add_missing_blob_digests() = make_digest(defg);
+
+    EXPECT_CALL(*casStub,
+                FindMissingBlobs(_,
+                                 AllOf(HasBlobDigest(make_digest(abc)),
+                                       HasBlobDigest(make_digest(defg))),
+                                 _))
+        .WillOnce(DoAll(SetArgPointee<2>(response), Return(grpc::Status::OK)));
+
+    proto::BatchUpdateBlobsResponse updateBlobsResponse;
+    *updateBlobsResponse.add_responses()->mutable_digest() = make_digest(defg);
+    EXPECT_CALL(
+        *casStub,
+        BatchUpdateBlobs(_, HasUpdateBlobRequest(make_digest(defg), defg), _))
+        .WillOnce(DoAll(SetArgPointee<2>(updateBlobsResponse),
+                        Return(grpc::Status::OK)));
+
+    casClient.upload_resources(blobs, {});
+    std::vector<std::string> metrics{TIMER_NAME_FIND_MISSING_BLOBS,
+                                     TIMER_NAME_UPLOAD_MISSING_BLOBS};
+    EXPECT_TRUE(validateMetricCollection<DurationMetricTimer>(metrics));
 }

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <buildboxcommonmetrics_durationmetrictimer.h>
+#include <buildboxcommonmetrics_testingutils.h>
 #include <digestgenerator.h>
 #include <env.h>
 #include <grpccontext.h>
@@ -35,7 +37,10 @@
 #include <signal.h>
 #include <unistd.h>
 
+#define TIMER_NAME_FETCH_WRITE_RESULTS "recc.fetch_write_results"
+
 using namespace BloombergLP::recc;
+using namespace buildboxcommon::buildboxcommonmetrics;
 using namespace testing;
 
 /*
@@ -279,6 +284,37 @@ TEST_F(RemoteExecutionClientTestFixture, WriteFilesToDisk)
     const std::string expectedPath = std::string(tempDir.name()) + "/test.txt";
     EXPECT_TRUE(FileUtils::isExecutable(expectedPath));
     EXPECT_EQ(FileUtils::getFileContents(expectedPath), "Test file content!");
+}
+
+TEST_F(RemoteExecutionClientTestFixture, VerifyMetricsWriteFilesToDisk)
+{
+    buildboxcommon::TemporaryDirectory tempDir;
+
+    ActionResult testResult;
+    proto::Digest d;
+    d.set_hash("Test file hash");
+    d.set_size_bytes(18);
+    auto testFile = OutputBlob(std::string(), d, true);
+    testResult.d_outputFiles["test.txt"] = testFile;
+
+    // Allow the client to fetch the file from CAS.
+    google::bytestream::ReadRequest expectedByteStreamRequest;
+    expectedByteStreamRequest.set_resource_name(
+        "blobs/" + testFile.d_digest.hash() + "/" +
+        std::to_string(testFile.d_digest.size_bytes()));
+    google::bytestream::ReadResponse readResponse;
+    readResponse.set_data("Test file content!");
+    EXPECT_CALL(*byteStreamStub,
+                ReadRaw(_, MessageEq(expectedByteStreamRequest)))
+        .WillOnce(Return(reader));
+    EXPECT_CALL(*reader, Read(_))
+        .WillOnce(DoAll(SetArgPointee<0>(readResponse), Return(true)))
+        .WillOnce(Return(false));
+    EXPECT_CALL(*reader, Finish()).WillOnce(Return(grpc::Status::OK));
+
+    client.write_files_to_disk(testResult, tempDir.name());
+    EXPECT_TRUE(validateMetricCollection<DurationMetricTimer>(
+        TIMER_NAME_FETCH_WRITE_RESULTS));
 }
 
 TEST_F(RemoteExecutionClientTestFixture, CancelOperation)
