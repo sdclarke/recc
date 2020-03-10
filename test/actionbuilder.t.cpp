@@ -44,7 +44,6 @@ class ActionBuilderTestFixture
         d_previous_deps_global_path = RECC_DEPS_GLOBAL_PATHS;
         d_previous_deps_exclude_paths = RECC_DEPS_EXCLUDE_PATHS;
         d_previous_working_dir_prefix = RECC_WORKING_DIR_PREFIX;
-        d_previous_prefix_placement = RECC_PREFIX_REPLACEMENT;
     }
 
     void TearDown() override
@@ -55,7 +54,6 @@ class ActionBuilderTestFixture
         RECC_DEPS_GLOBAL_PATHS = d_previous_deps_global_path;
         RECC_DEPS_EXCLUDE_PATHS = d_previous_deps_exclude_paths;
         RECC_WORKING_DIR_PREFIX = d_previous_working_dir_prefix;
-        RECC_PREFIX_REPLACEMENT = d_previous_prefix_placement;
     }
 
     digest_string_umap blobs;
@@ -70,14 +68,12 @@ class ActionBuilderTestFixture
     bool d_previous_force_remote;
     bool d_previous_deps_global_path;
     std::string d_previous_working_dir_prefix;
-    std::vector<std::pair<std::string, std::string>>
-        d_previous_prefix_placement;
 };
 
 TEST_F(ActionBuilderTestFixture, BuildSimpleCommand)
 {
     const std::vector<std::string> command_arguments = {
-        "/usr/bin/gcc", "-c", "hello.cpp", "-o", "hello.o"};
+        "/my/fake/gcc", "-c", "hello.cpp", "-o", "hello.o"};
     const std::set<std::string> output_files = {"hello.o"};
     const std::string working_directory = ".";
 
@@ -130,8 +126,8 @@ TEST_F(ActionBuilderTestFixture, BuildMerkleTreeVerifyMetricsCollection)
 
 TEST_F(ActionBuilderTestFixture, GetDependenciesVerifyMetricsCollection)
 {
-    const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
-                                                "hello.o"};
+    const std::vector<std::string> recc_args = {"./gcc", "-c", "hello.cpp",
+                                                "-o", "hello.o"};
     std::set<std::string> deps;
     std::set<std::string> prod;
     const ParsedCommand command(recc_args, cwd.c_str());
@@ -264,8 +260,8 @@ TEST_P(ActionBuilderTestFixture, ActionContainsExpectedCompileCommand)
     const std::string working_dir_prefix = GetParam();
     RECC_WORKING_DIR_PREFIX = working_dir_prefix;
 
-    const std::vector<std::string> recc_args = {"/usr/bin/gcc", "-c",
-                                                "hello.cpp", "-o", "hello.o"};
+    const std::vector<std::string> recc_args = {"./gcc", "-c", "hello.cpp",
+                                                "-o", "hello.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
 
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
@@ -293,8 +289,8 @@ TEST_P(ActionBuilderTestFixture, ActionCompileCommandGoldenDigests)
     const std::string working_dir_prefix = GetParam();
     RECC_WORKING_DIR_PREFIX = working_dir_prefix;
 
-    const std::vector<std::string> recc_args = {"/usr/bin/gcc", "-c",
-                                                "hello.cpp", "-o", "hello.o"};
+    const std::vector<std::string> recc_args = {"./gcc", "-c", "hello.cpp",
+                                                "-o", "hello.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
 
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
@@ -306,12 +302,12 @@ TEST_P(ActionBuilderTestFixture, ActionCompileCommandGoldenDigests)
      */
     if (working_dir_prefix.empty()) {
         EXPECT_EQ(
-            "d54413f2782a1da1ee38263750088d380b3d1ac0f29d04acfbde32040cc76ffd",
+            "2751b2f369c793ec389e54410db4b2eeddbcbbff3adc004e4283b81f254ffa14",
             actionPtr->command_digest().hash());
     }
     else {
         EXPECT_EQ(
-            "134f198b2a5015e24d5a7fc0bf002e27ee3486cd65a683718f5a7df4170b3708",
+            "df731385d14c9c5080f1cc8e84a41c0ec9391b88d3b0e11a05e63835be03e30b",
             actionPtr->command_digest().hash());
     }
 }
@@ -410,8 +406,8 @@ TEST_P(ActionBuilderTestFixture, ActionContainsExpectedMerkleTree)
     if (!working_dir_prefix.empty()) {
         RECC_WORKING_DIR_PREFIX = working_dir_prefix;
     }
-
-    const std::vector<std::string> recc_args = {"/usr/bin/gcc", "-c",
+    RECC_DEPS_OVERRIDE = {"hello.cpp"};
+    const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
 
@@ -452,8 +448,8 @@ TEST_P(ActionBuilderTestFixture, ActionBuiltGoldenDigests)
         RECC_WORKING_DIR_PREFIX = working_dir_prefix;
     }
 
-    const std::vector<std::string> recc_args = {"/usr/bin/gcc", "-c",
-                                                "hello.cpp", "-o", "hello.o"};
+    const std::vector<std::string> recc_args = {"./gcc", "-c", "hello.cpp",
+                                                "-o", "hello.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
 
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
@@ -465,13 +461,13 @@ TEST_P(ActionBuilderTestFixture, ActionBuiltGoldenDigests)
     if (working_dir_prefix.empty()) {
         EXPECT_EQ(140, actionDigest.size_bytes());
         EXPECT_EQ(
-            "f82858c42000e77965318892c4f5db2669fb865fb4a6295a56f1aa32f6778ce2",
+            "6a0949be163692a6a9e51530e31a5c3721246f350fe2d6c00e5cfd90d749e6b3",
             actionDigest.hash());
     }
     else {
         EXPECT_EQ(140, actionDigest.size_bytes());
         EXPECT_EQ(
-            "51fa5415b5bb24fda971d2696af84ad7217249f6a03daf541076b0955528ae84",
+            "1ce0771dfafdd22d59bdf0ac6a6c9fd6e00a183b0cd17fc09fec0bad1b460345",
             actionDigest.hash());
     }
 }
@@ -594,7 +590,7 @@ TEST_P(ActionBuilderTestFixture, AbsolutePathActionBuilt)
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
 
-    const std::vector<std::string> recc_args = {"/usr/bin/gcc", "-c",
+    const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
@@ -642,7 +638,7 @@ TEST_P(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
                           "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
 
-    const std::vector<std::string> recc_args = {"/usr/bin/gcc", "-c",
+    const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
@@ -678,7 +674,7 @@ TEST_P(ActionBuilderTestFixture, ExcludePath)
     RECC_DEPS_GLOBAL_PATHS = 1;
     RECC_DEPS_EXCLUDE_PATHS = {"/usr/include"};
 
-    const std::vector<std::string> recc_args = {"/usr/bin/gcc", "-c",
+    const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
@@ -715,7 +711,7 @@ TEST_P(ActionBuilderTestFixture, ExcludePathMultipleMatchOne)
     RECC_DEPS_GLOBAL_PATHS = 1;
     RECC_DEPS_EXCLUDE_PATHS = {"/foo/bar", "/usr/include"};
 
-    std::vector<std::string> recc_args = {"/usr/bin/gcc", "-c", "hello.cpp",
+    std::vector<std::string> recc_args = {"/my/fake/gcc", "-c", "hello.cpp",
                                           "-o", "hello.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
@@ -755,7 +751,7 @@ TEST_P(ActionBuilderTestFixture, ExcludePathNoMatch)
     RECC_DEPS_GLOBAL_PATHS = 1;
     RECC_DEPS_EXCLUDE_PATHS = {"/foo/bar"};
 
-    const std::vector<std::string> recc_args = {"/usr/bin/gcc", "-c",
+    const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
@@ -797,7 +793,7 @@ TEST_P(ActionBuilderTestFixture, ExcludePathSingleWithMultiInput)
     RECC_DEPS_GLOBAL_PATHS = 1;
     RECC_DEPS_EXCLUDE_PATHS = {"/usr/include/net"};
 
-    const std::vector<std::string> recc_args = {"/usr/bin/gcc", "-c",
+    const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
@@ -833,7 +829,7 @@ TEST_P(ActionBuilderTestFixture, EmptyWorkingDirInputRoot)
     RECC_DEPS_OVERRIDE = {"../deps/empty.c"};
 
     const std::vector<std::string> recc_args = {
-        "/usr/bin/gcc", "-c", "../deps/empty.c", "-o", "empty.o"};
+        "/my/fake/gcc", "-c", "../deps/empty.c", "-o", "empty.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
@@ -856,8 +852,8 @@ TEST_P(ActionBuilderTestFixture, UnrelatedOutputDirectory)
     if (!working_dir_prefix.empty()) {
         RECC_WORKING_DIR_PREFIX = working_dir_prefix;
     }
-    const std::vector<std::string> recc_args = {
-        "/usr/bin/gcc", "-c", "hello.cpp", "-o", "/fakedirname/hello.o"};
+    const std::vector<std::string> recc_args = {"./gcc", "-c", "hello.cpp",
+                                                "-o", "/fakedirname/hello.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
@@ -891,7 +887,7 @@ TEST_P(ActionBuilderTestFixture, SimplePathReplacement)
     RECC_DEPS_OVERRIDE = {"/usr/include/ctype.h", "hello.cpp"};
     RECC_DEPS_GLOBAL_PATHS = 1;
 
-    const std::vector<std::string> recc_args = {"/usr/bin/gcc", "-c",
+    const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
     const ParsedCommand command(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
