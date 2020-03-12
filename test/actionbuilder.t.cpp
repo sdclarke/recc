@@ -312,7 +312,6 @@ TEST_P(ActionBuilderTestFixture, ActionContainsExpectedCompileCommand)
 
 TEST_P(ActionBuilderTestFixture, ActionCompileCommandGoldenDigests)
 {
-
     const std::string working_dir_prefix = GetParam();
     RECC_WORKING_DIR_PREFIX = working_dir_prefix;
 
