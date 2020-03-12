@@ -25,6 +25,9 @@
 namespace BloombergLP {
 namespace recc {
 
+extern std::mutex ContainerWriteMutex;
+extern std::mutex LogWriteMutex;
+
 struct ActionBuilder {
     /**
      * Build an `Action` from the given `ParsedCommand` and working directory.

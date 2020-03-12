@@ -23,8 +23,11 @@
 
 #include <cstdlib>
 #include <exception>
+#include <functional>
+#include <gtest/gtest.h>
+#include <mutex>
 #include <sys/stat.h>
-
+#include <vector>
 using namespace BloombergLP::recc;
 
 TEST(FileUtilsTest, CreateDirectoryRecursive)

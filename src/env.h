@@ -253,6 +253,12 @@ extern std::string RECC_CORRELATED_INVOCATIONS_ID;
 extern std::string RECC_WORKING_DIR_PREFIX;
 
 /**
+ * Specify the maximum number of system threads available to the recc process.
+ * -1 specifies use as many system threads as cores
+ */
+extern int RECC_MAX_THREADS;
+
+/**
  * The process environment.
  */
 extern "C" char **environ;

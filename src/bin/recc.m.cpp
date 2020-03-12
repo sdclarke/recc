@@ -176,7 +176,10 @@ const std::string HELP(
     DigestGenerator::supportedDigestFunctionsList() +
     "\n\n"
     "RECC_WORKING_DIR_PREFIX - directory to prefix the command's working\n"
-    "                          directory, and input paths relative to it\n");
+    "                          directory, and input paths relative to it\n"
+    "RECC_MAX_THREADS -   Allow some operations to utilize multiple cores."
+    "Default: 4 \n"
+    "                     A value of -1 specifies use all available cores.");
 
 enum ReturnCode {
     RC_OK = 0,

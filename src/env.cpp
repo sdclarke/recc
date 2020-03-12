@@ -105,6 +105,7 @@ std::map<std::string, std::string> RECC_REMOTE_PLATFORM =
 
 // Keep this empty initially and have set_config_locations() populate it
 std::deque<std::string> RECC_CONFIG_LOCATIONS = {};
+int RECC_MAX_THREADS = DEFAULT_RECC_MAX_THREADS;
 
 namespace {
 
@@ -297,6 +298,7 @@ void Env::parse_config_variables(const char *const *env)
 
         INTVAR(RECC_RETRY_LIMIT)
         INTVAR(RECC_RETRY_DELAY)
+        INTVAR(RECC_MAX_THREADS)
 
         SETVAR(RECC_DEPS_OVERRIDE, ',')
         SETVAR(RECC_OUTPUT_FILES_OVERRIDE, ',')
@@ -398,6 +400,10 @@ void Env::handle_special_defaults()
         throw std::runtime_error(
             "Unknown digest function set in RECC_CAS_DIGEST_FUNCTION: \"" +
             RECC_CAS_DIGEST_FUNCTION + "\".");
+    }
+
+    if (RECC_MAX_THREADS == 0) {
+        RECC_MAX_THREADS = 1;
     }
 }
 

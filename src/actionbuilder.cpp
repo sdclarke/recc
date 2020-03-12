@@ -20,12 +20,18 @@
 #include <fileutils.h>
 #include <logging.h>
 #include <reccdefaults.h>
+#include <set>
+#include <thread>
+#include <threadutils.h>
 
 #define TIMER_NAME_COMPILER_DEPS "recc.compiler_deps"
 #define TIMER_NAME_BUILD_MERKLE_TREE "recc.build_merkle_tree"
 
 namespace BloombergLP {
 namespace recc {
+
+std::mutex ContainerWriteMutex;
+std::mutex LogWriteMutex;
 
 proto::Command ActionBuilder::populateCommandProto(
     const std::vector<std::string> &command,
@@ -96,6 +102,38 @@ ActionBuilder::prefixWorkingDirectory(const std::string &workingDirectory,
     return prefix + "/" + workingDirectory;
 }
 
+typedef std::set<std::string>::iterator setIterator;
+void addFileToMerkleTreeHelper(const std::string &dep, const std::string &cwd,
+                               NestedDirectory *nestedDirectory,
+                               digest_string_umap *digest_to_filecontents)
+{
+    // If the dependency is an absolute path, leave the merklePath
+    // untouched
+    std::string merklePath = (dep[0] == '/') ? dep : cwd + "/" + dep;
+    merklePath = FileUtils::normalizePath(merklePath);
+
+    // don't include a dependency if it's exclusion is requested
+    if (FileUtils::hasPathPrefixes(merklePath, RECC_DEPS_EXCLUDE_PATHS)) {
+        const std::lock_guard<std::mutex> lock(LogWriteMutex);
+        RECC_LOG_VERBOSE("Skipping \"" << merklePath << "\"");
+        return;
+    }
+
+    std::shared_ptr<ReccFile> file = ReccFileFactory::createFile(dep.c_str());
+    if (!file) {
+        const std::lock_guard<std::mutex> lock(LogWriteMutex);
+        RECC_LOG_VERBOSE("Encountered unsupported file \""
+                         << dep << "\", skipping...");
+        return;
+    }
+
+    {
+        const std::lock_guard<std::mutex> lock(ContainerWriteMutex);
+        nestedDirectory->add(file, merklePath.c_str());
+        (*digest_to_filecontents)[file->getDigest()] = file->getFileContents();
+    }
+}
+
 void ActionBuilder::buildMerkleTree(const std::set<std::string> &dependencies,
                                     const std::string &cwd,
                                     NestedDirectory *nestedDirectory,
@@ -107,29 +145,16 @@ void ActionBuilder::buildMerkleTree(const std::set<std::string> &dependencies,
 
     RECC_LOG_VERBOSE("Building Merkle tree");
 
-    for (const auto &dep : dependencies) {
-        // If the dependency is an absolute path, leave the merklePath
-        // untouched
-        std::string merklePath = (dep[0] == '/') ? dep : cwd + "/" + dep;
-        merklePath = FileUtils::normalizePath(merklePath);
-
-        // don't include a dependency if it's exclusion is requested
-        if (FileUtils::hasPathPrefixes(merklePath, RECC_DEPS_EXCLUDE_PATHS)) {
-            RECC_LOG_VERBOSE("Skipping \"" << merklePath << "\"");
-            continue;
-        }
-
-        std::shared_ptr<ReccFile> file =
-            ReccFileFactory::createFile(dep.c_str());
-        if (!file) {
-            RECC_LOG_VERBOSE("Encountered unsupported file \""
-                             << dep << "\", skipping...");
-            continue;
-        }
-        nestedDirectory->add(file, merklePath.c_str());
-        // Store the digest to the file content.
-        (*digest_to_filecontents)[file->getDigest()] = file->getFileContents();
-    }
+    std::function<void(setIterator, setIterator)>
+        createMerkleTreeFromIterators =
+            [&](setIterator start, setIterator end) {
+                for (; start != end; ++start) {
+                    addFileToMerkleTreeHelper(*start, cwd, nestedDirectory,
+                                              digest_to_filecontents);
+                }
+            };
+    ThreadUtils::parallelizeContainerOperations(dependencies,
+                                                createMerkleTreeFromIterators);
 }
 
 void ActionBuilder::getDependencies(const ParsedCommand &command,

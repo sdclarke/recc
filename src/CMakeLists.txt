@@ -1,27 +1,8 @@
+set(BINARY ${CMAKE_PROJECT_NAME})
+
 include_directories(.)
 
-set(SRCS
-    actionbuilder.cpp
-    authsession.cpp
-    casclient.cpp
-    deps.cpp
-    digestgenerator.cpp
-    env.cpp
-    fileutils.cpp
-    formpost.cpp
-    grpcretry.cpp
-    grpcchannels.cpp
-    grpccontext.cpp
-    jsonfilemanager.cpp
-    merklize.cpp
-    metricsconfig.cpp
-    parsedcommand.cpp
-    reccfile.cpp
-    remoteexecutionclient.cpp
-    remoteexecutionsignals.cpp
-    requestmetadata.cpp
-    subprocess.cpp
-)
+FILE(GLOB SRCS *.cpp)
 
 if(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
     set(DEBUG_FLAGS -Werror -Wextra -pedantic-errors -Wall -Wconversion -Wno-vla)
@@ -41,8 +22,8 @@ endif ()
 # Link remoteexecution to the buildboxcommon library
 target_link_libraries(remoteexecution Buildbox::buildboxcommon)
 
-add_executable(recc bin/recc.m.cpp)
-target_link_libraries(recc remoteexecution)
+add_executable(${BINARY} bin/${BINARY}.m.cpp)
+target_link_libraries(${BINARY} remoteexecution)
 
 add_executable(casupload bin/casupload.m.cpp)
 target_link_libraries(casupload remoteexecution)
@@ -50,15 +31,13 @@ target_link_libraries(casupload remoteexecution)
 add_executable(deps deps.cpp bin/deps.m.cpp)
 target_link_libraries(deps remoteexecution)
 
-install(TARGETS recc RUNTIME DESTINATION bin)
-
-
+install(TARGETS ${BINARY} RUNTIME DESTINATION bin)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
     message("Skipping all warnings due to GNU compiler + AIX system")
 else()
     target_compile_options(remoteexecution PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
-    target_compile_options(recc PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
+    target_compile_options(${BINARY} PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
     target_compile_options(casupload PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
     target_compile_options(deps PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
 endif()

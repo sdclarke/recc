@@ -15,12 +15,15 @@
 #ifndef INCLUDED_FILEUTILS
 #define INCLUDED_FILEUTILS
 
+#include <functional>
+#include <iostream>
+#include <iterator>
 #include <reccdefaults.h>
 #include <set>
 #include <string>
 #include <sys/stat.h>
+#include <thread>
 #include <vector>
-
 namespace BloombergLP {
 namespace recc {
 
@@ -182,4 +185,5 @@ struct FileUtils {
 
 } // namespace recc
 } // namespace BloombergLP
+
 #endif
