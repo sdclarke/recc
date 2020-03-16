@@ -45,24 +45,29 @@ struct ThreadUtils {
         int numThreads = RECC_MAX_THREADS;
         typename ContainerT::iterator start = container.begin();
         typename ContainerT::iterator end = container.end();
-        const int containerLength = container.size();
+        const auto containerLength = container.size();
         if (containerLength < 50 || numThreads == 0) {
             doWorkInRange(start, end);
         }
         else {
             if (numThreads < 0) {
                 // This call can return 0. If so, default to numThreads.
-                const unsigned int available_threads =
-                    std::thread::hardware_concurrency();
+                int available_threads =
+                    static_cast<int>(std::thread::hardware_concurrency());
                 numThreads =
                     available_threads ? available_threads : numThreads;
             }
             if (numThreads == 0) {
                 numThreads = 1;
             }
-            const int numItemsPerPartition = containerLength / numThreads;
+
+            auto positiveNumThreads = static_cast<unsigned long>(numThreads);
+            const auto numItemsPerPartition =
+                containerLength / positiveNumThreads;
             std::vector<std::thread> threadObjects;
-            threadObjects.reserve(numThreads);
+            // The conversion to unsigned is fine here, as we handle negative
+            // values for numThreads above.
+            threadObjects.reserve(positiveNumThreads);
             end = start;
             for (auto partition = 0; partition < numThreads; ++partition) {
                 // To handle a none evenly divisible number of objects, the
@@ -76,7 +81,7 @@ struct ThreadUtils {
                     continue;
                 }
                 else {
-                    std::advance(end, numItemsPerPartition);
+                    std::advance(end, static_cast<long>(numItemsPerPartition));
                 }
                 threadObjects.push_back(
                     std::thread(std::ref(doWorkInRange), start, end));

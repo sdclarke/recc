@@ -192,13 +192,21 @@ void parse_stage_option_list(const std::string &option,
 }
 
 // clang-format off
+// https://gcc.gnu.org/onlinedocs/gcc/Diagnostic-Pragmas.html
+// Suppress unused parameter warnings and sign conversion warnings stemming from the helper macros above.
+_Pragma("GCC diagnostic push")
+// Ignore sign conversion warnings resulting from checking string values in COMMAND_PARSER_LAMBDA
+_Pragma("GCC diagnostic ignored \"-Wsign-conversion\"")
+// Ignore unused parameter warnings resulting from compiler not recognizing usage of variables in COMMAND_PARSER_LAMBDA.
+_Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
+
 std::map<std::string, command_parser> make_command_parser_map()
 {
     std::map<std::string, command_parser> result;
     std::vector<std::pair<std::set<std::string>, command_parser>> initList =
     {
     {CompilerDefaults::getCompilers(CompilerFlavour::Gcc), COMMAND_PARSER_LAMBDA {
-            std::vector<std::string> preproOptions;
+        std::vector<std::string> preproOptions;
 
         OPTIONS_START()
         OPTION_INTERFERES_WITH_DEPS("-M")
@@ -335,18 +343,24 @@ std::map<std::string, command_parser> make_command_parser_map()
 #endif
         return false;
     }}
-};
+    }; // end initlist definition
+
     for (const auto &initPair : initList) {
         for (const auto &compiler : initPair.first) {
             result[compiler] = initPair.second;
         }
     }
+
     return result;
+
 } // end make_command_parser_map
 
-// clang-format on
-ParsedCommand::ParsedCommand(std::vector<std::string> command,
-                             const char *workingDirectory)
+_Pragma("GCC diagnostic pop")
+
+    // clang-format on
+
+    ParsedCommand::ParsedCommand(std::vector<std::string> command,
+                                 const char *workingDirectory)
     : d_compilerCommand(false), d_isClang(false),
       d_producesSunMakeRules(false), d_dependencyFileAIX(nullptr)
 {

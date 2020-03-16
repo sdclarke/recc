@@ -114,8 +114,9 @@ void NestedDirectory::addSymlink(const std::string &target,
 
     const char *slash = strchr(replacedDirectory.c_str(), '/');
     if (slash) {
-        const std::string subdirKey(replacedDirectory.c_str(),
-                                    slash - replacedDirectory.c_str());
+        const std::string subdirKey(
+            replacedDirectory.c_str(),
+            static_cast<size_t>(slash - replacedDirectory.c_str()));
         if (subdirKey.empty()) {
             this->addSymlink(target, slash + 1, checkedPrefix);
         }

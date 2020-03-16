@@ -342,7 +342,7 @@ void CASClient::batchUpdateBlobs(
     proto::BatchUpdateBlobsRequest batchUpdateRequest;
     batchUpdateRequest.set_instance_name(d_instanceName);
 
-    int batchSize = 0;
+    size_t batchSize = 0;
     for (const auto &digest : digests) {
         // Finding the data in one of the source maps:
         std::string blob;
@@ -379,7 +379,7 @@ void CASClient::batchUpdateBlobs(
         updateRequest->set_data(blob);
 
         batchSize += digest.size_bytes();
-        batchSize += digest.hash().size();
+        batchSize += static_cast<size_t>(digest.hash().size());
     }
 
     if (!batchUpdateRequest.requests().empty()) {

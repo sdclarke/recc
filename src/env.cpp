@@ -136,7 +136,7 @@ std::string stripChar(const std::string &str, const char value)
     tmp.resize(str.size());
     auto it = std::copy_if(str.begin(), str.end(), tmp.begin(),
                            [value](char c) { return (c != value); });
-    tmp.resize(std::distance(tmp.begin(), it));
+    tmp.resize(static_cast<size_t>(std::distance(tmp.begin(), it)));
     return tmp;
 }
 
@@ -230,6 +230,14 @@ void parse_config_files(const std::string &config_file_name)
 
 } // namespace
 
+// clang-format off
+
+// https://gcc.gnu.org/onlinedocs/gcc/Diagnostic-Pragmas.html
+// Suppress unused parameter warnings and sign conversion warnings stemming from the helper macros below.
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wsign-conversion\"")
+_Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
+
 void Env::parse_config_variables(const char *const *env)
 {
 #define VARS_START()                                                          \
@@ -312,7 +320,10 @@ void Env::parse_config_variables(const char *const *env)
     }
 }
 
-void Env::find_and_parse_config_files()
+_Pragma("GCC diagnostic pop")
+
+    // clang-format on
+    void Env::find_and_parse_config_files()
 {
     for (auto file_location : RECC_CONFIG_LOCATIONS) {
         std::ifstream config(file_location);
@@ -333,7 +344,6 @@ void Env::handle_special_defaults()
                          "specified."
                          << " Using default server (" << RECC_SERVER << ")");
     }
-
     if (RECC_CAS_SERVER.empty()) {
         if (RECC_ACTION_CACHE_SERVER.empty()) {
             RECC_CAS_SERVER = RECC_SERVER;

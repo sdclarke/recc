@@ -47,10 +47,11 @@ void grpc_retry(
             /* The call failed. */
             if (n_attempts < RECC_RETRY_LIMIT) {
                 /* Delay the next call based on the number of attempts made */
-                int time_delay =
-                    RECC_RETRY_DELAY * pow(static_cast<double>(2), n_attempts);
+                const int time_delay =
+                    static_cast<int>(RECC_RETRY_DELAY *
+                                     pow(static_cast<double>(2), n_attempts));
 
-                std::string error_msg =
+                const std::string error_msg =
                     "Attempt " + std::to_string(n_attempts + 1) + "/" +
                     std::to_string(RECC_RETRY_LIMIT + 1) +
                     " failed with gRPC error " +
@@ -59,7 +60,6 @@ void grpc_retry(
                     std::to_string(time_delay) + " ms...";
 
                 RECC_LOG_ERROR(error_msg);
-
                 std::this_thread::sleep_for(
                     std::chrono::milliseconds(time_delay));
             }

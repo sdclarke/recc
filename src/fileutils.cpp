@@ -116,8 +116,8 @@ std::string FileUtils::getSymlinkContents(const std::string &path,
         throw std::runtime_error(oss.str());
     }
 
-    std::string contents(statResult.st_size, '\0');
-    const int rc = readlink(path.c_str(), &contents[0], contents.size());
+    std::string contents(static_cast<size_t>(statResult.st_size), '\0');
+    const ssize_t rc = readlink(path.c_str(), &contents[0], contents.size());
     if (rc < 0) {
         std::ostringstream oss;
         oss << "readlink failed for \"" << path << "\", rc = " << rc
