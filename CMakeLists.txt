@@ -35,6 +35,8 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
     if(BUILD_STATIC)
         set(OS_LIBS "-lresolv -ldl")
     endif()
+elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    add_definitions(-DRECC_PLATFORM_COMPILER="clang++")
 endif()
 
 # Determine recc's version if none was provided

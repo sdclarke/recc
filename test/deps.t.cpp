@@ -28,6 +28,7 @@ std::set<std::string> normalize_all(const std::set<std::string> &paths)
     return result;
 }
 
+// Set in the top-level CMakeLists.txt depending on the platform.
 #ifdef RECC_PLATFORM_COMPILER
 
 // Some compilers, like xlc, need certain environment variables to
