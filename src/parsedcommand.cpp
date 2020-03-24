@@ -18,6 +18,7 @@
 #include <fileutils.h>
 #include <logging.h>
 
+#include <cctype>
 #include <cstring>
 #include <functional>
 #include <map>
@@ -372,27 +373,31 @@ ParsedCommand::ParsedCommand(std::vector<std::string> command,
 
 std::string ParsedCommand::command_basename(const std::string &path)
 {
-    const char *lastSlash = strrchr(path.c_str(), '/');
-    const char *basename = lastSlash == nullptr ? path.c_str() : lastSlash + 1;
-    auto length = strlen(basename);
+    const auto lastSlash = path.rfind('/');
+    const auto basename =
+        (lastSlash == std::string::npos) ? path : path.substr(lastSlash + 1);
 
-    if (basename[length - 2] == '_' && basename[length - 1] == 'r') {
+    auto length = basename.length();
+
+    // We get rid of "_r" suffixes in, for example, "./xlc++_r":
+    const std::string rSuffix = "_r";
+    if (length > 2 && basename.substr(length - rSuffix.length()) == rSuffix) {
         length -= 2;
     }
-    else if (basename[length - 3] == '_' && basename[length - 2] == 'r') {
+    else if (length > 3 &&
+             basename.substr(length - 3, rSuffix.length()) == rSuffix) {
         length -= 3;
     }
 
     const auto is_version_character = [](const char character) {
-        return (character >= '0' && character <= '9') || character == '.' ||
-               character == '-';
+        return (isdigit(character)) || character == '.' || character == '-';
     };
 
-    while (is_version_character(basename[length - 1]) && length > 0) {
+    while (length > 0 && is_version_character(basename[length - 1])) {
         --length;
     }
 
-    return std::string(basename, length);
+    return basename.substr(0, length);
 }
 
 std::vector<std::string>
