@@ -17,7 +17,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     "${TEST_DEPENDS}" \
     && apt-get clean
 
-
 WORKDIR /recc
 COPY . .
 
@@ -25,7 +24,7 @@ COPY . .
 RUN mkdir build && cd build && \
     if [ -z "${ENABLE_TESTS}" ]; then \
         echo "Building without tests" && \
-        cmake -DBUILD_ENABLE_TESTSING=OFF "${EXTRA_CMAKE_FLAGS}" .. && \
+        cmake -DBUILD_TESTING=OFF "${EXTRA_CMAKE_FLAGS}" .. && \
         make -j$(nproc) && \
         echo "Produced the following binaries: " && find /recc/build/bin/ \
     ;else \
@@ -33,7 +32,7 @@ RUN mkdir build && cd build && \
         if [ -n "${RUN_GCOV}" ]; then \
             GCOV_CMAKE_FLAGS="-DCMAKE_CXX_FLAGS=$GCOV_FLGS -DCMAKE_EXE_LINKER_FLAGS=$GCOV_FLGS -DCMAKE_SHARED_LINKER_FLAGS=$GCOV_FLGS -DCMAKE_CXX_OUTPUT_EXTENSION_REPLACE=ON" \
         ;fi && \
-        cmake -DGTEST_SOURCE_ROOT=/usr/src/googletest "${EXTRA_CMAKE_FLAGS}" "${GCOV_CMAKE_FLAGS-}" .. && \
+        cmake -DBUILD_TESTING=ON -DGTEST_SOURCE_ROOT=/usr/src/googletest "${EXTRA_CMAKE_FLAGS}" "${GCOV_CMAKE_FLAGS-}" .. && \
         make -j$(nproc) && ctest --verbose && \
         echo "Produced the following binaries: " && find /recc/build/bin/ \
     ;fi

@@ -14,11 +14,12 @@
 
 #include <deps.h>
 
-#include <buildboxcommon_fileutils.h>
+#include <compilerdefaults.h>
 #include <env.h>
 #include <logging.h>
 #include <subprocess.h>
 
+#include <buildboxcommon_fileutils.h>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -133,7 +134,7 @@ CommandFileInfo Deps::get_file_info(const ParsedCommand &parsedCommand)
 {
     CommandFileInfo result;
     bool is_clang = parsedCommand.is_clang();
-    auto subprocessResult =
+    const auto subprocessResult =
         Subprocess::execute(parsedCommand.get_dependencies_command(), true,
                             is_clang, RECC_DEPS_ENV);
 
@@ -149,8 +150,17 @@ CommandFileInfo Deps::get_file_info(const ParsedCommand &parsedCommand)
         throw subprocess_failed_error(subprocessResult.d_exitCode);
     }
 
+    std::string dependencies = subprocessResult.d_stdOut;
+
+    // If AIX compiler, read dependency information from temporary file.
+
+    if (parsedCommand.is_AIX()) {
+        dependencies = buildboxcommon::FileUtils::getFileContents(
+            parsedCommand.get_aix_dependency_file_name().c_str());
+    }
+
     result.d_dependencies = dependencies_from_make_rules(
-        subprocessResult.d_stdOut, parsedCommand.produces_sun_make_rules(),
+        dependencies, parsedCommand.produces_sun_make_rules(),
         RECC_DEPS_GLOBAL_PATHS);
 
     if (RECC_DEPS_GLOBAL_PATHS && is_clang) {

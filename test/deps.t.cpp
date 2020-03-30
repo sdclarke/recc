@@ -70,15 +70,21 @@ TEST(DepsTest, RecursiveDependency)
 
 TEST(DepsTest, MultiFile)
 {
-    Env::parse_config_variables();
-    RECC_DEPS_GLOBAL_PATHS = 0;
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
-                             "includes_includes_empty.c", "includes_empty.c"};
-    std::set<std::string> expected = {"includes_includes_empty.c",
-                                      "includes_empty.c", "includes_empty.h",
-                                      "empty.h"};
-    EXPECT_EQ(expected,
-              normalize_all(Deps::get_file_info(command).d_dependencies));
+    // Exclude this test on AIX, as the compiler doesn't support writing
+    // multiple source files dependency information to the same file without
+    // overriding the contents.
+    if (RECC_PLATFORM_COMPILER != "xlc") {
+        Env::parse_config_variables();
+        RECC_DEPS_GLOBAL_PATHS = 0;
+        ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
+                                 "includes_includes_empty.c",
+                                 "includes_empty.c"};
+        std::set<std::string> expected = {"includes_includes_empty.c",
+                                          "includes_empty.c",
+                                          "includes_empty.h", "empty.h"};
+        EXPECT_EQ(expected,
+                  normalize_all(Deps::get_file_info(command).d_dependencies));
+    }
 }
 
 TEST(DepsTest, EdgeCases)

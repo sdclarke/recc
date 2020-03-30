@@ -161,7 +161,15 @@ void ActionBuilder::getDependencies(const ParsedCommand &command,
                                     std::set<std::string> *dependencies,
                                     std::set<std::string> *products)
 {
-    RECC_LOG_VERBOSE("Getting dependencies");
+
+    RECC_LOG_VERBOSE("Getting dependencies using the command:");
+    if (RECC_VERBOSE == true) {
+        for (auto &depc : command.get_dependencies_command()) {
+            std::clog << depc << " ";
+        }
+        std::clog << "\n";
+    }
+
     CommandFileInfo fileInfo;
     { // Timed block
         buildboxcommon::buildboxcommonmetrics::MetricGuard<

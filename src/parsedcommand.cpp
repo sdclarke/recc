@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <parsedcommand.h>
-
 #include <buildboxcommon_fileutils.h>
 #include <fileutils.h>
 #include <logging.h>
 
 #include <cctype>
+#include <compilerdefaults.h>
 #include <cstring>
+#include <fileutils.h>
 #include <functional>
+#include <logging.h>
 #include <map>
+#include <parsedcommand.h>
 #include <utility>
 
 namespace BloombergLP {
@@ -51,9 +53,9 @@ typedef std::function<bool(std::vector<std::string> *, const char *,
 template <typename T> void UnusedVar(const T &) {}
 
 #define COMMAND_PARSER_LAMBDA                                                 \
-    [](std::vector<std::string> * command, const char *workingDirectory,      \
-       std::vector<std::string> *depsCommand, std::set<std::string> *outputs, \
-       bool *producesSunMakeRules) -> bool
+    [&](std::vector<std::string> * command, const char *workingDirectory,     \
+        std::vector<std::string> *depsCommand,                                \
+        std::set<std::string> *outputs, bool *producesSunMakeRules) -> bool
 
 // Helper macros for writing command parsers
 #define IF_GCC_OPTION_ARGUMENT(option, action)                                \
@@ -189,22 +191,13 @@ void parse_stage_option_list(const std::string &option,
     result->push_back(current);
 }
 
-std::map<std::string, command_parser> make_command_parser_map(
-    std::initializer_list<std::pair<std::set<std::string>, command_parser>>
-        initList)
+// clang-format off
+std::map<std::string, command_parser> make_command_parser_map()
 {
     std::map<std::string, command_parser> result;
-    for (const auto &initPair : initList) {
-        for (const auto &compiler : initPair.first) {
-            result[compiler] = initPair.second;
-        }
-    }
-    return result;
-}
-
-// clang-format off
-const std::map<std::string, command_parser> commandParsers = make_command_parser_map({
-    {{"gcc", "g++", "c++", "clang", "clang++"}, COMMAND_PARSER_LAMBDA {
+    std::vector<std::pair<std::set<std::string>, command_parser>> initList =
+    {
+    {CompilerDefaults::getCompilers(CompilerFlavour::Gcc), COMMAND_PARSER_LAMBDA {
             std::vector<std::string> preproOptions;
 
         OPTIONS_START()
@@ -242,7 +235,7 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
 
         if (preproOptions.size() > 0) {
             std::vector<std::string> preproDepsCommand;
-            commandParsers.at("gcc-preprocessor")(&preproOptions,
+            result.at("gcc-preprocessor")(&preproOptions,
                                                   workingDirectory,
                                                   &preproDepsCommand,
                                                   outputs,
@@ -257,10 +250,10 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
             }
         }
 
-        depsCommand->push_back("-M"); // Print make rule to stdout.
+        depsCommand->push_back("-M");
         return isCompileCommand;
     }},
-    {{"gcc-preprocessor"}, COMMAND_PARSER_LAMBDA {
+    {CompilerDefaults::getCompilers(CompilerFlavour::GccPreprocessor), COMMAND_PARSER_LAMBDA {
         OPTIONS_START()
         OPTION_INTERFERES_WITH_DEPS("-M")
         OPTION_INTERFERES_WITH_DEPS("-MM")
@@ -286,7 +279,7 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
 
         return false;
     }},
-    {{"CC"}, COMMAND_PARSER_LAMBDA {
+    {CompilerDefaults::getCompilers(CompilerFlavour::SunCPP), COMMAND_PARSER_LAMBDA {
         OPTIONS_START()
         OPTION_INTERFERES_WITH_DEPS("-xM")
         OPTION_INTERFERES_WITH_DEPS("-xM1")
@@ -305,7 +298,7 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
         *producesSunMakeRules = true;
         return isCompileCommand;
     }},
-    {{"xlc", "xlc++", "xlC", "xlCcore", "xlc++core"}, COMMAND_PARSER_LAMBDA {
+    {CompilerDefaults::getCompilers(CompilerFlavour::AIX), COMMAND_PARSER_LAMBDA {
         OPTIONS_START()
         OPTION_INTERFERES_WITH_DEPS("-qmakedep")
         OPTION_INTERFERES_WITH_DEPS("-qmakedep=gcc")
@@ -325,15 +318,15 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
         depsCommand->push_back("-qsyntaxonly");
         depsCommand->push_back("-M");
         depsCommand->push_back("-MF");
-        depsCommand->push_back("/dev/stdout");
+        // The file name is resolved, and pushed on at runtime time.
         *producesSunMakeRules = true;
         return isCompileCommand;
     }},
-    {{"cc", "c89", "c99"}, COMMAND_PARSER_LAMBDA {
+    {CompilerDefaults::getCompilers(CompilerFlavour::SunC), COMMAND_PARSER_LAMBDA {
 #ifdef RECC_PLATFORM_COMPILER
         std::string compiler = ParsedCommand::command_basename(RECC_PLATFORM_COMPILER);
-        if (commandParsers.count(compiler) > 0) {
-            return commandParsers.at(compiler)(command,
+        if (result.count(compiler) > 0) {
+            return result.at(compiler)(command,
                                                workingDirectory,
                                                depsCommand,
                                                outputs,
@@ -342,23 +335,32 @@ const std::map<std::string, command_parser> commandParsers = make_command_parser
 #endif
         return false;
     }}
-});
-// clang-format on
+};
+    for (const auto &initPair : initList) {
+        for (const auto &compiler : initPair.first) {
+            result[compiler] = initPair.second;
+        }
+    }
+    return result;
+} // end make_command_parser_map
 
+// clang-format on
 ParsedCommand::ParsedCommand(std::vector<std::string> command,
                              const char *workingDirectory)
+    : d_compilerCommand(false), d_isClang(false),
+      d_producesSunMakeRules(false), d_dependencyFileAIX(nullptr)
 {
-    d_compilerCommand = false;
-    d_producesSunMakeRules = false;
-    d_isClang = false;
     if (command.size() > 0) {
-        auto basename = command_basename(command[0]);
-        if (commandParsers.count(basename) > 0) {
-            d_compilerCommand = commandParsers.at(basename)(
+        d_compiler = command_basename(command[0]);
+        const auto commandParsers = make_command_parser_map();
+
+        if (commandParsers.count(d_compiler) > 0) {
+            d_compilerCommand = commandParsers.at(d_compiler)(
                 &command, workingDirectory, &d_dependenciesCommand,
                 &d_commandProducts, &d_producesSunMakeRules);
         }
-        if (basename == "clang" || basename == "clang++") {
+
+        if (d_compiler == "clang" || d_compiler == "clang++") {
             d_isClang = true;
 
             if (RECC_DEPS_GLOBAL_PATHS) {
@@ -367,7 +369,21 @@ ParsedCommand::ParsedCommand(std::vector<std::string> command,
                 d_dependenciesCommand.push_back("-v");
             }
         }
+
+        if (!d_isClang && CompilerDefaults::getCompilers(CompilerFlavour::AIX)
+                                  .count(d_compiler) != 0) {
+            // Create a temporary file, which will be used to write
+            // dependency information to, on AIX.
+            // The lifetime of the temporary file is the same as the instance
+            // of parsedcommand.
+            d_dependencyFileAIX =
+                std::make_unique<buildboxcommon::TemporaryFile>(
+                    buildboxcommon::TemporaryFile());
+            // Push back created file name to vector of the dependency command.
+            d_dependenciesCommand.push_back(d_dependencyFileAIX->strname());
+        }
     }
+
     this->d_command = command;
 }
 
@@ -418,5 +434,6 @@ ParsedCommand::vector_from_argv(const char *const *argv)
 
     return result;
 }
-}
-}
+
+} // namespace recc
+} // namespace BloombergLP

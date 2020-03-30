@@ -15,8 +15,10 @@
 #ifndef INCLUDED_PARSEDCOMMAND
 #define INCLUDED_PARSEDCOMMAND
 
+#include <buildboxcommon_temporaryfile.h>
 #include <initializer_list>
 #include <logging.h>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -55,6 +57,11 @@ class ParsedCommand {
     bool is_clang() const { return d_isClang; }
 
     /**
+     * Returns true if the command contains a AIX compiler.
+     */
+    bool is_AIX() const { return d_dependencyFileAIX != nullptr; }
+
+    /**
      * Returns the original command that was passed to the constructor, with
      * absolute paths replaced with equivalent relative paths.
      */
@@ -68,6 +75,25 @@ class ParsedCommand {
     std::vector<std::string> get_dependencies_command() const
     {
         return d_dependenciesCommand;
+    }
+
+    /**
+     * Return compiler basename specified from the command.
+     */
+    std::string get_compiler() const { return d_compiler; }
+
+    /**
+     * Return the name of the file the compiler will write the source
+     * dependencies to on AIX.
+     *
+     * If the compiler command doesn't include a AIX compiler, return empty.
+     */
+    std::string get_aix_dependency_file_name() const
+    {
+        if (d_dependencyFileAIX != nullptr) {
+            return d_dependencyFileAIX->strname();
+        }
+        return "";
     }
 
     /**
@@ -100,10 +126,12 @@ class ParsedCommand {
   private:
     bool d_compilerCommand;
     bool d_isClang;
+    bool d_producesSunMakeRules;
+    std::string d_compiler;
     std::vector<std::string> d_command;
     std::vector<std::string> d_dependenciesCommand;
     std::set<std::string> d_commandProducts;
-    bool d_producesSunMakeRules;
+    std::unique_ptr<buildboxcommon::TemporaryFile> d_dependencyFileAIX;
 };
 
 } // namespace recc

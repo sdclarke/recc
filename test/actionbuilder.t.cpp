@@ -19,6 +19,7 @@
 #include <digestgenerator.h>
 #include <env.h>
 #include <fileutils.h>
+#include <fstream>
 #include <protos.h>
 
 #include <gtest/gtest.h>
@@ -55,6 +56,17 @@ class ActionBuilderTestFixture
         RECC_DEPS_GLOBAL_PATHS = d_previous_deps_global_path;
         RECC_DEPS_EXCLUDE_PATHS = d_previous_deps_exclude_paths;
         RECC_WORKING_DIR_PREFIX = d_previous_working_dir_prefix;
+    }
+
+    void writeDependenciesToTempFile(const std::string &dependency_file_name)
+    {
+        const std::string path_to_hello = cwd + "/" + "hello.cpp";
+        // references the hello.cpp file in test/data/actionbuilder/hello.cpp
+        const std::string make_rule = "hello.o: " + path_to_hello + "\n";
+        std::ofstream fakedependencyfile;
+        fakedependencyfile.open(dependency_file_name);
+        fakedependencyfile << make_rule;
+        fakedependencyfile.close();
     }
 
     digest_string_umap blobs;
@@ -95,11 +107,28 @@ TEST_F(ActionBuilderTestFixture, BuildSimpleCommand)
     ASSERT_TRUE(command_proto.output_directories().empty());
 }
 
+TEST_F(ActionBuilderTestFixture, GetDependenciesAIX)
+{
+    const std::vector<std::string> recc_args = {
+        "./xlc", "-c", cwd + "/" + "hello.cpp ", "-o", "hello.o"};
+    std::set<std::string> deps;
+    std::set<std::string> prod;
+    const ParsedCommand command(recc_args, cwd.c_str());
+    ASSERT_FALSE(command.get_aix_dependency_file_name().empty());
+
+    writeDependenciesToTempFile(command.get_aix_dependency_file_name());
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+    ASSERT_NE(actionPtr, nullptr);
+}
+
 TEST_F(ActionBuilderTestFixture, IllegalNonCompileCommand)
 {
     const std::vector<std::string> recc_args = {"command-with-no-path", "foo",
                                                 "bar"};
     const ParsedCommand command(recc_args, cwd.c_str());
+
+    ASSERT_TRUE(command.get_aix_dependency_file_name().empty());
 
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
@@ -283,9 +312,6 @@ TEST_P(ActionBuilderTestFixture, ActionContainsExpectedCompileCommand)
 
 TEST_P(ActionBuilderTestFixture, ActionCompileCommandGoldenDigests)
 {
-    /* [!] WARNING [!]
-     * Changes that make this test fail will produce caches misses.
-     */
 
     const std::string working_dir_prefix = GetParam();
     RECC_WORKING_DIR_PREFIX = working_dir_prefix;

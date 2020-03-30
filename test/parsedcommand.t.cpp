@@ -13,9 +13,8 @@
 // limitations under the License.
 
 #include <env.h>
-#include <parsedcommand.h>
-
 #include <gtest/gtest.h>
+#include <parsedcommand.h>
 
 using namespace BloombergLP::recc;
 
@@ -275,12 +274,28 @@ TEST(XlcTest, OutputArguments)
 {
     ParsedCommand command = {"xlc", "-c",      "hello.c",
                              "-o",  "hello.o", "-qexpfile=exportlist"};
+
     std::vector<std::string> expectedCommand = {
         "xlc", "-c", "hello.c", "-o", "hello.o", "-qexpfile=exportlist"};
+
+    ASSERT_FALSE(command.get_aix_dependency_file_name().empty());
+
+    std::vector<std::string> expectedDepsCommand = {
+        "xlc",
+        "-c",
+        "hello.c",
+        "-qsyntaxonly",
+        "-M",
+        "-MF",
+        command.get_aix_dependency_file_name()};
+
     std::set<std::string> expectedProducts = {"hello.o", "exportlist"};
 
     ASSERT_TRUE(command.is_compiler_command());
     EXPECT_EQ(command.get_command(), expectedCommand);
+
+    EXPECT_EQ(command.get_dependencies_command(), expectedDepsCommand);
+
     EXPECT_EQ(command.get_products(), expectedProducts);
     EXPECT_TRUE(command.produces_sun_make_rules());
 }
