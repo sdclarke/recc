@@ -28,7 +28,14 @@ if(CMAKE_SYSTEM_NAME MATCHES "SunOS")
 elseif(CMAKE_SYSTEM_NAME MATCHES "AIX")
     add_definitions(-DRECC_PLATFORM_COMPILER="xlc")
     if(BUILD_STATIC)
-        message("Dynamically linking on AIX due to some pthread issues with exception catching.")
+        # Depending on versions, static linking of runtimes using gcc can
+        # trigger some bugs
+        # e.g. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=33704 If using
+        # static linking with gcc on aix be sure to run the tests. Failures
+        # with GTEST EXPECT_THROW etc. originate from these bugs and are fixed
+        # using the linker flag `-blazy` as detailed in the above bug
+        # report. Hence inclusion here.
+        set(_EXTRA_LDD_FLAGS "-static-libgcc -static-libstdc++ -Wl,-bbigtoc,-blazy")
     endif()
 elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
     add_definitions(-DRECC_PLATFORM_COMPILER="gcc")
