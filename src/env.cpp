@@ -430,21 +430,6 @@ void Env::verify_files_writeable()
         }
         of.close();
     }
-    else if (RECC_METRICS_UDP_SERVER.size()) {
-        std::string server_name;
-        int server_port;
-        try {
-            parse_host_port_string(RECC_METRICS_UDP_SERVER, server_name,
-                                   &server_port);
-        }
-        catch (const std::invalid_argument &e) {
-            std::string error_msg =
-                "Invalid RECC_METRICS_UDP_SERVER argument: '" +
-                RECC_METRICS_UDP_SERVER + "': ";
-            error_msg += e.what();
-            throw std::runtime_error(error_msg);
-        }
-    }
 }
 
 std::deque<std::string> Env::evaluate_config_locations()
@@ -534,34 +519,6 @@ void Env::set_config_locations()
 void Env::set_config_locations(const std::deque<std::string> &config_order)
 {
     RECC_CONFIG_LOCATIONS = config_order;
-}
-
-void Env::parse_host_port_string(const std::string &inputString,
-                                 std::string &serverRet, int *portRet)
-{
-    // NOTE: This only works for IPv4 addresses, not IPv6.
-    const std::size_t split_at = inputString.find_last_of(":");
-
-    if (split_at != std::string::npos &&
-        split_at + 2 <
-            inputString.size()) { // e.g. `localhost:1` or `example.org:1`
-        try {
-            *portRet = std::stoi(inputString.substr(split_at + 1));
-            serverRet =
-                inputString.substr(0, std::min(split_at, inputString.size()));
-        }
-        catch (const std::invalid_argument &) {
-            throw std::invalid_argument(
-                "Invalid port specified (cannot be parsed to int): '" +
-                inputString.substr(split_at + 1) + "'");
-        }
-    }
-    else { // e.g. `localhost` or `localhost:`
-        // default to port 0 if not specified in the string
-        *portRet = 0;
-        serverRet =
-            inputString.substr(0, std::min(split_at, inputString.size()));
-    }
 }
 
 std::string Env::substring_until_nth_token(const std::string &value,

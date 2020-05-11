@@ -14,31 +14,23 @@
 
 #include <metricsconfig.h>
 
+#include <env.h>
+
+#include <buildboxcommonmetrics_metricsconfigurator.h>
+
+#include <memory>
+
 namespace BloombergLP {
 namespace recc {
 
-StatsDPublisherType get_statsdpublisher_from_config()
+std::shared_ptr<StatsDPublisherType> get_statsdpublisher_from_config()
 {
-    buildboxcommon::buildboxcommonmetrics::StatsDPublisherOptions::
-        PublishMethod publishMethod = buildboxcommon::buildboxcommonmetrics::
-            StatsDPublisherOptions::PublishMethod::StdErr;
+    const auto config = buildboxcommon::buildboxcommonmetrics::
+        MetricsConfigurator::createMetricsConfig(
+            RECC_METRICS_FILE, RECC_METRICS_UDP_SERVER, RECC_ENABLE_METRICS);
 
-    std::string publishPath = "";
-    int publishPort = 0;
-
-    if (RECC_METRICS_UDP_SERVER.size()) {
-        publishMethod = buildboxcommon::buildboxcommonmetrics::
-            StatsDPublisherOptions::PublishMethod::UDP;
-        Env::parse_host_port_string(RECC_METRICS_UDP_SERVER, publishPath,
-                                    &publishPort);
-    }
-    else if (RECC_METRICS_FILE.size()) {
-        publishMethod = buildboxcommon::buildboxcommonmetrics::
-            StatsDPublisherOptions::PublishMethod::File;
-        publishPath = RECC_METRICS_FILE;
-    }
-
-    return StatsDPublisherType(publishMethod, publishPath, publishPort);
+    return buildboxcommon::buildboxcommonmetrics::MetricsConfigurator::
+        createMetricsPublisherWithConfig<StatsDPublisherType>(config);
 }
 
 } // namespace recc

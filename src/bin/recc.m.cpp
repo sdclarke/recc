@@ -188,7 +188,8 @@ enum ReturnCode {
     RC_INVALID_GRPC_CHANNELS = 102,
     RC_INVALID_SERVER_CAPABILITIES = 103,
     RC_EXEC_ACTIONS_FAILURE = 104,
-    RC_SAVING_OUTPUT_FAILURE = 105
+    RC_SAVING_OUTPUT_FAILURE = 105,
+    RC_METRICS_PUBLISHER_INIT_FAILURE = 106
 };
 
 } // namespace
@@ -217,9 +218,17 @@ int main(int argc, char *argv[])
     Env::set_config_locations();
     Env::parse_config_variables();
 
+    std::shared_ptr<StatsDPublisherType> statsDPublisher;
+    try {
+        statsDPublisher = get_statsdpublisher_from_config();
+    }
+    catch (const std::runtime_error &e) {
+        RECC_LOG_ERROR("Could not initialize statsD publisher: " << e.what());
+        return RC_METRICS_PUBLISHER_INIT_FAILURE;
+    }
+
     buildboxcommon::buildboxcommonmetrics::PublisherGuard<StatsDPublisherType>
-        statsDPublisherGuard(RECC_ENABLE_METRICS,
-                             get_statsdpublisher_from_config());
+        statsDPublisherGuard(RECC_ENABLE_METRICS, *statsDPublisher);
 
     const std::string cwd = FileUtils::getCurrentWorkingDirectory();
     ParsedCommand command(&argv[1], cwd.c_str());

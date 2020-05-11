@@ -326,14 +326,6 @@ struct Env {
     set_config_locations(const std::deque<std::string> &config_order);
 
     /**
-     * Parses strings of the form `host:port` and stores each segment in the
-     * individual string/int that are referenced/pointed to. If no port is
-     * specified, it defaults to 0. NOTE: This only works for IPv4, not IPv6.
-     */
-    static void parse_host_port_string(const std::string &inputString,
-                                       std::string &serverRet, int *portRet);
-
-    /**
      * Return a substring ending at the nth occurrence of a character. If a nth
      * occurrence isn't found, return empty string.
      */

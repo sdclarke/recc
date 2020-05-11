@@ -15,26 +15,15 @@
 #ifndef INCLUDED_METRICSCONFIG_H
 #define INCLUDED_METRICSCONFIG_H
 
-#include <iostream>
-
-#include <buildboxcommonmetrics_durationmetricvalue.h>
-#include <buildboxcommonmetrics_publisherguard.h>
-#include <buildboxcommonmetrics_statsdpublisher.h>
-#include <buildboxcommonmetrics_totaldurationmetricvalue.h>
-#include <env.h>
+#include <buildboxcommonmetrics_statsdpublishercreator.h>
 
 namespace BloombergLP {
 namespace recc {
 
-// This typedef here specifies the Metric ValueTypes
-// we want the publisher to publish
-typedef decltype(
-    buildboxcommon::buildboxcommonmetrics::StatsDPublisher<
-        buildboxcommon::buildboxcommonmetrics::DurationMetricValue,
-        buildboxcommon::buildboxcommonmetrics::TotalDurationMetricValue>())
+typedef buildboxcommon::buildboxcommonmetrics::StatsDPublisherType
     StatsDPublisherType;
 
-StatsDPublisherType get_statsdpublisher_from_config();
+std::shared_ptr<StatsDPublisherType> get_statsdpublisher_from_config();
 
 } // namespace recc
 } // namespace BloombergLP
