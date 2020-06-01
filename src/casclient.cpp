@@ -50,9 +50,9 @@ CASClient::CASClient(
 
 CASClient::CASClient(std::shared_ptr<grpc::Channel> channel,
                      const std::string &instanceName, GrpcContext *grpcContext)
-    : d_executionStub(new proto::ContentAddressableStorage::Stub(channel)),
-      d_byteStreamStub(new google::bytestream::ByteStream::Stub(channel)),
-      d_capabilitiesStub(new proto::Capabilities::Stub(channel)),
+    : d_executionStub(proto::ContentAddressableStorage::NewStub(channel)),
+      d_byteStreamStub(google::bytestream::ByteStream::NewStub(channel)),
+      d_capabilitiesStub(proto::Capabilities::NewStub(channel)),
       d_instanceName(instanceName), d_grpcContext(grpcContext)
 {
 }

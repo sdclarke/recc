@@ -24,7 +24,8 @@ namespace recc {
 
 GrpcContext::GrpcClientContextPtr GrpcContext::new_client_context()
 {
-    GrpcContext::GrpcClientContextPtr context(new grpc::ClientContext());
+    GrpcContext::GrpcClientContextPtr context(
+        std::make_unique<grpc::ClientContext>());
     if (d_authSession) {
         grpc::string access_token = d_authSession->get_access_token();
         std::shared_ptr<grpc::CallCredentials> call_creds =

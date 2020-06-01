@@ -46,7 +46,7 @@ struct NestedDirectory {
     // name, target
     std::map<std::string, std::string> d_symlinks;
 
-    NestedDirectory() : d_subdirs(new subdir_map){};
+    NestedDirectory() : d_subdirs(std::make_unique<subdir_map>()){};
 
     /**
      * Add the given File to this NestedDirectory at the given relative path,
