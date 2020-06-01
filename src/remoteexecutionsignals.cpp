@@ -33,7 +33,7 @@ void Signal::setup_signal_handler(int signal, void (*handler)(int))
         RECC_LOG_PERROR("Unable to clear signal set");
         return;
     }
-    if (sigaction(signal, &sa, NULL) != 0) {
+    if (sigaction(signal, &sa, nullptr) != 0) {
         RECC_LOG_PERROR("Unable to register cancellation handler");
     }
 }
@@ -41,12 +41,12 @@ void Signal::setup_signal_handler(int signal, void (*handler)(int))
 void Signal::block_sigint()
 {
     sigset_t signal_set;
-    if (sigaddset(&signal_set, SIGINT) != 0) {
+    if (sigemptyset(&signal_set) != 0 || sigaddset(&signal_set, SIGINT) != 0) {
         RECC_LOG_PERROR("Unable to block SIGINT");
         return;
     }
-    errno = pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
-    if (errno != 0) {
+
+    if (pthread_sigmask(SIG_BLOCK, &signal_set, nullptr) != 0) {
         RECC_LOG_PERROR("Unable to block SIGINT");
     }
 }
@@ -54,12 +54,12 @@ void Signal::block_sigint()
 void Signal::unblock_sigint()
 {
     sigset_t signal_set;
-    if (sigaddset(&signal_set, SIGINT) != 0) {
+    if (sigemptyset(&signal_set) != 0 || sigaddset(&signal_set, SIGINT) != 0) {
         RECC_LOG_PERROR("Unable to unblock SIGINT");
         return;
     }
-    errno = pthread_sigmask(SIG_UNBLOCK, &signal_set, NULL);
-    if (errno != 0) {
+
+    if (pthread_sigmask(SIG_UNBLOCK, &signal_set, nullptr) != 0) {
         RECC_LOG_PERROR("Unable to block SIGINT");
     }
 }
