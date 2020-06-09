@@ -35,7 +35,6 @@ add_recc_test(digestgenerator_tests digestgenerator.t.cpp)
 add_recc_test(casclient_tests casclient.t.cpp)
 add_recc_test(remoteexecutionclient_tests remoteexecutionclient.t.cpp)
 add_recc_test(fileutils_tests fileutils.t.cpp)
-add_recc_test(formpost_test formpost.t.cpp)
 add_recc_test(requestmetadata_tests requestmetadata.t.cpp)
 add_recc_test(threading_tests threadutils.t.cpp)
 

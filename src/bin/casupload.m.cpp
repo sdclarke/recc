@@ -199,7 +199,6 @@ int main(int argc, char *argv[])
     std::unique_ptr<GrpcChannels> returnChannels;
     std::unique_ptr<GrpcContext> grpcContext;
     std::unique_ptr<CASClient> casClient;
-    std::unique_ptr<FormPost> formPostFactory;
     std::unique_ptr<AuthSession> reccAuthSession;
 
     if (!dryRunMode) {
@@ -207,11 +206,9 @@ int main(int argc, char *argv[])
             GrpcChannels::get_channels_from_config());
 
         grpcContext = std::make_unique<GrpcContext>();
-        formPostFactory = std::make_unique<FormPost>();
 
         if (RECC_SERVER_JWT) {
-            reccAuthSession =
-                std::make_unique<AuthSession>(formPostFactory.get());
+            reccAuthSession = std::make_unique<AuthSession>();
             grpcContext->set_auth(reccAuthSession.get());
         }
 

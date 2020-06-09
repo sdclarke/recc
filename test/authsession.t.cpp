@@ -16,7 +16,6 @@
 #include <authsession_fixture.h>
 #include <env.h>
 #include <fileutils.h>
-#include <formpost.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -26,17 +25,11 @@
 using namespace BloombergLP::recc;
 using namespace testing;
 
-class MockPost : public Post {
-  public:
-    MOCK_METHOD1(generate_post, std::string(std::string refresh_token));
-};
-
 TEST_F(AuthSessionFiles, GetProperJwtToken)
 {
     RECC_JWT_JSON_FILE_PATH = s_clientFilePath;
 
-    FormPost formPostFactory;
-    AuthSession testSession(&formPostFactory);
+    AuthSession testSession;
 
     std::string jwtToken = testSession.get_access_token();
     std::string expectedToken = "old_fake";
@@ -48,12 +41,10 @@ TEST_F(AuthSessionFiles, GetImproperJwtToken)
     const std::string improper = "{\"refresh_token\": \"fake\"}";
     s_clientFile->write(improper);
     RECC_JWT_JSON_FILE_PATH = s_clientFilePath;
-    FormPost formPostFactory;
 
-    ASSERT_THROW(AuthSession testSession(&formPostFactory),
-                 std::runtime_error);
+    ASSERT_THROW(AuthSession testSession, std::runtime_error);
     try {
-        AuthSession testSessionAgain(&formPostFactory);
+        AuthSession testSessionAgain;
     }
     catch (const std::runtime_error &e) {
         std::string error_msg(e.what());
@@ -68,12 +59,10 @@ TEST_F(AuthSessionFiles, GetNotJwtToken)
     const std::string notJson = "Not Json!";
     s_clientFile->write(notJson);
     RECC_JWT_JSON_FILE_PATH = s_clientFilePath;
-    FormPost formPostFactory;
 
-    ASSERT_THROW(AuthSession testSession(&formPostFactory),
-                 std::runtime_error);
+    ASSERT_THROW(AuthSession testSession, std::runtime_error);
     try {
-        AuthSession testSessionAgain(&formPostFactory);
+        AuthSession testSessionAgain;
     }
     catch (const std::runtime_error &e) {
         std::string error_msg(e.what());
@@ -89,11 +78,9 @@ TEST_F(AuthSessionFiles, GetNotExist)
     const std::string fakePath = currDir + "/" + "fake_file.fake";
 
     RECC_JWT_JSON_FILE_PATH = fakePath;
-    FormPost formPostFactory;
-    ASSERT_THROW(AuthSession testSession(&formPostFactory),
-                 std::runtime_error);
+    ASSERT_THROW(AuthSession testSession, std::runtime_error);
     try {
-        AuthSession testSessionAgain(&formPostFactory);
+        AuthSession testSessionAgain;
     }
     catch (const std::runtime_error &e) {
         std::string error_msg(e.what());

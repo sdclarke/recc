@@ -16,7 +16,6 @@
 #include <authsession.h>
 #include <buildboxcommon_fileutils.h>
 #include <env.h>
-#include <formpost.h>
 #include <jsonfilemanager.h>
 #include <logging.h>
 #include <protos.h>
@@ -33,11 +32,7 @@ namespace BloombergLP {
 namespace recc {
 
 AuthBase::~AuthBase() {}
-AuthSession::AuthSession(Post *formPostFactory)
-{
-    init_jwt();
-    d_formPostFactory = formPostFactory;
-}
+AuthSession::AuthSession() { init_jwt(); }
 
 std::string AuthSession::get_access_token()
 {

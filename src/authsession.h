@@ -15,7 +15,6 @@
 #ifndef INCLUDED_AUTHSESSION
 #define INCLUDED_AUTHSESSION
 
-#include <formpost.h>
 #include <protos.h>
 
 #include <string>
@@ -63,7 +62,7 @@ class AuthSession : public AuthBase {
      * RECC_JWT_JSON_FILE_PATH. It will also create a
      * proto::AccessTokenResponse object from the file path.
      */
-    AuthSession(Post *formPostFactory);
+    AuthSession();
 
     /**
      * Will retrieve the access_token from d_jwtToken.
@@ -84,11 +83,6 @@ class AuthSession : public AuthBase {
      * construct_token if need be.
      */
     proto::AccessTokenResponse d_jwtToken;
-
-    /**
-     * A class which will generate a properly formatted post request
-     */
-    Post *d_formPostFactory;
 
     /**
      * verify if string is a proper json jwt object.

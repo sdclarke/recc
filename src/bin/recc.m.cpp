@@ -23,7 +23,6 @@
 #include <digestgenerator.h>
 #include <env.h>
 #include <fileutils.h>
-#include <formpost.h>
 #include <grpcchannels.h>
 #include <grpccontext.h>
 #include <logging.h>
@@ -288,9 +287,8 @@ int main(int argc, char *argv[])
     grpcContext.set_action_id(actionDigest.hash());
 
     std::unique_ptr<AuthSession> reccAuthSession;
-    FormPost formPostFactory;
     if (RECC_SERVER_JWT) {
-        reccAuthSession = std::make_unique<AuthSession>(&formPostFactory);
+        reccAuthSession = std::make_unique<AuthSession>();
         grpcContext.set_auth(reccAuthSession.get());
     }
 
