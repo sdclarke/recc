@@ -14,7 +14,7 @@
 
 #include <actionbuilder.h>
 #include <buildboxcommon_fileutils.h>
-#include <buildboxcommonmetrics_durationmetrictimer.h>
+#include <buildboxcommonmetrics_durationmetricvalue.h>
 #include <buildboxcommonmetrics_testingutils.h>
 #include <digestgenerator.h>
 #include <env.h>
@@ -150,8 +150,8 @@ TEST_F(ActionBuilderTestFixture, BuildMerkleTreeVerifyMetricsCollection)
 {
     std::set<std::string> deps;
     buildMerkleTree(deps, "cwd", nullptr, nullptr);
-    EXPECT_TRUE(validateMetricCollection<DurationMetricTimer>(
-        TIMER_NAME_BUILD_MERKLE_TREE));
+    EXPECT_TRUE(
+        collectedByName<DurationMetricValue>(TIMER_NAME_BUILD_MERKLE_TREE));
 }
 
 TEST_F(ActionBuilderTestFixture, GetDependenciesVerifyMetricsCollection)
@@ -162,8 +162,8 @@ TEST_F(ActionBuilderTestFixture, GetDependenciesVerifyMetricsCollection)
     std::set<std::string> prod;
     const ParsedCommand command(recc_args, cwd.c_str());
     getDependencies(command, &deps, &prod);
-    EXPECT_TRUE(validateMetricCollection<DurationMetricTimer>(
-        TIMER_NAME_COMPILER_DEPS));
+    EXPECT_TRUE(
+        collectedByName<DurationMetricValue>(TIMER_NAME_COMPILER_DEPS));
 }
 
 TEST_F(ActionBuilderTestFixture, OutputPaths)

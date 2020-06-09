@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <buildboxcommonmetrics_durationmetrictimer.h>
+#include <buildboxcommonmetrics_durationmetricvalue.h>
 #include <buildboxcommonmetrics_testingutils.h>
 #include <digestgenerator.h>
 #include <env.h>
@@ -315,8 +315,8 @@ TEST_F(RemoteExecutionClientTestFixture, VerifyMetricsWriteFilesToDisk)
     EXPECT_CALL(*reader, Finish()).WillOnce(Return(grpc::Status::OK));
 
     client.write_files_to_disk(testResult, tempDir.name());
-    EXPECT_TRUE(validateMetricCollection<DurationMetricTimer>(
-        TIMER_NAME_FETCH_WRITE_RESULTS));
+    EXPECT_TRUE(
+        collectedByName<DurationMetricValue>(TIMER_NAME_FETCH_WRITE_RESULTS));
 }
 
 TEST_F(RemoteExecutionClientTestFixture, CancelOperation)

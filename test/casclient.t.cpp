@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <buildboxcommonmetrics_durationmetrictimer.h>
+#include <buildboxcommonmetrics_durationmetricvalue.h>
 #include <buildboxcommonmetrics_testingutils.h>
 #include <casclient.h>
 #include <digestgenerator.h>
@@ -407,5 +407,5 @@ TEST_F(CasClientFixture, VerifyMetricsCollection)
     casClient.upload_resources(blobs, {});
     std::vector<std::string> metrics{TIMER_NAME_FIND_MISSING_BLOBS,
                                      TIMER_NAME_UPLOAD_MISSING_BLOBS};
-    EXPECT_TRUE(validateMetricCollection<DurationMetricTimer>(metrics));
+    EXPECT_TRUE(allCollectedByName<DurationMetricValue>(metrics));
 }

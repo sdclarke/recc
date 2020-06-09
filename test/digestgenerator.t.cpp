@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <buildboxcommonmetrics_testingutils.h>
-#include <buildboxcommonmetrics_totaldurationmetrictimer.h>
+#include <buildboxcommonmetrics_totaldurationmetricvalue.h>
 #include <digestgenerator.h>
 #include <env.h>
 
@@ -41,7 +41,7 @@ TEST(CASHashTest, EmptyStringDefaultFunction)
 TEST(CASHashTest, VerifyMetricsCollected)
 {
     DigestGenerator::make_digest("");
-    EXPECT_TRUE(validateMetricCollection<TotalDurationMetricTimer>(
+    EXPECT_TRUE(collectedByName<TotalDurationMetricValue>(
         TIMER_NAME_CALCULATE_DIGESTS_TOTAL));
 }
 
