@@ -17,15 +17,43 @@
 
 #include <set>
 #include <string>
+#include <vector>
 
 namespace BloombergLP {
 namespace recc {
 
-enum CompilerFlavour { Gcc, GccPreprocessor, SunCPP, AIX, SunC };
-
-struct CompilerDefaults {
+struct SupportedCompilers {
     typedef std::set<std::string> CompilerListType;
-    static CompilerListType getCompilers(const CompilerFlavour &flavour);
+
+    // Lists of compilers that support the same options.
+    static const CompilerListType Gcc;
+    static const CompilerListType GccPreprocessor;
+    static const CompilerListType SunCPP;
+    static const CompilerListType AIX;
+    static const CompilerListType SunC;
+
+    // Lists of options needed by the corresponding compiler to get dependency
+    // information from a source file. These commands will be added to the
+    // dependency command created by ParsedCommand. See the ParsedCommand
+    // constructor for usage.
+    static const std::vector<std::string> GccDefaultDeps;
+    static const std::vector<std::string> SunCPPDefaultDeps;
+    static const std::vector<std::string> AIXDefaultDeps;
+};
+
+struct CompilerListTypeHasher {
+    size_t operator()(const SupportedCompilers::CompilerListType &list) const
+    {
+        // This was copied from boost::hash_range, which iterates and calls
+        // boost::hash_combine on a range of elements.
+        // https://www.boost.org/doc/libs/1_35_0/doc/html/boost/hash_combine_id241013.html
+        size_t seed = 0;
+        for (const auto &val : list) {
+            seed ^= std::hash<std::string>{}(val) + 0x9e3779b9 + (seed << 6) +
+                    (seed >> 2);
+        }
+        return seed;
+    }
 };
 
 } // namespace recc

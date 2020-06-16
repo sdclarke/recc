@@ -15,107 +15,93 @@
 #include <env.h>
 #include <gtest/gtest.h>
 #include <parsedcommand.h>
+#include <parsedcommandfactory.h>
 
 using namespace BloombergLP::recc;
 
-TEST(VectorFromArgvTest, EmptyArgv)
-{
-    const char *argv[] = {nullptr};
-    EXPECT_EQ(ParsedCommand::vector_from_argv(argv),
-              std::vector<std::string>());
-}
-
-TEST(VectorFromArgvTest, OneItemArgv)
-{
-    const char *argv[] = {"gcc", nullptr};
-    std::vector<std::string> expected = {"gcc"};
-
-    EXPECT_EQ(ParsedCommand::vector_from_argv(argv), expected);
-}
-
-TEST(VectorFromArgvTest, MultiItemArgv)
-{
-    const char *argv[] = {"test", "", "of long", "argv", nullptr};
-    std::vector<std::string> expected = {"test", "", "of long", "argv"};
-
-    EXPECT_EQ(ParsedCommand::vector_from_argv(argv), expected);
-}
-
 TEST(CommandBasenameTest, EmptyString)
 {
-    EXPECT_EQ(ParsedCommand::command_basename(""), "");
+    EXPECT_EQ(ParsedCommand::commandBasename(""), "");
 }
 
 TEST(CommandBasenameTest, TrivialCommands)
 {
-    EXPECT_EQ(ParsedCommand::command_basename("gcc"), "gcc");
-    EXPECT_EQ(ParsedCommand::command_basename("g++"), "g++");
-    EXPECT_EQ(ParsedCommand::command_basename("CC"), "CC");
-    EXPECT_EQ(ParsedCommand::command_basename("clang"), "clang");
-    EXPECT_EQ(ParsedCommand::command_basename("clang++"), "clang++");
+    EXPECT_EQ(ParsedCommand::commandBasename("gcc"), "gcc");
+    EXPECT_EQ(ParsedCommand::commandBasename("g++"), "g++");
+    EXPECT_EQ(ParsedCommand::commandBasename("CC"), "CC");
+    EXPECT_EQ(ParsedCommand::commandBasename("clang"), "clang");
+    EXPECT_EQ(ParsedCommand::commandBasename("clang++"), "clang++");
 }
 
 TEST(CommandBasenameTest, CommandsWithVersions)
 {
-    EXPECT_EQ(ParsedCommand::command_basename("gcc-4.7"), "gcc");
-    EXPECT_EQ(ParsedCommand::command_basename("CC++-99"), "CC++");
-    EXPECT_EQ(ParsedCommand::command_basename("clang-6.0"), "clang");
-    EXPECT_EQ(ParsedCommand::command_basename("clang++-6.0"), "clang++");
+    EXPECT_EQ(ParsedCommand::commandBasename("gcc-4.7"), "gcc");
+    EXPECT_EQ(ParsedCommand::commandBasename("CC++-99"), "CC++");
+    EXPECT_EQ(ParsedCommand::commandBasename("clang-6.0"), "clang");
+    EXPECT_EQ(ParsedCommand::commandBasename("clang++-6.0"), "clang++");
 }
 
 TEST(CommandBasenameTest, CommandsAtPaths)
 {
-    EXPECT_EQ(ParsedCommand::command_basename("/usr/bin/gcc"), "gcc");
-    EXPECT_EQ(ParsedCommand::command_basename("/usr/bin/g++"), "g++");
-    EXPECT_EQ(ParsedCommand::command_basename("/CC++-99"), "CC++");
-    EXPECT_EQ(ParsedCommand::command_basename("/usr/bin/clang"), "clang");
-    EXPECT_EQ(ParsedCommand::command_basename("/usr/bin/clang++"), "clang++");
+    EXPECT_EQ(ParsedCommand::commandBasename("/usr/bin/gcc"), "gcc");
+    EXPECT_EQ(ParsedCommand::commandBasename("/usr/bin/g++"), "g++");
+    EXPECT_EQ(ParsedCommand::commandBasename("/CC++-99"), "CC++");
+    EXPECT_EQ(ParsedCommand::commandBasename("/usr/bin/clang"), "clang");
+    EXPECT_EQ(ParsedCommand::commandBasename("/usr/bin/clang++"), "clang++");
 }
 
 TEST(CommandBasenameTest, XlcVersions)
 {
-    EXPECT_EQ(ParsedCommand::command_basename("xlC128_r"), "xlC");
-    EXPECT_EQ(ParsedCommand::command_basename("xlc++_r7"), "xlc++");
+    EXPECT_EQ(ParsedCommand::commandBasename("xlC128_r"), "xlC");
+    EXPECT_EQ(ParsedCommand::commandBasename("xlc++_r7"), "xlc++");
 }
 
 TEST(IsCompilerTest, Empty)
 {
-    ParsedCommand command = {};
-    EXPECT_FALSE(command.is_compiler_command());
+    auto parsedCommand = ParsedCommandFactory::createParsedCommand({});
+    EXPECT_FALSE(parsedCommand.is_compiler_command());
 }
 
 TEST(IsCompilerTest, CompilerParsedCommandPath)
 {
-    ParsedCommand command = {"/usr/local/bin/gcc", "-c", "test/file.cpp"};
+    auto command = ParsedCommandFactory::createParsedCommand(
+        {"/usr/local/bin/gcc", "-c", "test/file.cpp"});
     EXPECT_TRUE(command.is_compiler_command());
 
-    command = {"/usr/local/bin/clang", "-c", "test/file.cpp"};
+    command = ParsedCommandFactory::createParsedCommand(
+        {"/usr/local/bin/clang", "-c", "test/file.cpp"});
     EXPECT_TRUE(command.is_compiler_command());
 }
 
 TEST(IsCompilerTest, NotCompiler)
 {
-    ParsedCommand command = {"cat", "something.c"};
+    auto command =
+        ParsedCommandFactory::createParsedCommand({"cat", "something.c"});
     EXPECT_FALSE(command.is_compiler_command());
 
-    command = {"clang-format", "something.c"};
+    command = ParsedCommandFactory::createParsedCommand(
+        {"clang-format", "something.c"});
     EXPECT_FALSE(command.is_compiler_command());
 }
 
 TEST(IsCompilerTest, EmptyString)
 {
-    ParsedCommand command = {""};
+    auto command = ParsedCommandFactory::createParsedCommand({""});
     EXPECT_FALSE(command.is_compiler_command());
 }
 
 void nonCompilerCommands(const char *gcc_or_clang)
 {
-    EXPECT_FALSE(ParsedCommand({gcc_or_clang}).is_compiler_command());
+    EXPECT_FALSE(ParsedCommandFactory::createParsedCommand({gcc_or_clang})
+                     .is_compiler_command());
     EXPECT_FALSE(
-        ParsedCommand({gcc_or_clang, "-version"}).is_compiler_command());
-    EXPECT_FALSE(
-        ParsedCommand({gcc_or_clang, "-dumpmachine"}).is_compiler_command());
-    EXPECT_FALSE(ParsedCommand({gcc_or_clang, "hello.c", "-o", "hello"})
+        ParsedCommandFactory::createParsedCommand({gcc_or_clang, "-version"})
+            .is_compiler_command());
+    EXPECT_FALSE(ParsedCommandFactory::createParsedCommand(
+                     {gcc_or_clang, "-dumpmachine"})
+                     .is_compiler_command());
+    EXPECT_FALSE(ParsedCommandFactory::createParsedCommand(
+                     {gcc_or_clang, "hello.c", "-o", "hello"})
                      .is_compiler_command());
 }
 
@@ -127,7 +113,8 @@ TEST(GccClangTest, NonCompilerCommands)
 
 void simpleCommand(const char *gcc_or_clang)
 {
-    ParsedCommand command = {gcc_or_clang, "-c", "hello.c"};
+    auto command = ParsedCommandFactory::createParsedCommand(
+        {gcc_or_clang, "-c", "hello.c"});
     std::vector<std::string> expectedCommand = {gcc_or_clang, "-c", "hello.c"};
     std::vector<std::string> expectedDepsCommand = {gcc_or_clang, "-c",
                                                     "hello.c", "-M"};
@@ -151,7 +138,8 @@ TEST(GccClangTest, SimpleCommand)
 
 void outputArgument(const char *gcc_or_clang)
 {
-    ParsedCommand command = {gcc_or_clang, "-c", "hello.c", "-o", "hello.o"};
+    auto command = ParsedCommandFactory::createParsedCommand(
+        {gcc_or_clang, "-c", "hello.c", "-o", "hello.o"});
     std::vector<std::string> expectedCommand = {gcc_or_clang, "-c", "hello.c",
                                                 "-o", "hello.o"};
     std::vector<std::string> expectedDepsCommand = {gcc_or_clang, "-c",
@@ -176,7 +164,8 @@ TEST(GccClangTest, OutputArgument)
 
 void outputArgumentNoSpace(const char *gcc_or_clang)
 {
-    ParsedCommand command = {gcc_or_clang, "-c", "-ohello.o", "hello.c"};
+    auto command = ParsedCommandFactory::createParsedCommand(
+        {gcc_or_clang, "-c", "-ohello.o", "hello.c"});
     std::vector<std::string> expectedCommand = {gcc_or_clang, "-c",
                                                 "-ohello.o", "hello.c"};
     std::vector<std::string> expectedDepsCommand = {gcc_or_clang, "-c",
@@ -201,14 +190,17 @@ TEST(GccClangTest, OutputArgumentNoSpace)
 
 void preprocessorArguments(const char *gcc_or_clang)
 {
-    ParsedCommand command = {gcc_or_clang, "-c",      "-Xpreprocessor",
-                             "-MMD",       "hello.c", "-Wp,hello.d,-MV,-valid",
-                             "-ohello.o"};
+    auto command = ParsedCommandFactory::createParsedCommand(
+        {gcc_or_clang, "-c", "-Xpreprocessor", "-MMD", "hello.c",
+         "-Wp,hello.d,-MV,-valid", "-ohello.o"});
+
     std::vector<std::string> expectedDepsCommand = {
         gcc_or_clang, "-c", "hello.c", "-Xpreprocessor", "-valid", "-M"};
+
     if (RECC_DEPS_GLOBAL_PATHS && command.is_clang()) {
         expectedDepsCommand.push_back("-v");
     }
+
     std::set<std::string> expectedProducts = {"hello.o", "hello.d"};
 
     ASSERT_TRUE(command.is_compiler_command());
@@ -225,29 +217,40 @@ TEST(GccClangTest, PreprocessorArguments)
 
 TEST(GccClangTest, RecogniseClang)
 {
-    EXPECT_FALSE(ParsedCommand({"gcc"}).is_clang());
-    EXPECT_FALSE(ParsedCommand({"g++"}).is_clang());
+    EXPECT_FALSE(
+        ParsedCommandFactory::createParsedCommand({"gcc"}).is_clang());
+    EXPECT_FALSE(
+        ParsedCommandFactory::createParsedCommand({"g++"}).is_clang());
 
-    EXPECT_TRUE(ParsedCommand({"clang"}).is_clang());
-    EXPECT_TRUE(ParsedCommand({"clang++"}).is_clang());
-    EXPECT_TRUE(ParsedCommand({"clang-6.0"}).is_clang());
-    EXPECT_TRUE(ParsedCommand({"clang++-6.0"}).is_clang());
+    EXPECT_TRUE(
+        ParsedCommandFactory::createParsedCommand({"clang"}).is_clang());
+    EXPECT_TRUE(
+        ParsedCommandFactory::createParsedCommand({"clang++"}).is_clang());
+    EXPECT_TRUE(
+        ParsedCommandFactory::createParsedCommand({"clang-6.0"}).is_clang());
+    EXPECT_TRUE(
+        ParsedCommandFactory::createParsedCommand({"clang++-6.0"}).is_clang());
 }
 
 TEST(SolarisCCTest, NonCompilerCommands)
 {
-    EXPECT_FALSE(ParsedCommand({"CC"}).is_compiler_command());
-    EXPECT_FALSE(
-        ParsedCommand({"CC", "hello.c", "-o", "hello"}).is_compiler_command());
-    EXPECT_FALSE(
-        ParsedCommand({"CC", "hello.c", "-c", "-###"}).is_compiler_command());
-    EXPECT_FALSE(ParsedCommand({"CC", "hello.c", "-c", "-xprofile=test"})
+    EXPECT_FALSE(ParsedCommandFactory::createParsedCommand({"CC"})
+                     .is_compiler_command());
+    EXPECT_FALSE(ParsedCommandFactory::createParsedCommand(
+                     {"CC", "hello.c", "-o", "hello"})
+                     .is_compiler_command());
+    EXPECT_FALSE(ParsedCommandFactory::createParsedCommand(
+                     {"CC", "hello.c", "-c", "-###"})
+                     .is_compiler_command());
+    EXPECT_FALSE(ParsedCommandFactory::createParsedCommand(
+                     {"CC", "hello.c", "-c", "-xprofile=test"})
                      .is_compiler_command());
 }
 
 TEST(SolarisCCTest, OutputArgument)
 {
-    ParsedCommand command = {"CC", "-c", "hello.c", "-o", "hello.o"};
+    auto command = ParsedCommandFactory::createParsedCommand(
+        {"CC", "-c", "hello.c", "-o", "hello.o"});
     std::vector<std::string> expectedCommand = {"CC", "-c", "hello.c", "-o",
                                                 "hello.o"};
     std::vector<std::string> expectedDepsCommand = {"CC", "-c", "hello.c",
@@ -263,17 +266,20 @@ TEST(SolarisCCTest, OutputArgument)
 
 TEST(XlcTest, NonCompilerCommands)
 {
-    EXPECT_FALSE(ParsedCommand({"xlc"}).is_compiler_command());
-    EXPECT_FALSE(ParsedCommand({"xlc", "hello.c", "-o", "hello"})
+    EXPECT_FALSE(ParsedCommandFactory::createParsedCommand({"xlc"})
                      .is_compiler_command());
-    EXPECT_FALSE(
-        ParsedCommand({"xlc", "hello.c", "-c", "-#"}).is_compiler_command());
+    EXPECT_FALSE(ParsedCommandFactory::createParsedCommand(
+                     {"xlc", "hello.c", "-o", "hello"})
+                     .is_compiler_command());
+    EXPECT_FALSE(ParsedCommandFactory::createParsedCommand(
+                     {"xlc", "hello.c", "-c", "-#"})
+                     .is_compiler_command());
 }
 
 TEST(XlcTest, OutputArguments)
 {
-    ParsedCommand command = {"xlc", "-c",      "hello.c",
-                             "-o",  "hello.o", "-qexpfile=exportlist"};
+    auto command = ParsedCommandFactory::createParsedCommand(
+        {"xlc", "-c", "hello.c", "-o", "hello.o", "-qexpfile=exportlist"});
 
     std::vector<std::string> expectedCommand = {
         "xlc", "-c", "hello.c", "-o", "hello.o", "-qexpfile=exportlist"};
@@ -306,7 +312,8 @@ TEST(RewriteAbsolutePathsTest, SimpleCompileCommand)
     const std::vector<std::string> command = {
         "gcc", "-c", "/home/nobody/test/hello.c", "-o",
         "/home/nobody/test/hello.o"};
-    const ParsedCommand parsedCommand(command, "/home/nobody/test");
+    auto parsedCommand = ParsedCommandFactory::createParsedCommand(
+        command, "/home/nobody/test");
 
     const std::vector<std::string> expectedCommand = {"gcc", "-c", "hello.c",
                                                       "-o", "hello.o"};
@@ -337,7 +344,8 @@ TEST(RewriteAbsolutePathsTest, ComplexOptions)
         "-I",
         "-Xpreprocessor",
         "/usr/include/something"};
-    const ParsedCommand parsedCommand(command, "/home/nobody/test");
+    auto parsedCommand = ParsedCommandFactory::createParsedCommand(
+        command, "/home/nobody/test");
 
     const std::vector<std::string> expectedCommand = {
         "gcc",
@@ -388,7 +396,8 @@ TEST(ReplacePathTest, SimpleRewrite)
     const std::vector<std::string> command = {
         "gcc", "-c", "hello.c", "-I/usr/bin/include/headers", "-o", "hello.o"};
 
-    const ParsedCommand parsedCommand(command, "/home");
+    auto parsedCommand =
+        ParsedCommandFactory::createParsedCommand(command, "/home");
 
     // -I should be replaced.
     const std::vector<std::string> expectedCommand = {
@@ -418,7 +427,8 @@ TEST(ReplacePathTest, PathInProjectRoot)
         "gcc", "-c",     "hello.c", "-I/home/usr/bin/include/headers",
         "-o",  "hello.o"};
 
-    const ParsedCommand parsedCommand(command, "/home/");
+    auto parsedCommand =
+        ParsedCommandFactory::createParsedCommand(command, "/home/");
 
     // Deps command shouldn't be rewritten.
     const std::vector<std::string> expectedDepsCommand = {
@@ -441,7 +451,9 @@ TEST(ReplacePathTest, SimpleCompilePathReplacement)
     RECC_PREFIX_REPLACEMENT = {{"/home/usr/bin", "/home/bin"}};
     const std::vector<std::string> command = {"gcc", "-c",
                                               "/home/usr/bin/hello.c"};
-    const ParsedCommand parsedCommand(command, "");
+
+    auto parsedCommand =
+        ParsedCommandFactory::createParsedCommand(command, "");
 
     // Deps command shouldn't be rewritten.
     const std::vector<std::string> expectedDepsCommand = {
@@ -470,7 +482,8 @@ TEST(ReplacePathTest, ReplaceCompilePathInProjectRoot)
         "-o",
         "hello.o"};
 
-    const ParsedCommand parsedCommand(command, "/home/");
+    auto parsedCommand =
+        ParsedCommandFactory::createParsedCommand(command, "/home/");
 
     // Deps command shouldn't be rewritten.
     const std::vector<std::string> expectedDepsCommand = {

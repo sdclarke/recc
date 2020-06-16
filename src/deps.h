@@ -16,7 +16,7 @@
 #define INCLUDED_DEPS
 
 #include <parsedcommand.h>
-
+#include <parsedcommandfactory.h>
 #include <set>
 #include <stdexcept>
 #include <string>

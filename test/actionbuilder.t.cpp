@@ -113,7 +113,8 @@ TEST_F(ActionBuilderTestFixture, GetDependenciesAIX)
         "./xlc", "-c", cwd + "/" + "hello.cpp ", "-o", "hello.o"};
     std::set<std::string> deps;
     std::set<std::string> prod;
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     ASSERT_FALSE(command.get_aix_dependency_file_name().empty());
 
     writeDependenciesToTempFile(command.get_aix_dependency_file_name());
@@ -126,7 +127,8 @@ TEST_F(ActionBuilderTestFixture, IllegalNonCompileCommand)
 {
     const std::vector<std::string> recc_args = {"command-with-no-path", "foo",
                                                 "bar"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
 
     ASSERT_TRUE(command.get_aix_dependency_file_name().empty());
 
@@ -139,7 +141,8 @@ TEST_F(ActionBuilderTestFixture, IllegalCompileCommandThrows)
 {
     const std::vector<std::string> recc_args = {"gcc", "-c", "hello.cpp", "-o",
                                                 "hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
 
     EXPECT_THROW(ActionBuilder::BuildAction(command, cwd, &blobs,
                                             &digest_to_filecontents),
@@ -160,7 +163,8 @@ TEST_F(ActionBuilderTestFixture, GetDependenciesVerifyMetricsCollection)
                                                 "-o", "hello.o"};
     std::set<std::string> deps;
     std::set<std::string> prod;
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     getDependencies(command, &deps, &prod);
     EXPECT_TRUE(
         collectedByName<DurationMetricValue>(TIMER_NAME_COMPILER_DEPS));
@@ -292,7 +296,8 @@ TEST_P(ActionBuilderTestFixture, ActionContainsExpectedCompileCommand)
 
     const std::vector<std::string> recc_args = {"./gcc", "-c", "hello.cpp",
                                                 "-o", "hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
 
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
@@ -317,7 +322,8 @@ TEST_P(ActionBuilderTestFixture, ActionCompileCommandGoldenDigests)
 
     const std::vector<std::string> recc_args = {"./gcc", "-c", "hello.cpp",
                                                 "-o", "hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
 
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
@@ -352,7 +358,8 @@ TEST_P(ActionBuilderTestFixture, ActionNonCompileCommandGoldenDigests)
     RECC_FORCE_REMOTE = true;
 
     const std::vector<std::string> recc_args = {"/bin/ls"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
 
@@ -435,7 +442,8 @@ TEST_P(ActionBuilderTestFixture, ActionContainsExpectedMerkleTree)
     RECC_DEPS_OVERRIDE = {"hello.cpp"};
     const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
 
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
@@ -476,7 +484,8 @@ TEST_P(ActionBuilderTestFixture, ActionBuiltGoldenDigests)
 
     const std::vector<std::string> recc_args = {"./gcc", "-c", "hello.cpp",
                                                 "-o", "hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
 
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
@@ -512,7 +521,8 @@ TEST_P(ActionBuilderTestFixture, NonCompileCommand)
     RECC_FORCE_REMOTE = false;
 
     const std::vector<std::string> recc_args = {"ls"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
 
@@ -532,7 +542,8 @@ TEST_P(ActionBuilderTestFixture, NonCompileCommandForceRemoteMerkleTree)
     RECC_FORCE_REMOTE = true;
 
     const std::vector<std::string> recc_args = {"/bin/ls"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
     ASSERT_NE(actionPtr, nullptr);
@@ -571,7 +582,8 @@ TEST_P(ActionBuilderTestFixture, NonCompileCommandForceRemoteGoldenDigests)
     RECC_FORCE_REMOTE = true;
 
     const std::vector<std::string> recc_args = {"/bin/ls"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
     ASSERT_NE(actionPtr, nullptr);
@@ -618,7 +630,8 @@ TEST_P(ActionBuilderTestFixture, AbsolutePathActionBuilt)
 
     const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
     ASSERT_NE(actionPtr, nullptr);
@@ -666,7 +679,8 @@ TEST_P(ActionBuilderTestFixture, RelativePathAndAbsolutePathWithCwd)
 
     const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
     ASSERT_NE(actionPtr, nullptr);
@@ -702,7 +716,8 @@ TEST_P(ActionBuilderTestFixture, ExcludePath)
 
     const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
     ASSERT_NE(actionPtr, nullptr);
@@ -739,7 +754,8 @@ TEST_P(ActionBuilderTestFixture, ExcludePathMultipleMatchOne)
 
     std::vector<std::string> recc_args = {"/my/fake/gcc", "-c", "hello.cpp",
                                           "-o", "hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
     ASSERT_NE(actionPtr, nullptr);
@@ -779,7 +795,8 @@ TEST_P(ActionBuilderTestFixture, ExcludePathNoMatch)
 
     const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
     ASSERT_NE(actionPtr, nullptr);
@@ -821,7 +838,8 @@ TEST_P(ActionBuilderTestFixture, ExcludePathSingleWithMultiInput)
 
     const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
 
@@ -856,7 +874,8 @@ TEST_P(ActionBuilderTestFixture, EmptyWorkingDirInputRoot)
 
     const std::vector<std::string> recc_args = {
         "/my/fake/gcc", "-c", "../deps/empty.c", "-o", "empty.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
     ASSERT_NE(actionPtr, nullptr);
@@ -880,7 +899,8 @@ TEST_P(ActionBuilderTestFixture, UnrelatedOutputDirectory)
     }
     const std::vector<std::string> recc_args = {"./gcc", "-c", "hello.cpp",
                                                 "-o", "/fakedirname/hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
 
@@ -915,7 +935,8 @@ TEST_P(ActionBuilderTestFixture, SimplePathReplacement)
 
     const std::vector<std::string> recc_args = {"/my/fake/gcc", "-c",
                                                 "hello.cpp", "-o", "hello.o"};
-    const ParsedCommand command(recc_args, cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
     const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
                                                       &digest_to_filecontents);
     ASSERT_NE(actionPtr, nullptr);

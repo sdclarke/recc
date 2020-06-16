@@ -39,7 +39,8 @@ TEST(DepsTest, Empty)
 {
     Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.", "empty.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "-I.", "empty.c"});
     std::set<std::string> expectedDeps = {"empty.c"};
     EXPECT_EQ(expectedDeps,
               normalize_all(Deps::get_file_info(command).d_dependencies));
@@ -49,8 +50,8 @@ TEST(DepsTest, SimpleInclude)
 {
     Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
-                             "includes_empty.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "-I.", "includes_empty.c"});
     std::set<std::string> expected = {"includes_empty.c", "empty.h"};
     EXPECT_EQ(expected,
               normalize_all(Deps::get_file_info(command).d_dependencies));
@@ -60,8 +61,8 @@ TEST(DepsTest, RecursiveDependency)
 {
     Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
-                             "includes_includes_empty.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "-I.", "includes_includes_empty.c"});
     std::set<std::string> expected = {"includes_includes_empty.c",
                                       "includes_empty.h", "empty.h"};
     EXPECT_EQ(expected,
@@ -76,9 +77,9 @@ TEST(DepsTest, MultiFile)
     if (RECC_PLATFORM_COMPILER != "xlc") {
         Env::parse_config_variables();
         RECC_DEPS_GLOBAL_PATHS = 0;
-        ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
-                                 "includes_includes_empty.c",
-                                 "includes_empty.c"};
+        const auto command = ParsedCommandFactory::createParsedCommand(
+            {RECC_PLATFORM_COMPILER, "-c", "-I.", "includes_includes_empty.c",
+             "includes_empty.c"});
         std::set<std::string> expected = {"includes_includes_empty.c",
                                           "includes_empty.c",
                                           "includes_empty.h", "empty.h"};
@@ -91,8 +92,8 @@ TEST(DepsTest, EdgeCases)
 {
     Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
-                             "edge_cases.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "-I.", "edge_cases.c"});
     std::set<std::string> expected = {"edge_cases.c", "empty.h",
                                       "header with spaces.h"};
     EXPECT_EQ(expected,
@@ -103,8 +104,9 @@ TEST(DepsTest, OutputArgument)
 {
     Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
-                             "includes_empty.c",     "-o", "/dev/null"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "-I.", "includes_empty.c", "-o",
+         "/dev/null"});
     std::set<std::string> expected = {"includes_empty.c", "empty.h"};
     EXPECT_EQ(expected,
               normalize_all(Deps::get_file_info(command).d_dependencies));
@@ -114,8 +116,9 @@ TEST(DepsTest, OutputArgumentNoSpace)
 {
     Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
-                             "includes_empty.c", "-o/dev/null"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "-I.", "includes_empty.c",
+         "-o/dev/null"});
     std::set<std::string> expected = {"includes_empty.c", "empty.h"};
     EXPECT_EQ(expected,
               normalize_all(Deps::get_file_info(command).d_dependencies));
@@ -123,9 +126,10 @@ TEST(DepsTest, OutputArgumentNoSpace)
 
 TEST(DepsTest, PreprocessorOutputArgument)
 {
-    if (ParsedCommand::command_basename(RECC_PLATFORM_COMPILER) == "gcc") {
-        ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
-                                 "includes_empty.c", "-Wp,-MMD,'/dev/null'"};
+    if (ParsedCommand::commandBasename(RECC_PLATFORM_COMPILER) == "gcc") {
+        const auto command = ParsedCommandFactory::createParsedCommand(
+            {RECC_PLATFORM_COMPILER, "-c", "-I.", "includes_empty.c",
+             "-Wp,-MMD,'/dev/null'"});
         std::set<std::string> expected = {"includes_empty.c", "empty.h"};
         EXPECT_EQ(expected,
                   normalize_all(Deps::get_file_info(command).d_dependencies));
@@ -136,8 +140,9 @@ TEST(DepsTest, Subdirectory)
 {
     Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
-                             "-Isubdirectory", "includes_from_subdirectory.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "-I.", "-Isubdirectory",
+         "includes_from_subdirectory.c"});
     std::set<std::string> expected = {"includes_from_subdirectory.c",
                                       "subdirectory/header.h"};
     EXPECT_EQ(expected,
@@ -146,12 +151,12 @@ TEST(DepsTest, Subdirectory)
 
 TEST(DepsTest, SystemSubdirectory)
 {
-    if (ParsedCommand::command_basename(RECC_PLATFORM_COMPILER) == "gcc") {
+    if (ParsedCommand::commandBasename(RECC_PLATFORM_COMPILER) == "gcc") {
         Env::parse_config_variables();
         RECC_DEPS_GLOBAL_PATHS = 0;
-        ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-I.",
-                                 "-isystemsubdirectory",
-                                 "includes_from_subdirectory.c"};
+        const auto command = ParsedCommandFactory::createParsedCommand(
+            {RECC_PLATFORM_COMPILER, "-c", "-I.", "-isystemsubdirectory",
+             "includes_from_subdirectory.c"});
         std::set<std::string> expected = {"includes_from_subdirectory.c",
                                           "subdirectory/header.h"};
         EXPECT_EQ(expected,
@@ -163,8 +168,8 @@ TEST(DepsTest, InputInSubdirectory)
 {
     Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c",
-                             "subdirectory/empty.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "subdirectory/empty.c"});
     std::set<std::string> expected = {"subdirectory/empty.c"};
     EXPECT_EQ(expected,
               normalize_all(Deps::get_file_info(command).d_dependencies));
@@ -173,8 +178,9 @@ TEST(DepsTest, InputInSubdirectory)
 TEST(DepsTest, SubprocessFailure)
 {
     Env::parse_config_variables();
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "empty.c",
-                             "--clearly-invalid-option", "invalid_file.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "empty.c", "--clearly-invalid-option",
+         "invalid_file.c"});
     EXPECT_THROW(Deps::get_file_info(command), subprocess_failed_error);
 }
 
@@ -182,7 +188,8 @@ TEST(DepsTest, GlobalPathsAllowed)
 {
     Env::parse_config_variables();
     RECC_DEPS_GLOBAL_PATHS = 0;
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "ctype_include.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "ctype_include.c"});
     std::set<std::string> expected = {"ctype_include.c"};
     EXPECT_EQ(expected,
               normalize_all(Deps::get_file_info(command).d_dependencies));
@@ -231,8 +238,8 @@ TEST(DepsTest, ClangCrtbegin)
 TEST(ProductsTest, OutputArgument)
 {
     Env::parse_config_variables();
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-o",
-                             "some_output.exe", "empty.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "-o", "some_output.exe", "empty.c"});
 
     auto products = Deps::get_file_info(command).d_possibleProducts;
 
@@ -242,8 +249,9 @@ TEST(ProductsTest, OutputArgument)
 TEST(ProductsTest, NormalizesPath)
 {
     Env::parse_config_variables();
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-o",
-                             "out/subdir/../../../empty", "empty.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "-o", "out/subdir/../../../empty",
+         "empty.c"});
 
     auto products = Deps::get_file_info(command).d_possibleProducts;
 
@@ -253,8 +261,8 @@ TEST(ProductsTest, NormalizesPath)
 TEST(ProductsTest, OutputArgumentNoSpace)
 {
     Env::parse_config_variables();
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "-osome_output.exe",
-                             "empty.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "-osome_output.exe", "empty.c"});
 
     auto products = Deps::get_file_info(command).d_possibleProducts;
 
@@ -264,7 +272,8 @@ TEST(ProductsTest, OutputArgumentNoSpace)
 TEST(ProductsTest, DefaultOutput)
 {
     Env::parse_config_variables();
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c", "empty.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "empty.c"});
 
     auto products = Deps::get_file_info(command).d_possibleProducts;
 
@@ -275,8 +284,8 @@ TEST(ProductsTest, DefaultOutput)
 TEST(ProductsTest, Subdirectory)
 {
     Env::parse_config_variables();
-    ParsedCommand command = {RECC_PLATFORM_COMPILER, "-c",
-                             "subdirectory/empty.c"};
+    const auto command = ParsedCommandFactory::createParsedCommand(
+        {RECC_PLATFORM_COMPILER, "-c", "subdirectory/empty.c"});
 
     auto products = Deps::get_file_info(command).d_possibleProducts;
 
@@ -286,9 +295,10 @@ TEST(ProductsTest, Subdirectory)
 
 TEST(ProductsTest, PreprocessorArgument)
 {
-    if (ParsedCommand::command_basename(RECC_PLATFORM_COMPILER) == "gcc") {
-        ParsedCommand command = {RECC_PLATFORM_COMPILER,   "-c", "empty.c",
-                                 "-Wp,-MMD,'some/test.d'", "-o", "empty.o"};
+    if (ParsedCommand::commandBasename(RECC_PLATFORM_COMPILER) == "gcc") {
+        const auto command = ParsedCommandFactory::createParsedCommand(
+            {RECC_PLATFORM_COMPILER, "-c", "empty.c", "-Wp,-MMD,'some/test.d'",
+             "-o", "empty.o"});
         std::set<std::string> deps = {"empty.c"};
 
         auto products = Deps::get_file_info(command).d_possibleProducts;

@@ -16,9 +16,7 @@
 #define INCLUDED_PARSEDCOMMAND
 
 #include <buildboxcommon_temporaryfile.h>
-#include <initializer_list>
-#include <logging.h>
-#include <memory>
+#include <list>
 #include <set>
 #include <string>
 #include <vector>
@@ -28,21 +26,16 @@ namespace recc {
 
 /**
  * Represents the result of parsing a compiler command.
+ * NOTE: THIS CLASS SHOULD BE TREATED AS PRIVATE, USAGE SHOULD GO THROUGH
+ * PARSEDCOMMMANDFACTORY.H
  */
 class ParsedCommand {
   public:
-    /**
-     * Parses the given command. If workingDirectory is non-null, replace
-     * absolute paths with paths relative to the given working directory.
-     */
-    ParsedCommand(std::vector<std::string> command,
-                  const char *workingDirectory);
-    ParsedCommand(char **argv, const char *workingDirectory)
-        : ParsedCommand(vector_from_argv(argv), workingDirectory)
-    {
-    }
-    ParsedCommand(std::initializer_list<std::string> command)
-        : ParsedCommand(std::vector<std::string>(command), nullptr)
+    ParsedCommand(const std::string &command);
+    ParsedCommand()
+        : d_compilerCommand(false), d_isClang(false),
+          d_producesSunMakeRules(false), d_containsUnsupportedOptions(false),
+          d_dependencyFileAIX(nullptr)
     {
     }
 
@@ -57,20 +50,20 @@ class ParsedCommand {
     bool is_clang() const { return d_isClang; }
 
     /**
-     * Returns true if the command contains a AIX compiler.
+     * Returns true if this is a AIX command.
      */
     bool is_AIX() const { return d_dependencyFileAIX != nullptr; }
 
     /**
-     * Returns the original command that was passed to the constructor, with
-     * absolute paths replaced with equivalent relative paths.
+     * Returns the original command that was passed to the constructor,
+     * with absolute paths replaced with equivalent relative paths.
      */
     std::vector<std::string> get_command() const { return d_command; }
 
     /**
      * Return a command that prints this command's dependencies in Makefile
-     * format. If this command is not a supported compiler command, the result
-     * is undefined.
+     * format. If this command is not a supported compiler command, the
+     * result is undefined.
      */
     std::vector<std::string> get_dependencies_command() const
     {
@@ -86,7 +79,8 @@ class ParsedCommand {
      * Return the name of the file the compiler will write the source
      * dependencies to on AIX.
      *
-     * If the compiler command doesn't include a AIX compiler, return empty.
+     * If the compiler command doesn't include a AIX compiler, return
+     * empty.
      */
     std::string get_aix_dependency_file_name() const
     {
@@ -99,9 +93,9 @@ class ParsedCommand {
     /**
      * Return the output files specified in the command arguments.
      *
-     * This is not necessarily all of the files the command will create. (For
-     * example, if no output files are specified, many compilers will write to
-     * a.out by default.)
+     * This is not necessarily all of the files the command will create.
+     * (For example, if no output files are specified, many compilers will
+     * write to a.out by default.)
      */
     std::set<std::string> get_products() const { return d_commandProducts; }
 
@@ -116,18 +110,16 @@ class ParsedCommand {
      * Converts a command path (e.g. "/usr/bin/gcc-4.7") to a command name
      * (e.g. "gcc")
      */
-    static std::string command_basename(const std::string &path);
+    static std::string commandBasename(const std::string &path);
 
-    /**
-     * Convert a null-terminated list of C strings to a vector of C++ strings.
-     */
-    static std::vector<std::string> vector_from_argv(const char *const *argv);
-
-  private:
     bool d_compilerCommand;
     bool d_isClang;
     bool d_producesSunMakeRules;
+    bool d_containsUnsupportedOptions;
     std::string d_compiler;
+    std::list<std::string> d_originalCommand;
+    std::vector<std::string> d_defaultDepsCommand;
+    std::vector<std::string> d_preProcessorOptions;
     std::vector<std::string> d_command;
     std::vector<std::string> d_dependenciesCommand;
     std::set<std::string> d_commandProducts;

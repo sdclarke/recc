@@ -27,6 +27,7 @@
 #include <grpccontext.h>
 #include <logging.h>
 #include <metricsconfig.h>
+#include <parsedcommandfactory.h>
 #include <reccdefaults.h>
 #include <remoteexecutionclient.h>
 #include <requestmetadata.h>
@@ -230,7 +231,8 @@ int main(int argc, char *argv[])
         statsDPublisherGuard(RECC_ENABLE_METRICS, *statsDPublisher);
 
     const std::string cwd = FileUtils::getCurrentWorkingDirectory();
-    ParsedCommand command(&argv[1], cwd.c_str());
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(&argv[1], cwd.c_str());
 
     digest_string_umap blobs;
     digest_string_umap digest_to_filecontents;

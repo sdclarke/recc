@@ -17,29 +17,22 @@
 namespace BloombergLP {
 namespace recc {
 
-CompilerDefaults::CompilerListType
-CompilerDefaults::getCompilers(const CompilerFlavour &flavour)
-{
-    switch (flavour) {
-        case CompilerFlavour::Gcc: {
-            return {"gcc", "g++", "c++", "clang", "clang++"};
-        }
-        case CompilerFlavour::GccPreprocessor: {
-            return {"gcc-preprocessor"};
-        }
-        case CompilerFlavour::SunCPP: {
-            return {"CC"};
-        }
-        case CompilerFlavour::AIX: {
-            return {"xlc", "xlc++", "xlC", "xlCcore", "xlc++core"};
-        }
-        case CompilerFlavour::SunC: {
-            return {"cc", "c89", "c99"};
-        }
-        default:
-            return {};
-    }
-}
+// Supported Compilers
+const SupportedCompilers::CompilerListType SupportedCompilers::Gcc = {
+    "gcc", "g++", "c++", "clang", "clang++"};
+const SupportedCompilers::CompilerListType
+    SupportedCompilers::GccPreprocessor = {"gcc-preprocessor"};
+const SupportedCompilers::CompilerListType SupportedCompilers::SunCPP = {"CC"};
+const SupportedCompilers::CompilerListType SupportedCompilers::AIX = {
+    "xlc", "xlc++", "xlC", "xlCcore", "xlc++core"};
+const SupportedCompilers::CompilerListType SupportedCompilers::SunC = {
+    "cc", "c89", "c99"};
+
+// Default Deps
+const std::vector<std::string> SupportedCompilers::GccDefaultDeps = {"-M"};
+const std::vector<std::string> SupportedCompilers::SunCPPDefaultDeps = {"-xM"};
+const std::vector<std::string> SupportedCompilers::AIXDefaultDeps = {
+    "-qsyntaxonly", "-M", "-MF"};
 
 } // namespace recc
 } // namespace BloombergLP

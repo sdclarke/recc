@@ -37,6 +37,7 @@ add_recc_test(remoteexecutionclient_tests remoteexecutionclient.t.cpp)
 add_recc_test(fileutils_tests fileutils.t.cpp)
 add_recc_test(requestmetadata_tests requestmetadata.t.cpp)
 add_recc_test(threading_tests threadutils.t.cpp)
+add_recc_test(parsed_command_factory_tests parsedcommandfactory.t.cpp)
 
 add_recc_test(env_set_test env/env_set.t.cpp)
 add_recc_test(env_default_cas_test env/env_default_cas.t.cpp)

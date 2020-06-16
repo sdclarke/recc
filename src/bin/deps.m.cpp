@@ -40,9 +40,9 @@ int main(int argc, char *argv[])
         return 0;
     }
     try {
-        const auto deps =
-            Deps::get_file_info(ParsedCommand(&argv[1], cwd.c_str()))
-                .d_dependencies;
+        const auto parsedCommand =
+            ParsedCommandFactory::createParsedCommand(&argv[1], cwd.c_str());
+        const auto deps = Deps::get_file_info(parsedCommand).d_dependencies;
         for (const auto &dep : deps) {
             RECC_LOG(dep);
         }
