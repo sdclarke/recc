@@ -317,8 +317,8 @@ TEST(RewriteAbsolutePathsTest, SimpleCompileCommand)
 
     const std::vector<std::string> expectedCommand = {"gcc", "-c", "hello.c",
                                                       "-o", "hello.o"};
-    const std::vector<std::string> expectedDepsCommand = {"gcc", "-c",
-                                                          "hello.c", "-M"};
+    const std::vector<std::string> expectedDepsCommand = {
+        "gcc", "-c", "/home/nobody/test/hello.c", "-M"};
     const std::set<std::string> expectedProducts = {"hello.o"};
 
     ASSERT_TRUE(parsedCommand.is_compiler_command());
@@ -367,14 +367,14 @@ TEST(RewriteAbsolutePathsTest, ComplexOptions)
     const std::vector<std::string> expectedDepsCommand = {
         "gcc",
         "-c",
-        "hello.c",
-        "-I../headers",
+        "/home/nobody/test/hello.c",
+        "-I/home/nobody/headers",
         "-I",
-        "moreheaders/",
+        "/home/nobody/test/moreheaders/",
         "-Xpreprocessor",
         "-I",
         "-Xpreprocessor",
-        "../evenmoreheaders",
+        "/home/nobody/evenmoreheaders",
         "-Xpreprocessor",
         "-I",
         "-Xpreprocessor",
@@ -432,7 +432,7 @@ TEST(ReplacePathTest, PathInProjectRoot)
 
     // Deps command shouldn't be rewritten.
     const std::vector<std::string> expectedDepsCommand = {
-        "gcc", "-c", "hello.c", "-Iusr/bin/include/headers", "-M"};
+        "gcc", "-c", "hello.c", "-I/home/usr/bin/include/headers", "-M"};
 
     // -I should be replaced, and made relative
     const std::vector<std::string> expectedCommand = {
@@ -487,7 +487,8 @@ TEST(ReplacePathTest, ReplaceCompilePathInProjectRoot)
 
     // Deps command shouldn't be rewritten.
     const std::vector<std::string> expectedDepsCommand = {
-        "gcc", "-c", "usr/bin/hello.c", "-Iusr/bin/include/headers", "-M"};
+        "gcc", "-c", "/home/usr/bin/hello.c",
+        "-I/home/usr/bin/include/headers", "-M"};
 
     // -I should be replaced, and made relative
     const std::vector<std::string> expectedCommand = {

@@ -254,10 +254,11 @@ void ParsedCommandFactory::parseCommand(
             }
         } // end inner for
         if (!foundMatch) {
-            const auto pathPair = ParsedCommandModifiers::modifyPaths(
-                curr_val, workingDirectory);
-            command->d_command.push_back(pathPair.second);
-            command->d_dependenciesCommand.push_back(pathPair.first);
+            const std::string replacedPath =
+                ParsedCommandModifiers::modifyRemotePath(curr_val,
+                                                         workingDirectory);
+            command->d_command.push_back(replacedPath);
+            command->d_dependenciesCommand.push_back(curr_val);
             command->d_originalCommand.pop_front();
         }
         foundMatch = false;
@@ -386,17 +387,18 @@ void ParsedCommandModifiers::gccOptionModifier(
             optionPath = val.substr(equalPos + 1);
         }
 
-        const auto pathPair =
-            ParsedCommandModifiers::modifyPaths(optionPath, workingDirectory);
+        const std::string replacedPath =
+            ParsedCommandModifiers::modifyRemotePath(optionPath,
+                                                     workingDirectory);
 
-        command->d_command.push_back(modifiedOption + pathPair.second);
+        command->d_command.push_back(modifiedOption + replacedPath);
 
         if (isOutput) {
-            command->d_commandProducts.insert(pathPair.second);
+            command->d_commandProducts.insert(replacedPath);
         }
         else if (toDeps) {
             command->d_dependenciesCommand.push_back(modifiedOption +
-                                                     pathPair.first);
+                                                     optionPath);
         }
 
         command->d_originalCommand.pop_front();
@@ -410,18 +412,18 @@ void ParsedCommandModifiers::appendAndRemoveOption(
     auto option = command->d_originalCommand.front();
     if (isPath) {
 
-        const auto pathPair =
-            ParsedCommandModifiers::modifyPaths(option, workingDirectory);
+        const std::string replacedPath =
+            ParsedCommandModifiers::modifyRemotePath(option, workingDirectory);
 
         // If pushing back to dependencies command, do not replace the path
         // since this will be run locally.
         if (toDeps) {
-            command->d_dependenciesCommand.push_back(pathPair.first);
+            command->d_dependenciesCommand.push_back(option);
         }
-        command->d_command.push_back(pathPair.second);
+        command->d_command.push_back(replacedPath);
 
         if (isOutput) {
-            command->d_commandProducts.insert(pathPair.second);
+            command->d_commandProducts.insert(replacedPath);
         }
     }
     else {
@@ -436,19 +438,12 @@ void ParsedCommandModifiers::appendAndRemoveOption(
     command->d_originalCommand.pop_front();
 }
 
-std::pair<std::string, std::string>
-ParsedCommandModifiers::modifyPaths(const std::string &path,
-                                    const std::string &workingDirectory)
+std::string
+ParsedCommandModifiers::modifyRemotePath(const std::string &path,
+                                         const std::string &workingDirectory)
 {
-    const auto relativePath =
-        FileUtils::makePathRelative(path, workingDirectory.c_str());
-
     const auto replacedPath = FileUtils::resolvePathFromPrefixMap(path);
-
-    const auto replacedRelativePath =
-        FileUtils::makePathRelative(replacedPath, workingDirectory.c_str());
-
-    return std::make_pair(relativePath, replacedRelativePath);
+    return FileUtils::makePathRelative(replacedPath, workingDirectory.c_str());
 }
 
 void ParsedCommandModifiers::parseStageOptionList(

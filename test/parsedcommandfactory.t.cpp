@@ -78,7 +78,8 @@ TEST(TestParsedCommandFactory, testInputPathsAndGCC)
 
     // Change once deps are handled.
     const std::vector<std::string> expectedDepsCommand = {
-        "gcc", "-c", "test/hello.c", "-Itest/include/user.h", "-M"};
+        "gcc", "-c", "/home/nobody/test/hello.c",
+        "-I/home/nobody/test/include/user.h", "-M"};
 
     EXPECT_EQ(expectedCommand, parsedCommand.get_command());
     EXPECT_EQ(expectedDepsCommand, parsedCommand.get_dependencies_command());
@@ -104,7 +105,11 @@ TEST(TestParsedCommandFactory, testEqualInputPaths)
 
     // Change once deps are handled.
     const std::vector<std::string> expectedDepsCommand = {
-        "gcc", "-c", "test/hello.c", "-Itest/include/user.h", "--sysroot=test",
+        "gcc",
+        "-c",
+        "/home/nobody/test/hello.c",
+        "-I/home/nobody/test/include/user.h",
+        "--sysroot=/home/nobody/test",
         "-M"};
 
     EXPECT_EQ(expectedCommand, parsedCommand.get_command());
@@ -154,14 +159,14 @@ TEST(TestParsedCommandFactory, testPreprocessor)
     const std::vector<std::string> expectedDepsCommand = {
         "gcc",
         "-c",
-        "hello.c",
-        "-I../headers",
+        "/home/nobody/test/hello.c",
+        "-I/home/nobody/headers",
         "-I",
-        "moreheaders/",
+        "/home/nobody/test/moreheaders/",
         "-Xpreprocessor",
         "-I",
         "-Xpreprocessor",
-        "../evenmoreheaders",
+        "/home/nobody/evenmoreheaders",
         "-Xpreprocessor",
         "-I",
         "-Xpreprocessor",
@@ -179,31 +184,62 @@ TEST(TestParsedCommandFactory, testPreprocessor)
     EXPECT_EQ(true, parsedCommand.is_compiler_command());
 }
 
-TEST(PathReplacement, modifiedPathsSimple)
+TEST(PathReplacement, modifyRemotePathUnmodified)
 {
+    // If a given path doesn't match any PREFIX_REPLACEMENT
+    // rules and can't be made relative, it's returned unmodified
     RECC_PROJECT_ROOT = "/home/nobody/";
     RECC_PREFIX_REPLACEMENT = {{"/home", "/hi"}};
 
     const auto workingDir = "/home";
 
-    const auto pathPair =
-        ParsedCommandModifiers::modifyPaths("/home/nobody/test", workingDir);
+    const std::string replacedPath = ParsedCommandModifiers::modifyRemotePath(
+        "/other/dir/nobody/test", workingDir);
 
-    EXPECT_EQ("nobody/test", pathPair.first);
-    EXPECT_EQ("/hi/nobody/test", pathPair.second);
+    EXPECT_EQ("/other/dir/nobody/test", replacedPath);
 }
 
-TEST(PathReplacement, modifiedPathsComplex)
+TEST(PathReplacement, modifyRemotePathPrefixMatch)
 {
-    // Replaced path is still inside workingdirectory.
+    // Match a PREFIX_REPLACEMENT rule, but the replaced path
+    // isn't eligable to be made relative, so it's returned absolute
+    RECC_PROJECT_ROOT = "/home/nobody/";
+    RECC_PREFIX_REPLACEMENT = {{"/home", "/hi"}};
+
+    const auto workingDir = "/home";
+
+    const std::string replacedPath = ParsedCommandModifiers::modifyRemotePath(
+        "/home/nobody/test", workingDir);
+
+    EXPECT_EQ("/hi/nobody/test", replacedPath);
+}
+
+TEST(PathReplacement, modifyRemotePathMadeRelative)
+{
+    // Path doesn't match any PREFIX_REPLACEMENT rules,
+    // but can be made relative to RECC_PROJECT_ROOT
+    RECC_PROJECT_ROOT = "/other";
+    RECC_PREFIX_REPLACEMENT = {{"/home", "/hi"}};
+
+    const auto workingDir = "/other";
+
+    const std::string replacedPath = ParsedCommandModifiers::modifyRemotePath(
+        "/other/nobody/test", workingDir);
+
+    EXPECT_EQ("nobody/test", replacedPath);
+}
+
+TEST(PathReplacement, modifyRemotePathPrefixAndRelativeMatch)
+{
+    // Path matches a PREFIX_REPLACEMENT rule, and the replaced
+    // path can be made relative to RECC_PROJECT_ROOT
     RECC_PROJECT_ROOT = "/home/";
     RECC_PREFIX_REPLACEMENT = {{"/home/nobody/", "/home"}};
 
     const auto workingDir = "/home";
 
-    const auto pathPair =
-        ParsedCommandModifiers::modifyPaths("/home/nobody/test", workingDir);
+    const std::string replacedPath = ParsedCommandModifiers::modifyRemotePath(
+        "/home/nobody/test", workingDir);
 
-    EXPECT_EQ("nobody/test", pathPair.first);
-    EXPECT_EQ("test", pathPair.second);
+    EXPECT_EQ("test", replacedPath);
 }

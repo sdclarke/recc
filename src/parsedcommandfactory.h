@@ -132,15 +132,12 @@ struct ParsedCommandModifiers {
                                       bool isPath, bool toDeps,
                                       bool isOutput = false);
     /**
-     * This helper deals with modifing paths, by returning:
-     * 1. Path made relative to the working directory.
-     * 2. Path replaced if matching a option in RECC_PREFIX_MAP, and then made
-     * relative to the working directory.
-     * The first path can be run locally, the second is used for remoteing the
-     * command.
+     * This helper modifies the given path to make it suitable for running
+     * remotely. The path is replaced if matching a option in RECC_PREFIX_MAP,
+     * and then made relative to the working directory
      */
-    static std::pair<std::string, std::string>
-    modifyPaths(const std::string &path, const std::string &workingDirectory);
+    static std::string modifyRemotePath(const std::string &path,
+                                        const std::string &workingDirectory);
 
     /**
      * Parse a comma-separated list and store the results in the given
