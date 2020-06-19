@@ -26,7 +26,7 @@ macro(add_recc_test TEST_NAME TEST_SOURCE)
     endif()
 
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME} WORKING_DIRECTORY ${TEST_WORKING_DIRECTORY})
-    target_link_libraries(${TEST_NAME} PUBLIC remoteexecution extra_libs ${GTEST_TARGET} ${GMOCK_TARGET} gtest_main)
+    target_link_libraries(${TEST_NAME} PUBLIC remoteexecution extra_libs ${GTEST_TARGET} ${GMOCK_TARGET} ${GTEST_MAIN_TARGET})
 endmacro()
 
 add_recc_test(subprocess_tests subprocess.t.cpp)
