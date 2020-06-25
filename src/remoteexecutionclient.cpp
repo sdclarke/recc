@@ -27,7 +27,6 @@
 
 #include <functional>
 #include <future>
-#include <sstream>
 
 #define TIMER_NAME_FETCH_WRITE_RESULTS "recc.fetch_write_results"
 
@@ -74,6 +73,7 @@ void read_operation_async(ReaderPointer reader_ptr,
             logged = true;
         }
         if (operation_ptr->done()) {
+            RECC_LOG_VERBOSE("Operation done.");
             break;
         }
     }
@@ -232,6 +232,27 @@ RemoteExecutionClient::execute_action(const proto::Digest &actionDigest,
     }
 
     proto::ActionResult resultProto = get_actionresult(operation);
+    if (RECC_VERBOSE) {
+        RECC_LOG_VERBOSE("Action result contains: [Files="
+                         << resultProto.output_files_size()
+                         << "], [Directories="
+                         << resultProto.output_directories_size() << "]");
+
+        for (int i = 0; i < resultProto.output_files_size(); ++i) {
+            auto fileProto = resultProto.output_files(i);
+            RECC_LOG_VERBOSE("File digest=["
+                             << fileProto.digest().hash() << "/"
+                             << fileProto.digest().size_bytes() << "] :"
+                             << " path=[" << fileProto.path() << "]");
+        }
+        for (int i = 0; i < resultProto.output_directories_size(); ++i) {
+            auto dirProto = resultProto.output_directories(i);
+            RECC_LOG_VERBOSE("Directory tree digest=["
+                             << dirProto.tree_digest().hash() << "/"
+                             << dirProto.tree_digest().size_bytes() << "] :"
+                             << " path=[" << dirProto.path() << "]");
+        }
+    }
     return from_proto(resultProto);
 }
 
