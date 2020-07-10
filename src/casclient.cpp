@@ -341,6 +341,10 @@ void CASClient::batchUpdateBlobs(
 {
     proto::BatchUpdateBlobsRequest batchUpdateRequest;
     batchUpdateRequest.set_instance_name(d_instanceName);
+    // Timed block
+    buildboxcommon::buildboxcommonmetrics::MetricGuard<
+        buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
+        mt(TIMER_NAME_UPLOAD_MISSING_BLOBS);
 
     size_t batchSize = 0;
     for (const auto &digest : digests) {
@@ -383,11 +387,6 @@ void CASClient::batchUpdateBlobs(
     }
 
     if (!batchUpdateRequest.requests().empty()) {
-        // Timed block
-        buildboxcommon::buildboxcommonmetrics::MetricGuard<
-            buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
-            mt(TIMER_NAME_UPLOAD_MISSING_BLOBS);
-
         RECC_LOG_VERBOSE("Sending final update request");
         batchUpdateBlobs(batchUpdateRequest);
     }
