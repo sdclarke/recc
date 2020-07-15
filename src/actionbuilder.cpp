@@ -73,14 +73,14 @@ proto::Command ActionBuilder::populateCommandProto(
 }
 
 std::string
-ActionBuilder::commonAncestorPath(const std::set<std::string> &dependencies,
+ActionBuilder::commonAncestorPath(const DependencyPairs &dependencies,
                                   const std::set<std::string> &products,
                                   const std::string &workingDirectory)
 {
     int parentsNeeded = 0;
     for (const auto &dep : dependencies) {
-        parentsNeeded =
-            std::max(parentsNeeded, FileUtils::parentDirectoryLevels(dep));
+        parentsNeeded = std::max(parentsNeeded,
+                                 FileUtils::parentDirectoryLevels(dep.second));
     }
 
     for (const auto &product : products) {
@@ -102,14 +102,17 @@ ActionBuilder::prefixWorkingDirectory(const std::string &workingDirectory,
     return prefix + "/" + workingDirectory;
 }
 
-typedef std::set<std::string>::iterator setIterator;
-void addFileToMerkleTreeHelper(const std::string &dep, const std::string &cwd,
+void addFileToMerkleTreeHelper(const PathRewritePair &dep_paths,
+                               const std::string &cwd,
                                NestedDirectory *nestedDirectory,
                                digest_string_umap *digest_to_filecontents)
 {
-    // If the dependency is an absolute path, leave the merklePath
-    // untouched
-    std::string merklePath = (dep[0] == '/') ? dep : cwd + "/" + dep;
+    // If this path is relative, prepend the remote cwd to it
+    // and normalize it, getting rid of any '../' present
+    std::string merklePath(dep_paths.second);
+    if (merklePath[0] != '/' && !cwd.empty()) {
+        merklePath = cwd + "/" + merklePath;
+    }
     merklePath = buildboxcommon::FileUtils::normalizePath(merklePath.c_str());
 
     // don't include a dependency if it's exclusion is requested
@@ -119,22 +122,25 @@ void addFileToMerkleTreeHelper(const std::string &dep, const std::string &cwd,
         return;
     }
 
-    std::shared_ptr<ReccFile> file = ReccFileFactory::createFile(dep.c_str());
+    std::shared_ptr<ReccFile> file =
+        ReccFileFactory::createFile(dep_paths.first.c_str());
     if (!file) {
         const std::lock_guard<std::mutex> lock(LogWriteMutex);
         RECC_LOG_VERBOSE("Encountered unsupported file \""
-                         << dep << "\", skipping...");
+                         << dep_paths.first << "\", skipping...");
         return;
     }
 
     {
         const std::lock_guard<std::mutex> lock(ContainerWriteMutex);
-        nestedDirectory->add(file, merklePath.c_str());
+        // All necessary merkle path path transformations have already been
+        // applied, don't have nestedDirectory apply any additional ones.
+        nestedDirectory->add(file, merklePath.c_str(), true);
         (*digest_to_filecontents)[file->getDigest()] = file->getFileContents();
     }
 }
 
-void ActionBuilder::buildMerkleTree(const std::set<std::string> &dependencies,
+void ActionBuilder::buildMerkleTree(DependencyPairs &dependency_paths,
                                     const std::string &cwd,
                                     NestedDirectory *nestedDirectory,
                                     digest_string_umap *digest_to_filecontents)
@@ -145,15 +151,15 @@ void ActionBuilder::buildMerkleTree(const std::set<std::string> &dependencies,
 
     RECC_LOG_VERBOSE("Building Merkle tree");
 
-    std::function<void(setIterator, setIterator)>
-        createMerkleTreeFromIterators =
-            [&](setIterator start, setIterator end) {
-                for (; start != end; ++start) {
-                    addFileToMerkleTreeHelper(*start, cwd, nestedDirectory,
-                                              digest_to_filecontents);
-                }
-            };
-    ThreadUtils::parallelizeContainerOperations(dependencies,
+    std::function<void(DependencyPairs::iterator, DependencyPairs::iterator)>
+        createMerkleTreeFromIterators = [&](DependencyPairs::iterator start,
+                                            DependencyPairs::iterator end) {
+            for (; start != end; ++start) {
+                addFileToMerkleTreeHelper(*start, cwd, nestedDirectory,
+                                          digest_to_filecontents);
+            }
+        };
+    ThreadUtils::parallelizeContainerOperations(dependency_paths,
                                                 createMerkleTreeFromIterators);
 }
 
@@ -233,19 +239,38 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
         else {
             deps = RECC_DEPS_OVERRIDE;
         }
+        // Go through all the dependencies and apply any required path
+        // transformations, constructing DependencyParis
+        // corresponding to filesystem path -> transformed merkle tree path
+        DependencyPairs dep_path_pairs;
+        for (const auto &dep : deps) {
+            std::string modifiedDep(dep);
+            if (modifiedDep[0] == '/') {
+                modifiedDep = FileUtils::resolvePathFromPrefixMap(modifiedDep);
+                modifiedDep =
+                    FileUtils::makePathRelative(modifiedDep, cwd.c_str());
+                RECC_LOG_VERBOSE("Mapping local path: ["
+                                 << dep << "] to remote path: [" << modifiedDep
+                                 << "]");
+            }
+            dep_path_pairs.push_back(std::make_pair(dep, modifiedDep));
+        }
 
-        const auto commonAncestor = commonAncestorPath(deps, products, cwd);
+        const auto commonAncestor =
+            commonAncestorPath(dep_path_pairs, products, cwd);
         commandWorkingDirectory =
             prefixWorkingDirectory(commonAncestor, RECC_WORKING_DIR_PREFIX);
 
-        buildMerkleTree(deps, commandWorkingDirectory, &nestedDirectory,
-                        digest_to_filecontents);
+        buildMerkleTree(dep_path_pairs, commandWorkingDirectory,
+                        &nestedDirectory, digest_to_filecontents);
     }
 
     if (!commandWorkingDirectory.empty()) {
         commandWorkingDirectory = buildboxcommon::FileUtils::normalizePath(
             commandWorkingDirectory.c_str());
-        nestedDirectory.addDirectory(commandWorkingDirectory.c_str());
+        // All necessary merkle path path transformations have already been
+        // applied, don't have nestedDirectory apply any additional ones.
+        nestedDirectory.addDirectory(commandWorkingDirectory.c_str(), true);
     }
 
     for (const auto &product : products) {

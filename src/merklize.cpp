@@ -78,6 +78,9 @@ void NestedDirectory::add(std::shared_ptr<ReccFile> file,
     if (!checkedPrefix) {
         replacedDirectory =
             FileUtils::resolvePathFromPrefixMap(std::string(relativePath));
+        RECC_LOG_VERBOSE("Replacing and normalized path: ["
+                         << relativePath << "] with newpath: ["
+                         << replacedDirectory << "]");
         checkedPrefix = true;
     }
 
@@ -109,6 +112,9 @@ void NestedDirectory::addSymlink(const std::string &target,
     if (!checkedPrefix) {
         replacedDirectory =
             FileUtils::resolvePathFromPrefixMap(std::string(relativePath));
+        RECC_LOG_VERBOSE("Replacing and normalized path: ["
+                         << relativePath << "] with newpath: ["
+                         << replacedDirectory << "]");
         checkedPrefix = true;
     }
 
@@ -150,6 +156,9 @@ void NestedDirectory::addDirectory(const char *directory, bool checkedPrefix)
     if (!checkedPrefix) {
         replacedDirectory =
             FileUtils::resolvePathFromPrefixMap(std::string(directory));
+        RECC_LOG_VERBOSE("Replacing and normalized path: ["
+                         << directory << "] with newpath: ["
+                         << replacedDirectory << "]");
         checkedPrefix = true;
     }
 

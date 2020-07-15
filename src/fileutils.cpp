@@ -434,8 +434,6 @@ std::string FileUtils::resolvePathFromPrefixMap(const std::string &path)
             const std::string newPath =
                 buildboxcommon::FileUtils::normalizePath(
                     replaced_path.c_str());
-            RECC_LOG_VERBOSE("Replacing and normalized path: ["
-                             << path << "] with newpath: [" << newPath << "]");
             return newPath;
         }
     }

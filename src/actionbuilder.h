@@ -28,6 +28,11 @@ namespace recc {
 extern std::mutex ContainerWriteMutex;
 extern std::mutex LogWriteMutex;
 
+// Path to file on disk and it's associated location
+// to be placed in the input root merkle tree
+typedef std::pair<std::string, std::string> PathRewritePair;
+typedef std::vector<PathRewritePair> DependencyPairs;
+
 struct ActionBuilder {
     /**
      * Build an `Action` from the given `ParsedCommand` and working directory.
@@ -70,14 +75,14 @@ struct ActionBuilder {
         const std::string &workingDirectory);
 
     /**
-     * Given a list of paths to dependency and output files, builds a
-     * Merkle tree.
+     * Given a vector of filesystem -> Merkle path pairs to dependency and
+     * output files, builds a Merkle tree.
      *
      * Adds the files to `NestedDirectory` and `digest_to_filecontents`.
      *
      * If necessary, modifies the contents of `commandWorkingDirectory`.
      */
-    static void buildMerkleTree(const std::set<std::string> &dependencies,
+    static void buildMerkleTree(DependencyPairs &deps_paths,
                                 const std::string &cwd,
                                 NestedDirectory *nestedDirectory,
                                 digest_string_umap *digest_to_filecontents);
@@ -92,10 +97,11 @@ struct ActionBuilder {
                                 std::set<std::string> *products);
 
     /** Scans the list of dependencies and output files and strips
-     * `workingDirectory` to the level of the common ancestor.
+     * `workingDirectory` to the level of the common ancestor. For
+     * dependencies, only look at the filesystem path, not the merkle path
      */
     static std::string
-    commonAncestorPath(const std::set<std::string> &dependencies,
+    commonAncestorPath(const DependencyPairs &dependencies,
                        const std::set<std::string> &products,
                        const std::string &workingDirectory);
 
