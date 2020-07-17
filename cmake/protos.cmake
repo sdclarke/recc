@@ -3,9 +3,8 @@ set(PROTO_PATH_THIRD_PARTY ${CMAKE_CURRENT_SOURCE_DIR}/protos/third_party/google
 set(PROTO_PATH_INTERNAL ${CMAKE_CURRENT_SOURCE_DIR}/protos)
 set(protos google/api/http google/api/annotations
            google/rpc/code google/rpc/status
-           google/longrunning/operations google/bytestream/bytestream
-           build/bazel/semver/semver
-           build/bazel/remote/execution/v2/remote_execution)
+           google/longrunning/operations
+           build/bazel/semver/semver)
 
 set(proto_srcs "")
 set(proto_headers "")

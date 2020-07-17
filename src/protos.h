@@ -15,10 +15,8 @@
 #ifndef INCLUDED_PROTOS
 #define INCLUDED_PROTOS
 
-#include <build/bazel/remote/execution/v2/remote_execution.grpc.pb.h>
-#include <build/bazel/remote/execution/v2/remote_execution.pb.h>
-#include <google/bytestream/bytestream.grpc.pb.h>
-#include <google/bytestream/bytestream.pb.h>
+#include <buildboxcommon_protos.h>
+
 #include <google/longrunning/operations.grpc.pb.h>
 #include <google/longrunning/operations.pb.h>
 #include <google/rpc/code.pb.h>
@@ -27,7 +25,7 @@
 namespace BloombergLP {
 namespace recc {
 namespace proto {
-using namespace build::bazel::remote::execution::v2;
+using namespace buildboxcommon; // REAPI and ByteStream protos
 using namespace google::longrunning;
 } // namespace proto
 
@@ -52,30 +50,4 @@ inline void ensure_ok(const google::rpc::Status &status)
 } // namespace recc
 } // namespace BloombergLP
 
-// Allow Digests to be used as unordered_hash keys.
-namespace std {
-template <> struct hash<BloombergLP::recc::proto::Digest> {
-    std::size_t
-    operator()(const BloombergLP::recc::proto::Digest &digest) const noexcept
-    {
-        return std::hash<std::string>{}(digest.hash());
-    }
-};
-} // namespace std
-
-namespace build {
-namespace bazel {
-namespace remote {
-namespace execution {
-namespace v2 {
-inline bool operator==(const BloombergLP::recc::proto::Digest &a,
-                       const BloombergLP::recc::proto::Digest &b)
-{
-    return a.hash() == b.hash() && a.size_bytes() == b.size_bytes();
-}
-} // namespace v2
-} // namespace execution
-} // namespace remote
-} // namespace bazel
-} // namespace build
 #endif
