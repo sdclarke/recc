@@ -22,11 +22,15 @@
 #include <google/rpc/code.pb.h>
 #include <google/rpc/status.pb.h>
 
+#include <set>
+
 namespace BloombergLP {
 namespace recc {
 namespace proto {
 using namespace buildboxcommon; // REAPI and ByteStream protos
 using namespace google::longrunning;
+
+static const std::set<std::string> s_reapiSupportedVersions = {"2.0", "2.1"};
 } // namespace proto
 
 /**

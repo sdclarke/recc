@@ -43,6 +43,7 @@ add_recc_test(env_file_advertised_order_test env/env_file_advertised_order.t.cpp
 add_recc_test(env_check_order_test env/env_check_order.t.cpp)
 add_recc_test(env_utils_test env/env_utils.t.cpp)
 add_recc_test(env_path_vector_test env/env_path_vector.t.cpp)
+add_recc_test(env_reapi_version_test env/env_reapi_version.t.cpp)
 
 # These tests include an extra arg, containing the working directory of the test.
 add_recc_test(merklize_tests merklize.t.cpp ${CMAKE_CURRENT_SOURCE_DIR}/data/merklize)

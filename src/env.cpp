@@ -14,8 +14,10 @@
 
 #include <env.h>
 
-#include <algorithm>
+#include <buildboxcommon_exception.h>
 #include <buildboxcommon_fileutils.h>
+
+#include <algorithm>
 #include <cstring>
 #include <ctype.h>
 #include <digestgenerator.h>
@@ -107,6 +109,8 @@ std::map<std::string, std::string> RECC_REMOTE_PLATFORM =
 // Keep this empty initially and have set_config_locations() populate it
 std::deque<std::string> RECC_CONFIG_LOCATIONS = {};
 int RECC_MAX_THREADS = DEFAULT_RECC_MAX_THREADS;
+
+std::string RECC_REAPI_VERSION = DEFAULT_RECC_REAPI_VERSION;
 
 namespace {
 
@@ -292,6 +296,7 @@ void Env::parse_config_variables(const char *const *env)
         STRVAR(RECC_PREFIX_MAP)
         STRVAR(RECC_CAS_DIGEST_FUNCTION)
         STRVAR(RECC_WORKING_DIR_PREFIX)
+        STRVAR(RECC_REAPI_VERSION)
 
         BOOLVAR(RECC_VERBOSE)
         BOOLVAR(RECC_ENABLE_METRICS)
@@ -429,6 +434,16 @@ void Env::handle_special_defaults()
 
     if (RECC_MAX_THREADS == 0) {
         RECC_MAX_THREADS = 1;
+    }
+}
+
+void Env::assert_reapi_version_is_valid()
+{
+    if (!proto::s_reapiSupportedVersions.count(RECC_REAPI_VERSION)) {
+        BUILDBOXCOMMON_THROW_EXCEPTION(
+            std::runtime_error,
+            "Unknown REAPI version set in RECC_REAPI_VERSION: \""
+                << RECC_REAPI_VERSION << "\".");
     }
 }
 
@@ -587,6 +602,7 @@ void Env::parse_config_variables()
     Env::find_and_parse_config_files();
     Env::parse_config_variables(environ);
     Env::handle_special_defaults();
+    Env::assert_reapi_version_is_valid();
     Env::verify_files_writeable();
 }
 

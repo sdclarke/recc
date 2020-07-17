@@ -255,6 +255,11 @@ extern std::string RECC_WORKING_DIR_PREFIX;
 extern int RECC_MAX_THREADS;
 
 /**
+ * Version of the Remote Execution API to use.
+ */
+extern std::string RECC_REAPI_VERSION;
+
+/**
  * The process environment.
  */
 extern "C" char **environ;
@@ -279,6 +284,11 @@ struct Env {
      * Handles the case that RECC_SERVER and RECC_CAS_SERVER have not been set.
      */
     static void handle_special_defaults();
+
+    /**
+     * Asserts that RECC_REAPI_VERSION is set to a valid value.
+     */
+    static void assert_reapi_version_is_valid();
 
     /**
      * Verifies that the files referred to in the configuration can be actually
