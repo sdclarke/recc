@@ -18,7 +18,6 @@
 // it's actually run locally.
 
 #include <actionbuilder.h>
-#include <authsession.h>
 #include <deps.h>
 #include <digestgenerator.h>
 #include <env.h>
@@ -70,7 +69,7 @@ const std::string HELP(
     "The following environment variables can be used to change recc's\n"
     "behavior. To set them in a recc.conf file, omit the \"RECC_\" prefix.\n"
     "\n"
-    "RECC_SERVER - the URI of the server to use (e.g. localhost:8085)\n"
+    "RECC_SERVER - the URI of the server to use (e.g. http://localhost:8085)\n"
     "\n"
     "RECC_CAS_SERVER - the URI of the CAS server to use (by default, \n"
     "                  use RECC_ACTION_CACHE_SERVER if set. Else "
@@ -89,17 +88,10 @@ const std::string HELP(
     "                             communicating over gRPC, instead of\n"
     "                             using an insecure connection\n"
     "\n"
-    "RECC_SERVER_SSL - use a secure SSL/TLS channel when communicating over\n"
-    "                  grpc\n"
-    "\n"
-    "RECC_SERVER_JWT - use a secure SSL/TLS channel, and authenticate with "
-    "JWT\n"
-    "                  when communicating with the execution and cas servers\n"
-    "\n"
-    "RECC_JWT_JSON_FILE_PATH - path specifying location of JWT access token.\n"
-    "                          defaults to " DEFAULT_RECC_JWT_JSON_FILE_PATH
-    " (JSON format expected)\n"
-    "\n"
+    "RECC_ACCESS_TOKEN_PATH - path specifying location of access token (JWT, "
+    "OAuth, etc) to be attached to all secure connections.\n"
+    "                         Defaults to \"" DEFAULT_RECC_ACCESS_TOKEN_PATH
+    "\"\n"
     "RECC_INSTANCE - the instance name to pass to the server (defaults "
     "to \"" DEFAULT_RECC_INSTANCE "\") \n"
     "\n"
@@ -287,12 +279,6 @@ int main(int argc, char *argv[])
 
     GrpcContext grpcContext;
     grpcContext.set_action_id(actionDigest.hash());
-
-    std::unique_ptr<AuthSession> reccAuthSession;
-    if (RECC_SERVER_JWT) {
-        reccAuthSession = std::make_unique<AuthSession>();
-        grpcContext.set_auth(reccAuthSession.get());
-    }
 
     RemoteExecutionClient client(
         returnChannels->server(), returnChannels->cas(),

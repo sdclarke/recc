@@ -23,6 +23,7 @@ class EnvTest : public ::testing::Test {
     void TearDown() override
     {
         RECC_SERVER = RECC_CAS_SERVER = RECC_ACTION_CACHE_SERVER = "";
+        RECC_SERVER_SSL = false;
         RECC_FORCE_REMOTE = false;
         RECC_DEPS_OVERRIDE = RECC_OUTPUT_FILES_OVERRIDE = {};
         RECC_REMOTE_ENV.clear();
@@ -32,7 +33,7 @@ class EnvTest : public ::testing::Test {
 
 TEST_F(EnvTest, EnvSetTest)
 {
-    const char *testEnviron[] = {"RECC_SERVER=server:1234",
+    const char *testEnviron[] = {"RECC_SERVER=http://server:1234",
                                  "RECC_FORCE_REMOTE=1",
                                  "RECC_DEPS_OVERRIDE=oneitem",
                                  "RECC_OUTPUT_FILES_OVERRIDE=one,two,three",
@@ -42,7 +43,7 @@ TEST_F(EnvTest, EnvSetTest)
                                  "rh/devtoolset-7,/some/dir\\,withcomma",
                                  "TMPDIR=/some/tmp/dir",
                                  nullptr};
-    const std::string expectedServer = "server:1234";
+    const std::string expectedServer = "http://server:1234";
     const std::set<std::string> expectedDeps = {"oneitem"};
     const std::set<std::string> expectedOutputFiles = {"one", "two", "three"};
     const std::set<std::string> expectedExcludePaths = {
@@ -80,10 +81,11 @@ TEST_F(EnvTest, EnvSetTest2)
 
 TEST_F(EnvTest, EnvSetTestWithCAS)
 {
-    const char *testEnviron[] = {"RECC_SERVER=server:1234",
-                                 "RECC_CAS_SERVER=casserver:123456", nullptr};
-    const std::string expectedServer = "server:1234";
-    const std::string expectedCasServer = "casserver:123456";
+    const char *testEnviron[] = {"RECC_SERVER=http://server:1234",
+                                 "RECC_CAS_SERVER=http://casserver:123456",
+                                 nullptr};
+    const std::string expectedServer = "http://server:1234";
+    const std::string expectedCasServer = "http://casserver:123456";
     Env::parse_config_variables(testEnviron);
 
     EXPECT_EQ(expectedServer, RECC_SERVER);
@@ -99,11 +101,11 @@ TEST_F(EnvTest, EnvSetTestWithCAS)
 
 TEST_F(EnvTest, EnvSetTestWithOnlyACCAS)
 {
-    const char *testEnviron[] = {"RECC_SERVER=server:1234",
-                                 "RECC_ACTION_CACHE_SERVER=acserver:123456",
-                                 nullptr};
-    const std::string expectedServer = "server:1234";
-    const std::string expectedAcServer = "acserver:123456";
+    const char *testEnviron[] = {
+        "RECC_SERVER=http://server:1234",
+        "RECC_ACTION_CACHE_SERVER=http://acserver:123456", nullptr};
+    const std::string expectedServer = "http://server:1234";
+    const std::string expectedAcServer = "http://acserver:123456";
     Env::parse_config_variables(testEnviron);
 
     EXPECT_EQ(expectedServer, RECC_SERVER);
@@ -116,4 +118,45 @@ TEST_F(EnvTest, EnvSetTestWithOnlyACCAS)
     EXPECT_EQ(expectedServer, RECC_SERVER);
     EXPECT_EQ(expectedAcServer, RECC_CAS_SERVER);
     EXPECT_EQ(expectedAcServer, RECC_ACTION_CACHE_SERVER);
+}
+
+TEST_F(EnvTest, EnvTestServerBackwardCompatible)
+{
+    const char *testEnviron[] = {"RECC_SERVER=oldserver:1234", nullptr};
+    const std::string expectedServer = "http://oldserver:1234";
+    Env::parse_config_variables(testEnviron);
+    Env::handle_special_defaults();
+    EXPECT_EQ(expectedServer, RECC_SERVER);
+    EXPECT_EQ(expectedServer, RECC_CAS_SERVER);
+    EXPECT_EQ(expectedServer, RECC_ACTION_CACHE_SERVER);
+}
+
+TEST_F(EnvTest, EnvTestServerBackwardCompatibleSSL)
+{
+    const char *testEnviron[] = {"RECC_SERVER=oldserver:1234",
+                                 "RECC_SERVER_SSL=1", nullptr};
+    const std::string expectedServer = "https://oldserver:1234";
+    Env::parse_config_variables(testEnviron);
+    Env::handle_special_defaults();
+    EXPECT_EQ(expectedServer, RECC_SERVER);
+    EXPECT_EQ(expectedServer, RECC_CAS_SERVER);
+    EXPECT_EQ(expectedServer, RECC_ACTION_CACHE_SERVER);
+}
+
+TEST_F(EnvTest, EnvTestServerBackwardCompatibleSeparate)
+{
+    const char *testEnviron[] = {
+        "RECC_SERVER=oldserver:1234", "RECC_CAS_SERVER=oldserver:5678",
+        "RECC_ACTION_CACHE_SERVER=oldserver:1776", nullptr};
+
+    const std::string expectedServer = "http://oldserver:1234";
+    const std::string expectedCasServer = "http://oldserver:5678";
+    const std::string expectedACServer = "http://oldserver:1776";
+
+    Env::parse_config_variables(testEnviron);
+    Env::handle_special_defaults();
+
+    EXPECT_EQ(expectedServer, RECC_SERVER);
+    EXPECT_EQ(expectedCasServer, RECC_CAS_SERVER);
+    EXPECT_EQ(expectedACServer, RECC_ACTION_CACHE_SERVER);
 }

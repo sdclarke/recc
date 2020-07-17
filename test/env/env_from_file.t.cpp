@@ -32,8 +32,8 @@ TEST(EnvTest, EnvFromFile)
     unsetenv("RECC_REMOTE_ENV_Header");
 
     // should be set from file in data/recc/recc.conf
-    const std::string expectedReccServer = "localhost:99999";
-    const std::string expectedRecCasServer = "localhost:66666";
+    const std::string expectedReccServer = "http://localhost:99999";
+    const std::string expectedRecCasServer = "http://localhost:66666";
     const std::string expectedTMPDIR = "/tmp/dir";
     const std::string expectedAuthMsg = "authentication not configured";
     const std::string expectedRemoteArch = "x86_64";

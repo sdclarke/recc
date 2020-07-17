@@ -13,7 +13,6 @@
 // limitations under the License.
 //
 
-#include <authsession.h>
 #include <grpccontext.h>
 #include <requestmetadata.h>
 
@@ -26,12 +25,6 @@ GrpcContext::GrpcClientContextPtr GrpcContext::new_client_context()
 {
     GrpcContext::GrpcClientContextPtr context(
         std::make_unique<grpc::ClientContext>());
-    if (d_authSession) {
-        grpc::string access_token = d_authSession->get_access_token();
-        std::shared_ptr<grpc::CallCredentials> call_creds =
-            grpc::AccessTokenCredentials(access_token);
-        context->set_credentials(call_creds);
-    }
 
     RequestMetadataGenerator::attach_request_metadata(*context, d_action_id);
     return context;
@@ -40,21 +33,6 @@ GrpcContext::GrpcClientContextPtr GrpcContext::new_client_context()
 void GrpcContext::set_action_id(const std::string &action_id)
 {
     d_action_id = action_id;
-}
-
-void GrpcContext::auth_refresh()
-{
-    if (d_authSession) {
-        d_authSession->refresh_current_token();
-    }
-    else {
-        throw std::runtime_error("An AuthSession was not set");
-    }
-}
-
-void GrpcContext::set_auth(AuthBase *authSession)
-{
-    d_authSession = authSession;
 }
 
 } // namespace recc

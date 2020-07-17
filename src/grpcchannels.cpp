@@ -13,47 +13,56 @@
 // limitations under the License.
 //
 
-#include <authsession.h>
 #include <env.h>
 #include <grpcchannels.h>
+#include <logging.h>
 
-#include <grpcpp/create_channel.h>
 #include <sstream>
 #include <string>
 
 namespace BloombergLP {
 namespace recc {
 
-namespace {
-
-std::shared_ptr<grpc::ChannelCredentials> get_channel_creds()
-{
-    return grpc::SslCredentials(grpc::SslCredentialsOptions());
-}
-
-} // Unnamed namespace
-
 GrpcChannels GrpcChannels::get_channels_from_config()
 {
-    if (RECC_SERVER_AUTH_GOOGLEAPI && (RECC_SERVER_SSL || RECC_SERVER_JWT)) {
-        throw std::invalid_argument(
-            "RECC_SERVER_AUTH_GOOGLEAPI & "
-            "RECC_SERVER_SSL/RECC_SERVER_JWT cannot both be set.");
-    }
-    std::shared_ptr<grpc::ChannelCredentials> creds;
-    if (RECC_SERVER_AUTH_GOOGLEAPI) {
-        creds = grpc::GoogleDefaultCredentials();
+    buildboxcommon::ConnectionOptions connection_options_server;
+    buildboxcommon::ConnectionOptions connection_options_cas;
+    buildboxcommon::ConnectionOptions connection_options_action_cache;
+
+    connection_options_server.setUrl(RECC_SERVER);
+    connection_options_cas.setUrl(RECC_CAS_SERVER);
+    connection_options_action_cache.setUrl(RECC_ACTION_CACHE_SERVER);
+
+    connection_options_server.setInstanceName(RECC_INSTANCE);
+    connection_options_cas.setInstanceName(RECC_INSTANCE);
+    connection_options_action_cache.setInstanceName(RECC_INSTANCE);
+
+    const std::string retryLimitStr = std::to_string(RECC_RETRY_LIMIT);
+    connection_options_server.setRetryLimit(retryLimitStr);
+    connection_options_cas.setRetryLimit(retryLimitStr);
+    connection_options_action_cache.setRetryLimit(retryLimitStr);
+
+    const std::string retryDelayStr = std::to_string(RECC_RETRY_DELAY);
+    connection_options_server.setRetryDelay(retryDelayStr);
+    connection_options_cas.setRetryDelay(retryDelayStr);
+    connection_options_action_cache.setRetryDelay(retryDelayStr);
+
+    if (RECC_ACCESS_TOKEN_PATH.size()) {
+        connection_options_server.setAccessTokenPath(RECC_ACCESS_TOKEN_PATH);
+        connection_options_cas.setAccessTokenPath(RECC_ACCESS_TOKEN_PATH);
+        connection_options_action_cache.setAccessTokenPath(
+            RECC_ACCESS_TOKEN_PATH);
     }
 
-    else if (RECC_SERVER_SSL || RECC_SERVER_JWT) {
-        creds = get_channel_creds();
+    if (RECC_SERVER_AUTH_GOOGLEAPI) {
+        connection_options_server.setUseGoogleApiAuth(true);
+        connection_options_cas.setUseGoogleApiAuth(true);
+        connection_options_action_cache.setUseGoogleApiAuth(true);
     }
-    else {
-        creds = grpc::InsecureChannelCredentials();
-    }
-    return GrpcChannels(grpc::CreateChannel(RECC_SERVER, creds),
-                        grpc::CreateChannel(RECC_CAS_SERVER, creds),
-                        grpc::CreateChannel(RECC_ACTION_CACHE_SERVER, creds));
+
+    return GrpcChannels(connection_options_server.createChannel(),
+                        connection_options_cas.createChannel(),
+                        connection_options_action_cache.createChannel());
 }
 
 } // namespace recc

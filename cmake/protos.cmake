@@ -22,10 +22,6 @@ foreach(proto ${protos})
     list(APPEND proto_files "${PROTO_PATH_THIRD_PARTY}/${proto}.proto")
 endforeach(proto)
 
-set(proto_auth_src "${PROTO_GEN_PATH}/reccauth/auth.pb.cc")
-set(proto_auth_header "${PROTO_GEN_PATH}/reccauth/auth.pb.h")
-set(proto_auth_file "${PROTO_PATH_INTERNAL}/reccauth/auth.proto")
-
 file(MAKE_DIRECTORY ${PROTO_GEN_PATH})
 add_custom_command(
     OUTPUT ${proto_srcs} ${proto_headers} ${grpc_srcs} ${grpc_headers} ${grpc_mock_headers}
@@ -38,16 +34,7 @@ add_custom_command(
          ${proto_files}
     DEPENDS ${proto_files})
 
-add_custom_command(
-    OUTPUT ${proto_auth_src} ${proto_auth_header}
-    COMMAND ${Protobuf_PROTOC_EXECUTABLE}
-    ARGS --cpp_out "${PROTO_GEN_PATH}"
-         -I "${PROTO_PATH_INTERNAL}"
-         -I "${PROTOBUF_INCLUDE_DIR}"
-         ${proto_auth_file}
-    DEPENDS ${proto_auth_file})
-
-add_library(reccproto ${grpc_srcs} ${proto_srcs} ${proto_auth_src})
+add_library(reccproto ${grpc_srcs} ${proto_srcs})
 target_include_directories(reccproto PUBLIC ${PROTO_GEN_PATH})
 target_link_libraries(reccproto ${GRPC_TARGET} ${Protobuf_LIBRARIES})
 

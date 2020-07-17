@@ -15,9 +15,7 @@
 #ifndef INCLUDED_GRPCCONTEXT
 #define INCLUDED_GRPCCONTEXT
 
-#include <authsession.h>
-
-#include <grpcpp/security/credentials.h>
+#include <grpcpp/client_context.h>
 
 namespace BloombergLP {
 namespace recc {
@@ -26,27 +24,12 @@ class GrpcContext {
   public:
     typedef std::unique_ptr<grpc::ClientContext> GrpcClientContextPtr;
 
-    GrpcContext(AuthBase *authSession) : d_authSession(authSession) {}
-
-    GrpcContext() : d_authSession(NULL) {}
+    GrpcContext() {}
 
     /**
      * Build a new ClientContext object for rpc calls.
-     * If an authSession is set, it will set the context's
-     * authentication credentials.
      */
     GrpcClientContextPtr new_client_context();
-
-    /**
-     * Refresh AuthSession. If AuthSession not set, this will
-     * throw a runtime error.
-     */
-    void auth_refresh();
-
-    /**
-     * Set a new AuthSession
-     */
-    void set_auth(AuthBase *authSession);
 
     /**
      * Set `RequestMetadata.action_id` value to attach to request headers.
@@ -54,8 +37,6 @@ class GrpcContext {
     void set_action_id(const std::string &action_id);
 
   private:
-    AuthBase *d_authSession;
-
     std::string d_action_id;
 };
 

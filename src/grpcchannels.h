@@ -15,8 +15,7 @@
 #ifndef INCLUDED_GRPCCHANNELS
 #define INCLUDED_GRPCCHANNELS
 
-#include <grpcpp/channel.h>
-#include <grpcpp/security/credentials.h>
+#include <buildboxcommon_connectionoptions.h>
 
 namespace BloombergLP {
 namespace recc {

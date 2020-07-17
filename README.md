@@ -223,8 +223,8 @@ line. Lines starting with a hash sign are comments. Blank lines are ignored.
 
 At minimum, you'll need to set `RECC_SERVER` to the URI of your Remote:
 ```
-  # set execution server to localhost:12345
-  server=localhost:12345
+  # set execution server to http://localhost:12345
+  server=http://localhost:12345
 ```
 
 Map configuration variables can be set similarly

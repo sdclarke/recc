@@ -50,7 +50,7 @@ std::string RECC_DEPS_DIRECTORY_OVERRIDE =
     DEFAULT_RECC_DEPS_DIRECTORY_OVERRIDE;
 std::string RECC_PROJECT_ROOT = DEFAULT_RECC_PROJECT_ROOT;
 std::string TMPDIR = DEFAULT_RECC_TMPDIR;
-std::string RECC_JWT_JSON_FILE_PATH = DEFAULT_RECC_JWT_JSON_FILE_PATH;
+std::string RECC_ACCESS_TOKEN_PATH = DEFAULT_RECC_ACCESS_TOKEN_PATH;
 std::string RECC_CORRELATED_INVOCATIONS_ID =
     DEFAULT_RECC_CORRELATED_INVOCATIONS_ID;
 std::string RECC_METRICS_FILE = DEFAULT_RECC_METRICS_FILE;
@@ -67,8 +67,8 @@ bool RECC_ACTION_UNCACHEABLE = DEFAULT_RECC_ACTION_UNCACHEABLE;
 bool RECC_SKIP_CACHE = DEFAULT_RECC_SKIP_CACHE;
 bool RECC_DONT_SAVE_OUTPUT = DEFAULT_RECC_DONT_SAVE_OUTPUT;
 bool RECC_SERVER_AUTH_GOOGLEAPI = DEFAULT_RECC_SERVER_AUTH_GOOGLEAPI;
-bool RECC_SERVER_SSL = DEFAULT_RECC_SERVER_SSL;
-bool RECC_SERVER_JWT = DEFAULT_RECC_SERVER_JWT;
+bool RECC_SERVER_SSL =
+    DEFAULT_RECC_SERVER_SSL; // deprecated: inferred from URL
 bool RECC_DEPS_GLOBAL_PATHS = DEFAULT_RECC_DEPS_GLOBAL_PATHS;
 bool RECC_VERBOSE = DEFAULT_RECC_VERBOSE;
 bool RECC_CAS_GET_CAPABILITIES = false;
@@ -284,7 +284,7 @@ void Env::parse_config_variables(const char *const *env)
         STRVAR(RECC_DEPS_DIRECTORY_OVERRIDE)
         STRVAR(RECC_PROJECT_ROOT)
         STRVAR(TMPDIR)
-        STRVAR(RECC_JWT_JSON_FILE_PATH)
+        STRVAR(RECC_ACCESS_TOKEN_PATH)
         STRVAR(RECC_AUTH_UNCONFIGURED_MSG)
         STRVAR(RECC_CORRELATED_INVOCATIONS_ID)
         STRVAR(RECC_METRICS_FILE)
@@ -301,7 +301,6 @@ void Env::parse_config_variables(const char *const *env)
         BOOLVAR(RECC_DONT_SAVE_OUTPUT)
         BOOLVAR(RECC_SERVER_AUTH_GOOGLEAPI)
         BOOLVAR(RECC_SERVER_SSL)
-        BOOLVAR(RECC_SERVER_JWT)
         BOOLVAR(RECC_DEPS_GLOBAL_PATHS)
         BOOLVAR(RECC_CAS_GET_CAPABILITIES)
 
@@ -344,6 +343,11 @@ void Env::handle_special_defaults()
                          "specified."
                          << " Using default server (" << RECC_SERVER << ")");
     }
+    else {
+        // Deprecate this in the future, allow old configs to work for now.
+        RECC_SERVER = Env::backwardsCompatibleURL(RECC_SERVER);
+    }
+
     if (RECC_CAS_SERVER.empty()) {
         if (RECC_ACTION_CACHE_SERVER.empty()) {
             RECC_CAS_SERVER = RECC_SERVER;
@@ -363,6 +367,11 @@ void Env::handle_special_defaults()
                 << RECC_ACTION_CACHE_SERVER << ")");
         }
     }
+    else {
+        // Deprecate this in the future, allow old configs to work for now.
+        RECC_CAS_SERVER = Env::backwardsCompatibleURL(RECC_CAS_SERVER);
+    }
+
     if (RECC_ACTION_CACHE_SERVER.empty()) {
         RECC_ACTION_CACHE_SERVER = RECC_CAS_SERVER;
         RECC_LOG_VERBOSE("No RECC_ACTION_CACHE_SERVER environment variable "
@@ -370,8 +379,13 @@ void Env::handle_special_defaults()
                          << " Using the same as RECC_CAS_SERVER ("
                          << RECC_CAS_SERVER << ")");
     }
+    else {
+        // Deprecate this in the future, allow old configs to work for now.
+        RECC_ACTION_CACHE_SERVER =
+            Env::backwardsCompatibleURL(RECC_ACTION_CACHE_SERVER);
+    }
 
-    if (!(RECC_SERVER_AUTH_GOOGLEAPI || RECC_SERVER_SSL || RECC_SERVER_JWT)) {
+    if (!RECC_SERVER_AUTH_GOOGLEAPI) {
         if (!RECC_AUTH_UNCONFIGURED_MSG.empty()) {
             RECC_LOG_WARNING(RECC_AUTH_UNCONFIGURED_MSG);
         }
@@ -540,6 +554,32 @@ std::string Env::substring_until_nth_token(const std::string &value,
         ++i;
     }
     return result;
+}
+
+const std::string Env::backwardsCompatibleURL(const std::string &url)
+{
+    // Construct the new URL format if it is in the previous format
+    // which doesn't include the protocol
+    if (!(url.find("http://") == 0 || url.find("https://") == 0 ||
+          url.find("unix:") == 0)) {
+        // Use the hint provided by the deprecated flag
+        // to use https protocol instead, if set
+        if (RECC_SERVER_SSL) {
+            return "https://" + url;
+        }
+        else {
+            return "http://" + url;
+        }
+    }
+    else {
+        if (RECC_SERVER_SSL && url.find("https://") != 0) {
+            throw std::runtime_error(
+                "URL set to url=[" + url +
+                "], with incompatible flag RECC_SERVER_SSL set. (URL must "
+                "be of the format `https://...` with this flag).");
+        }
+        return url;
+    }
 }
 
 void Env::parse_config_variables()

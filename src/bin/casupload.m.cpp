@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <authsession.h>
 #include <casclient.h>
 #include <env.h>
 #include <fileutils.h>
@@ -199,18 +198,12 @@ int main(int argc, char *argv[])
     std::unique_ptr<GrpcChannels> returnChannels;
     std::unique_ptr<GrpcContext> grpcContext;
     std::unique_ptr<CASClient> casClient;
-    std::unique_ptr<AuthSession> reccAuthSession;
 
     if (!dryRunMode) {
         returnChannels = std::make_unique<GrpcChannels>(
             GrpcChannels::get_channels_from_config());
 
         grpcContext = std::make_unique<GrpcContext>();
-
-        if (RECC_SERVER_JWT) {
-            reccAuthSession = std::make_unique<AuthSession>();
-            grpcContext->set_auth(reccAuthSession.get());
-        }
 
         casClient = std::make_unique<CASClient>(
             returnChannels->cas(), RECC_INSTANCE, grpcContext.get());

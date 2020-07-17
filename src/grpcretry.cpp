@@ -29,6 +29,7 @@ void grpc_retry(
     const std::function<grpc::Status(grpc::ClientContext &)> &grpc_invocation,
     GrpcContext *grpcContext)
 {
+    // TODO maybe use buildbox-common grpc_retry
     int n_attempts = 0;
     bool refreshed = false;
     int NO_AUTH = int(grpc::StatusCode::UNAUTHENTICATED);
@@ -40,7 +41,6 @@ void grpc_retry(
             return;
         }
         if (status.error_code() == NO_AUTH && !refreshed) {
-            grpcContext->auth_refresh();
             refreshed = true;
         }
         else {

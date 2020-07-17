@@ -1,15 +1,10 @@
 # Every directory containing a source file needed by the tests, must be added here.
 include_directories(fixtures/ env/ ../src/)
 
-# Add any srcs/headers containing code for tests to link against here.
-file(GLOB EXTRA_LIBS_SRCS fixtures/*.cpp fixtures/*.h)
-add_library(extra_libs ${EXTRA_LIBS_SRCS})
-
 # Add the extra directories here.
-target_include_directories(extra_libs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/fixtures)
-target_link_libraries(extra_libs remoteexecution ${GTEST_TARGET})
+# target_link_libraries(remoteexecution ${GTEST_TARGET})
 
-# This macro creates the specific test executable, linking against extra_libs defined above, google test and google mock.
+# This macro creates the specific test executable, linking against defined above, google test and google mock.
 # Current limitation is the TEST_SOURCE must only be one file.
 # If more than 1 file is needed, combine the sources into a list.
 macro(add_recc_test TEST_NAME TEST_SOURCE)
@@ -26,7 +21,7 @@ macro(add_recc_test TEST_NAME TEST_SOURCE)
     endif()
 
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME} WORKING_DIRECTORY ${TEST_WORKING_DIRECTORY})
-    target_link_libraries(${TEST_NAME} PUBLIC remoteexecution extra_libs ${GTEST_TARGET} ${GMOCK_TARGET} ${GTEST_MAIN_TARGET})
+    target_link_libraries(${TEST_NAME} PUBLIC remoteexecution ${GTEST_TARGET} ${GMOCK_TARGET} ${GTEST_MAIN_TARGET})
 endmacro()
 
 add_recc_test(subprocess_tests subprocess.t.cpp)
@@ -50,13 +45,9 @@ add_recc_test(env_utils_test env/env_utils.t.cpp)
 add_recc_test(env_path_vector_test env/env_path_vector.t.cpp)
 
 # These tests include an extra arg, containing the working directory of the test.
-add_recc_test(grpcretry_tests grpcretry.t.cpp ${CMAKE_CURRENT_SOURCE_DIR}/data/authsession_fixture)
-add_recc_test(grpccontext_tests grpccontext.t.cpp ${CMAKE_CURRENT_SOURCE_DIR}/data/authsession_fixture)
 add_recc_test(merklize_tests merklize.t.cpp ${CMAKE_CURRENT_SOURCE_DIR}/data/merklize)
 add_recc_test(actionbuilder_tests actionbuilder.t.cpp ${CMAKE_CURRENT_SOURCE_DIR}/data/actionbuilder)
 add_recc_test(deps_tests deps.t.cpp ${CMAKE_CURRENT_SOURCE_DIR}/data/deps)
-add_recc_test(authsession_tests authsession.t.cpp ${CMAKE_CURRENT_SOURCE_DIR}/data/authsession_fixture)
-add_recc_test(jsonfilemanager_tests jsonfilemanager.t.cpp ${CMAKE_CURRENT_SOURCE_DIR}/data/authsession_fixture)
 add_recc_test(env_from_file_override_test env/env_from_file_override.t.cpp ${CMAKE_CURRENT_SOURCE_DIR}/data/)
 add_recc_test(env_multiple_configs_test env/env_multiple_configs.t.cpp ${CMAKE_CURRENT_SOURCE_DIR}/data/)
 add_recc_test(env_from_file_test env/env_from_file.t.cpp ${CMAKE_CURRENT_SOURCE_DIR}/data/)

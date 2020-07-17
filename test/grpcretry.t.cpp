@@ -1,5 +1,4 @@
-#include <authsession.h>
-#include <authsession_fixture.h>
+
 #include <env.h>
 #include <grpccontext.h>
 #include <grpcretry.h>
@@ -10,10 +9,8 @@
 #include <iostream>
 #include <stdlib.h>
 
-using BloombergLP::recc::AuthSession;
 using BloombergLP::recc::grpc_retry;
 using BloombergLP::recc::GrpcContext;
-using BloombergLP::recc::JsonFileManager;
 using BloombergLP::recc::RECC_JWT_JSON_FILE_PATH;
 using BloombergLP::recc::RECC_RETRY_LIMIT;
 

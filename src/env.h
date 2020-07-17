@@ -25,7 +25,7 @@ namespace BloombergLP {
 namespace recc {
 
 /**
- * The URI of the server to use, e.g. localhost:8085
+ * The URI of the server to use, e.g. http://localhost:8085
  */
 extern std::string RECC_SERVER;
 
@@ -142,18 +142,14 @@ extern int RECC_RETRY_DELAY;
 
 /**
  * Use a secure SSL/TLS channel to talk to the execution and CAS servers.
+ * (deprecated, but forces URLs missing protocol to be prefixed with https://)
  */
 extern bool RECC_SERVER_SSL;
 
 /**
- * Use a secure SSL/TLS channel along with JWT authorization
+ * File path to Access Token to use for server/cas/action_cache requests
  */
-extern bool RECC_SERVER_JWT;
-
-/**
- * File path to JSON file containing JWT access token
- */
-extern std::string RECC_JWT_JSON_FILE_PATH;
+extern std::string RECC_ACCESS_TOKEN_PATH;
 
 /**
  * Customisable msg to display to indicate that authentication has not been
@@ -333,6 +329,13 @@ struct Env {
     substring_until_nth_token(const std::string &value,
                               const std::string &character,
                               const std::string::size_type &pos);
+
+    /**
+     * Adds a default protocol prefix to the server URL from the config, if
+     * missing and prints a message telling the user to update their configs To
+     * be deprecated.
+     */
+    static const std::string backwardsCompatibleURL(const std::string &url);
 
     /**
      * Calculate and set the config locations, parse the config files from

@@ -20,8 +20,8 @@ using namespace BloombergLP::recc;
 
 TEST(EnvTest, CasDefaultsToServerTest)
 {
-    const char *testEnviron[] = {"RECC_SERVER=somehost:1234", nullptr};
-    std::string expectedReccServer = "somehost:1234";
+    const char *testEnviron[] = {"RECC_SERVER=http://somehost:1234", nullptr};
+    std::string expectedReccServer = "http://somehost:1234";
 
     Env::parse_config_variables(testEnviron);
     // need this for testing, since we are calling parse_config_variables
@@ -34,7 +34,7 @@ TEST(EnvTest, CasDefaultsToServerTest)
 
 TEST(EnvTest, CasDoNotGetCapabilitiesByDefault)
 {
-    const char *testEnviron[] = {"RECC_SERVER=somehost:1234", nullptr};
+    const char *testEnviron[] = {"RECC_SERVER=http://somehost:1234", nullptr};
 
     Env::parse_config_variables(testEnviron);
     // need this for testing, since we are calling parse_config_variables

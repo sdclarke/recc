@@ -21,10 +21,10 @@ using namespace BloombergLP::recc;
 TEST(EnvTest, EnvFromFileOverride)
 {
 
-    const char *testEnviron[] = {"RECC_SERVER=somehost:1234", nullptr};
-    std::string expectedReccServer = "somehost:1234";
+    const char *testEnviron[] = {"RECC_SERVER=http://somehost:1234", nullptr};
+    std::string expectedReccServer = "http://somehost:1234";
     // should be set from file
-    std::string expectedRecCasServer = "localhost:66666";
+    std::string expectedRecCasServer = "http://localhost:66666";
 
     // need this for testing, since we are calling parse_config_variables
     // directly.
