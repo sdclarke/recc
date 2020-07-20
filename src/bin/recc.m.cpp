@@ -210,6 +210,8 @@ int main(int argc, char *argv[])
     Env::set_config_locations();
     Env::parse_config_variables();
 
+    RECC_LOG_VERBOSE("RECC_REAPI_VERSION == '" << RECC_REAPI_VERSION << "'");
+
     std::shared_ptr<StatsDPublisherType> statsDPublisher;
     try {
         statsDPublisher = get_statsdpublisher_from_config();
