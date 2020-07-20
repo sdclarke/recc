@@ -53,12 +53,24 @@ proto::Command ActionBuilder::populateCommandProto(
         envVar->set_value(envIter.second);
     }
 
+    // REAPI v2.1 deprecated the `output_files` and `output_directories` fields
+    // of the `Command` message, replacing them with `output_paths`.
     for (const auto &file : outputFiles) {
-        commandProto.add_output_files(file);
+        if (RECC_REAPI_VERSION == "2.0") {
+            commandProto.add_output_files(file);
+        }
+        else {
+            commandProto.add_output_paths(file);
+        }
     }
 
     for (const auto &directory : outputDirectories) {
-        commandProto.add_output_directories(directory);
+        if (RECC_REAPI_VERSION == "2.0") {
+            commandProto.add_output_directories(directory);
+        }
+        else {
+            commandProto.add_output_paths(directory);
+        }
     }
 
     for (const auto &platformIter : platformProperties) {

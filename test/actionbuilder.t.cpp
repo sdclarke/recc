@@ -46,6 +46,7 @@ class ActionBuilderTestFixture
         d_previous_deps_global_path = RECC_DEPS_GLOBAL_PATHS;
         d_previous_deps_exclude_paths = RECC_DEPS_EXCLUDE_PATHS;
         d_previous_working_dir_prefix = RECC_WORKING_DIR_PREFIX;
+        d_previous_reapi_version = RECC_REAPI_VERSION;
     }
 
     void TearDown() override
@@ -56,6 +57,7 @@ class ActionBuilderTestFixture
         RECC_DEPS_GLOBAL_PATHS = d_previous_deps_global_path;
         RECC_DEPS_EXCLUDE_PATHS = d_previous_deps_exclude_paths;
         RECC_WORKING_DIR_PREFIX = d_previous_working_dir_prefix;
+        RECC_REAPI_VERSION = d_previous_reapi_version;
     }
 
     void writeDependenciesToTempFile(const std::string &dependency_file_name)
@@ -81,6 +83,7 @@ class ActionBuilderTestFixture
     bool d_previous_force_remote;
     bool d_previous_deps_global_path;
     std::string d_previous_working_dir_prefix;
+    std::string d_previous_reapi_version;
 };
 
 TEST_F(ActionBuilderTestFixture, BuildSimpleCommand)
@@ -104,6 +107,33 @@ TEST_F(ActionBuilderTestFixture, BuildSimpleCommand)
 
     ASSERT_TRUE(command_proto.environment_variables().empty());
     ASSERT_TRUE(command_proto.platform().properties().empty());
+    ASSERT_TRUE(command_proto.output_directories().empty());
+}
+
+TEST_P(ActionBuilderTestFixture, BuildSimpleCommandWithOutputPaths)
+{
+    RECC_REAPI_VERSION = "2.1";
+
+    const std::vector<std::string> command_arguments = {
+        "/my/fake/gcc", "-c", "hello.cpp", "-o", "hello.o"};
+    const std::set<std::string> output_files = {"hello.o"};
+    const std::string working_directory = ".";
+
+    const proto::Command command_proto = this->generateCommandProto(
+        command_arguments, output_files, {}, {}, {}, working_directory);
+
+    ASSERT_TRUE(std::equal(command_arguments.cbegin(),
+                           command_arguments.cend(),
+                           command_proto.arguments().cbegin()));
+
+    ASSERT_EQ(command_proto.working_directory(), working_directory);
+    ASSERT_TRUE(command_proto.environment_variables().empty());
+    ASSERT_TRUE(command_proto.platform().properties().empty());
+
+    ASSERT_EQ(command_proto.output_paths_size(), 1);
+    ASSERT_EQ(command_proto.output_paths(0), "hello.o");
+
+    ASSERT_TRUE(command_proto.output_files().empty());
     ASSERT_TRUE(command_proto.output_directories().empty());
 }
 
@@ -170,8 +200,10 @@ TEST_F(ActionBuilderTestFixture, GetDependenciesVerifyMetricsCollection)
         collectedByName<DurationMetricValue>(TIMER_NAME_COMPILER_DEPS));
 }
 
-TEST_F(ActionBuilderTestFixture, OutputPaths)
+TEST_F(ActionBuilderTestFixture, OutputFilesAndDirectories)
 {
+    RECC_REAPI_VERSION = "2.0";
+
     const std::set<std::string> output_files = {"hello.o", "foo.o", "bar.o"};
     const std::set<std::string> output_directories = {"export/"};
 
@@ -184,6 +216,29 @@ TEST_F(ActionBuilderTestFixture, OutputPaths)
     ASSERT_TRUE(std::equal(output_directories.cbegin(),
                            output_directories.cend(),
                            command_proto.output_directories().cbegin()));
+
+    ASSERT_TRUE(command_proto.output_paths().empty());
+}
+
+TEST_P(ActionBuilderTestFixture, OutputPaths)
+{
+    RECC_REAPI_VERSION = "2.1";
+
+    const std::set<std::string> output_files = {"hello.o", "foo.o", "bar.o"};
+    const std::set<std::string> output_directories = {"export/"};
+
+    const proto::Command command_proto = this->generateCommandProto(
+        {}, output_files, output_directories, {}, {}, "");
+
+    const std::vector<std::string> expectedOutputPaths = {"hello.o", "foo.o",
+                                                          "bar.o", "export/"};
+
+    ASSERT_TRUE(std::is_permutation(expectedOutputPaths.cbegin(),
+                                    expectedOutputPaths.cend(),
+                                    command_proto.output_paths().cbegin()));
+
+    ASSERT_TRUE(command_proto.output_files().empty());
+    ASSERT_TRUE(command_proto.output_directories().empty());
 }
 
 TEST_F(ActionBuilderTestFixture, EnvironmentVariables)
