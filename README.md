@@ -52,14 +52,19 @@ You can now compile `recc`.
 Install [OpenSSL][], [CMake][], [pkg-config][], [googletest][] through `apt`:
 
 ```sh
-$ [sudo] apt-get install cmake gcc g++ googletest libssl-dev pkg-config
+$ apt install cmake gcc g++ googletest libssl-dev pkg-config
+```
+
+**If not already installed**, install [gRPC][], [Protobuf][]:
+```sh
+$ apt install libgrpc++-dev libprotobuf-dev
 ```
 
 Install the `googletest`, and `googlemock` binaries.
 
 ```sh
-$ cd /usr/src/googletest && mkdir build && cd build
-$ cmake .. && [sudo] make install
+$ cd $(mktemp -d)
+$ cmake /usr/src/googletest && make install
 ```
 
 #### Debian 10/Ubuntu 18.10 or newer
@@ -67,7 +72,7 @@ $ cmake .. && [sudo] make install
 Install [gRPC][], [Protobuf][]:
 
 ```sh
-$ [sudo] apt-get install protobuf-compiler-grpc libgrpc++-dev libprotobuf-dev
+$ apt install protobuf-compiler-grpc libgrpc++-dev libprotobuf-dev
 ```
 
 #### Debian 9/Ubuntu 18.04 or older
@@ -77,21 +82,41 @@ $ [sudo] apt-get install protobuf-compiler-grpc libgrpc++-dev libprotobuf-dev
 On these systems, the package versions of `protobuf` and `grpc` either don't exist or are too old for use with recc. Therefore manual build and install is necessary.
 The instructions below for installing the `protobuf` compiler and `grpc`  are synthesized from the [grpc source](https://github.com/grpc/grpc/blob/master/BUILDING.md).
 
-Clone and install the latest release of `grpc`.
+Install `c-ares` (the ubuntu package version does not include cmake
+lists and therefore will not be used correctly).
 ```sh
-$ [sudo] apt-get install build-essential autoconf libtool pkg-config
-$ git clone -b $(curl -L https://grpc.io/release) https://github.com/grpc/grpc
-$ cd grpc
-$ git submodule update --init
-$ [sudo] make install
+$ cd $(mktemp -d)
+$ apt install build-essential cmake curl
+$ curl -OJL $(curl -s https://api.github.com/repos/c-ares/c-ares/releases/latest | grep browser_download_url | cut -d '"' -f 4 | head -n 1)
+$ tar xf c-ares-*.tar.gz && rm c-ares-*.tar.gz
+$ cd c-ares-*
+$ mkdir build && cd build
+$ cmake .. && make install
 ```
 
-Check to see if `protoc` is installed by running `protoc --version`, if not found, install the protobuf compiler.
-
-Inside the above `grpc` directory run:
+Clone and install the latest release of `protobuf` and `grpc`.
 ```sh
-$ cd third_party/protobuf
-$[sudo] make install
+$ cd $(mktemp -d)
+$ apt install autoconf libtool
+$ git clone --recursive -b $(curl -L https://grpc.io/release) https://github.com/grpc/grpc
+$ cd grpc/third_party/protobuf
+$ ./autogen.sh
+$ ./configure
+$ make && make install
+$ ldconfig
+$ cd ../../
+$
+$ apt install libssl-dev zlib1g-dev
+$ mkdir build && cd build
+$ cmake -DgRPC_INSTALL=ON \
+        -DgRPC_BUILD_TESTS=OFF \
+        -DgRPC_PROTOBUF_PROVIDER=package \
+        -DgRPC_ZLIB_PROVIDER=package \
+        -DgRPC_CARES_PROVIDER=package \
+        -DgRPC_SSL_PROVIDER=package \
+        -DCMAKE_BUILD_TYPE=Release \
+        ..
+$ make install
 ```
 
 Now you can follow the same instructions as the [Installing on Debian section](#installing-on-debian-based-linux-distributions) to install the other necessary dependencies, and build `recc`. Remember to skip the `protoc` and `grpc` install instructions!
@@ -105,7 +130,7 @@ From the Microsoft Store, download and open the `Debian` or `Ubuntu` application
 Update the package lists, install the updated packages.
 
 ```sh
-$ [sudo] apt-get update && [sudo] apt-get upgrade
+$ apt update && apt upgrade
 ```
 
 Clone `recc` and follow the instructions in either the [Installing on Debian section](#installing-on-debian-based-linux-distributions) or [Installing on Ubuntu section](#installing-on-Ubuntu).
