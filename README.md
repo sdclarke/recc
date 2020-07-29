@@ -274,11 +274,10 @@ $ export RECC_SERVER=localhost:12345
 
 You may also want to set `RECC_VERBOSE=1` to enable verbose output.
 
-```
 #### Support for dependency path replacement.
 
 A common problem that can hinder reproducibility and cacheabilty of remote builds, are dependencies that are local to the user, system, and set of machines the build command is sent from. To solve this issue, `recc` supports specifying the `RECC_PREFIX_MAP` configuration variable, allowing changing a prefix in a path, with another one. For example, replacing all paths with prefixes including `/usr/local/bin` with `/usr/bin` can be done by specifying:
-```
+```sh
 export RECC_PREFIX_MAP=/usr/local/bin=/usr/bin
 ```
 Supports multiple prefixes by specifying `:` as a delimiter.
@@ -291,7 +290,7 @@ Guidelines for replacement are:
 #### Support for dependency filtering
 
 When using `RECC_DEPS_GLOBAL_PATHS`, paths to system files (/usr/include, /opt/rh/devtoolset-7, etc) are included as part of the input root. To avoid these system dependencies potential conflicting with downstream build environment dependencies, there is now a method to filter out dependencies based on a set of paths. Setting the `RECC_DEPS_EXCLUDE_PATHS` environment variable with a comma-delimited set of paths(used as path prefixes) will be used as a filter to exclude those dependencies:
-```
+```sh
 export RECC_DEPS_EXCLUDE_PATHS=/usr/include,/opt/rh/devtoolset-7
 ```
 
