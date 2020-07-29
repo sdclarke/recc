@@ -23,6 +23,7 @@
 #include <google/rpc/status.pb.h>
 
 #include <set>
+#include <sstream>
 
 namespace BloombergLP {
 namespace recc {
@@ -31,6 +32,22 @@ using namespace buildboxcommon; // REAPI and ByteStream protos
 using namespace google::longrunning;
 
 static const std::set<std::string> s_reapiSupportedVersions = {"2.0", "2.1"};
+
+inline std::string reapiSupportedVersionsList()
+{
+    std::ostringstream res;
+
+    auto it = s_reapiSupportedVersions.cbegin();
+    while (it != s_reapiSupportedVersions.cend()) {
+        res << '"' << *it++ << '"';
+        if (it != s_reapiSupportedVersions.cend()) {
+            res << ", ";
+        }
+    }
+
+    return res.str();
+}
+
 } // namespace proto
 
 /**

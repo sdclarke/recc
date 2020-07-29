@@ -171,7 +171,11 @@ const std::string HELP(
     "                          directory, and input paths relative to it\n"
     "RECC_MAX_THREADS -   Allow some operations to utilize multiple cores."
     "Default: 4 \n"
-    "                     A value of -1 specifies use all available cores.");
+    "                     A value of -1 specifies use all available cores.\n"
+    "RECC_REAPI_VERSION - Version of the Remote Execution API to use. "
+    "(Default: \"" DEFAULT_RECC_REAPI_VERSION "\")\n"
+    "                     Supported values: " +
+    proto::reapiSupportedVersionsList());
 
 enum ReturnCode {
     RC_OK = 0,
