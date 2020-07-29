@@ -416,8 +416,9 @@ void Env::handle_special_defaults()
     }
 
     if (RECC_METRICS_FILE.size() && RECC_METRICS_UDP_SERVER.size()) {
-        throw std::runtime_error("You can either set RECC_METRICS_FILE or "
-                                 "RECC_METRICS_UDP_SERVER, but not both.");
+        BUILDBOXCOMMON_THROW_EXCEPTION(
+            std::runtime_error, "You can either set RECC_METRICS_FILE or "
+                                "RECC_METRICS_UDP_SERVER, but not both.");
     }
 
     if (!RECC_PREFIX_MAP.empty()) {
@@ -427,9 +428,10 @@ void Env::handle_special_defaults()
 
     if (DigestGenerator::stringToDigestFunctionMap().count(
             RECC_CAS_DIGEST_FUNCTION) == 0) {
-        throw std::runtime_error(
+        BUILDBOXCOMMON_THROW_EXCEPTION(
+            std::runtime_error,
             "Unknown digest function set in RECC_CAS_DIGEST_FUNCTION: \"" +
-            RECC_CAS_DIGEST_FUNCTION + "\".");
+                RECC_CAS_DIGEST_FUNCTION + "\".");
     }
 
     if (RECC_MAX_THREADS == 0) {
@@ -453,9 +455,10 @@ void Env::verify_files_writeable()
         std::ofstream of;
         of.open(RECC_METRICS_FILE, std::ofstream::out | std::ofstream::app);
         if (!of.good()) {
-            throw std::runtime_error(
+            BUILDBOXCOMMON_THROW_EXCEPTION(
+                std::runtime_error,
                 "Cannot open RECC_METRICS_FILE for writing: " +
-                RECC_METRICS_FILE);
+                    RECC_METRICS_FILE);
         }
         of.close();
     }
@@ -588,10 +591,11 @@ const std::string Env::backwardsCompatibleURL(const std::string &url)
     }
     else {
         if (RECC_SERVER_SSL && url.find("https://") != 0) {
-            throw std::runtime_error(
+            BUILDBOXCOMMON_THROW_EXCEPTION(
+                std::runtime_error,
                 "URL set to url=[" + url +
-                "], with incompatible flag RECC_SERVER_SSL set. (URL must "
-                "be of the format `https://...` with this flag).");
+                    "], with incompatible flag RECC_SERVER_SSL set. (URL must "
+                    "be of the format `https://...` with this flag).");
         }
         return url;
     }
