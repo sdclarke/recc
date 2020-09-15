@@ -1,9 +1,6 @@
 # Every directory containing a source file needed by the tests, must be added here.
 include_directories(fixtures/ env/ ../src/)
 
-# Add the extra directories here.
-# target_link_libraries(remoteexecution ${GTEST_TARGET})
-
 # This macro creates the specific test executable, linking against defined above, google test and google mock.
 # Current limitation is the TEST_SOURCE must only be one file.
 # If more than 1 file is needed, combine the sources into a list.
@@ -21,7 +18,13 @@ macro(add_recc_test TEST_NAME TEST_SOURCE)
     endif()
 
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME} WORKING_DIRECTORY ${TEST_WORKING_DIRECTORY})
-    target_link_libraries(${TEST_NAME} PUBLIC remoteexecution ${GTEST_TARGET} ${GMOCK_TARGET} ${GTEST_MAIN_TARGET})
+    target_link_libraries(${TEST_NAME} PUBLIC
+        ${_EXTRA_LDD_FLAGS}
+        remoteexecution
+        ${GTEST_TARGET}
+        ${GMOCK_TARGET}
+        ${GTEST_MAIN_TARGET}
+    )
 endmacro()
 
 add_recc_test(subprocess_tests subprocess.t.cpp)

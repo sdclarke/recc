@@ -9,25 +9,31 @@ if(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
 endif()
 
 add_library(remoteexecution STATIC ${SRCS})
-target_link_libraries(remoteexecution reccproto ${_EXTRA_LDD_FLAGS} ${Protobuf_LIBRARIES} ${GRPC_TARGET} ${OPENSSL_TARGET})
-
-if(BUILD_STATIC)
-    target_link_libraries(remoteexecution ${ZLIB_LIBRARIES} ${OS_LIBS})
-endif()
+target_link_libraries(remoteexecution
+    ${_EXTRA_LDD_FLAGS}
+    Buildbox::buildboxcommon
+    reccproto
+    ${PROTOBUF_TARGET}
+    ${OPENSSL_TARGET}
+    ${GRPC_TARGET}
+    ${STATIC_GRPC_LINKER_RULE}
+    ${ZLIB_LIBRARIES}
+    ${OS_LIBS}
+)
 
 if (CMAKE_SYSTEM_NAME MATCHES "SunOS")
     target_link_libraries(remoteexecution socket nsl)
 endif ()
 
-# Link remoteexecution to the buildboxcommon library
-target_link_libraries(remoteexecution Buildbox::buildboxcommon)
-
+# recc
 add_executable(${BINARY} bin/${BINARY}.m.cpp)
 target_link_libraries(${BINARY} remoteexecution)
 
+# casupload
 add_executable(casupload bin/casupload.m.cpp)
 target_link_libraries(casupload remoteexecution)
 
+# deps
 add_executable(deps deps.cpp bin/deps.m.cpp)
 target_link_libraries(deps remoteexecution)
 

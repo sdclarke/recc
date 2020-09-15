@@ -4,6 +4,7 @@ ARG ENABLE_TESTS=true
 ARG EXTRA_CMAKE_FLAGS=
 ARG RUN_GCOV=
 ARG GCOV_FLGS="-g -O0 -fprofile-arcs -ftest-coverage"
+ARG MAKE_VERBOSE=
 
 ENV TEST_DEPENDS=${ENABLE_TESTS:+googletest}
 
@@ -33,7 +34,7 @@ RUN mkdir build && cd build && \
             GCOV_CMAKE_FLAGS="-DCMAKE_CXX_FLAGS=$GCOV_FLGS -DCMAKE_EXE_LINKER_FLAGS=$GCOV_FLGS -DCMAKE_SHARED_LINKER_FLAGS=$GCOV_FLGS -DCMAKE_CXX_OUTPUT_EXTENSION_REPLACE=ON" \
         ;fi && \
         cmake -DBUILD_TESTING=ON -DGTEST_SOURCE_ROOT=/usr/src/googletest "${EXTRA_CMAKE_FLAGS}" "${GCOV_CMAKE_FLAGS-}" .. && \
-        make -j$(nproc) && ctest --verbose && \
+        VERBOSE=${MAKE_VERBOSE} make -j$(nproc) && ctest --verbose && \
         echo "Produced the following binaries: " && find /recc/build/bin/ \
     ;fi
 

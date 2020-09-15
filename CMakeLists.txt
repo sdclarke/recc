@@ -4,19 +4,23 @@ project(recc CXX)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+option(BUILD_STATIC "Build statically" OFF)
+if(BUILD_STATIC)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+    message(STATUS "${CMAKE_CURRENT_LIST_FILE}: setting CMAKE_FIND_LIBRARY_SUFFIXES to ${CMAKE_FIND_LIBRARY_SUFFIXES}")
+endif()
 
 find_package(BuildboxCommon REQUIRED)
-
 if(NOT BuildboxCommon_FOUND)
         message(FATAL_ERROR "recc requires linking against the buildbox-common library. Please build and install it first.")
 endif()
+
+include(cmake/deps.cmake)
 
 # gcc on AIX can't deal with -isystem that contains C++ .h files
 if(${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED ON)
 endif()
-
-option(BUILD_STATIC "Build statically" OFF)
 
 # Platform-specific settings
 if(CMAKE_SYSTEM_NAME MATCHES "SunOS")
@@ -36,6 +40,10 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "AIX")
         # using the linker flag `-blazy` as detailed in the above bug
         # report. Hence inclusion here.
         set(_EXTRA_LDD_FLAGS "-static-libgcc -static-libstdc++ -Wl,-bbigtoc,-blazy")
+    else()
+        # when dynamically linking on AIX, ie; setting -DBUILD_STATIC=OFF,
+        # we can get a "Table Of Contents too big" error, so we set --bbigtoc here
+        set(_EXTRA_LDD_FLAGS "-Wl,-bbigtoc")
     endif()
 elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
     add_definitions(-DRECC_PLATFORM_COMPILER="gcc")
@@ -69,8 +77,6 @@ add_definitions(-DRECC_VERSION="${RECC_VERSION}")
 # define DEFAULT_RECC_INSTANCE
 add_definitions(-DDEFAULT_RECC_INSTANCE="${DEFAULT_RECC_INSTANCE}")
 
-include(cmake/deps.cmake)
-
 # define CMAKE_INSTALL_DIR
 add_definitions(-DCMAKE_INSTALL_DIR="${CMAKE_INSTALL_PREFIX}")
 
@@ -82,9 +88,8 @@ add_subdirectory(src)
 
 include(CTest)
 if(BUILD_TESTING)
-  find_file(BuildboxGTestSetup BuildboxGTestSetup.cmake HINTS ${BuildboxCommon_DIR})
-  include(${BuildboxGTestSetup})
-
-  include_directories(third_party/grpc/include)
-  add_subdirectory(test)
+    find_file(BuildboxGTestSetup BuildboxGTestSetup.cmake HINTS ${BuildboxCommon_DIR})
+    include(${BuildboxGTestSetup})
+    include_directories(third_party/grpc/include)
+    add_subdirectory(test)
 endif()
