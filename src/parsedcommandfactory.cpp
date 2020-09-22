@@ -308,7 +308,7 @@ void ParsedCommandModifiers::parseIsEqualInputPathOption(
 
 void ParsedCommandModifiers::parseIsCompileOption(
     ParsedCommand *command, const std::string &workingDirectory,
-    const std::string &option)
+    const std::string &)
 {
     command->d_compilerCommand = true;
     // Push back option (e.g "-c")
@@ -323,8 +323,7 @@ void ParsedCommandModifiers::parseOptionRedirectsOutput(
 }
 
 void ParsedCommandModifiers::parseIsPreprocessorArgOption(
-    ParsedCommand *command, const std::string &workingDirectory,
-    const std::string &option)
+    ParsedCommand *command, const std::string &, const std::string &option)
 {
     auto val = command->d_originalCommand.front();
     if (option == "-Wp,") {
@@ -343,9 +342,9 @@ void ParsedCommandModifiers::parseIsPreprocessorArgOption(
     command->d_originalCommand.pop_front();
 }
 
-void ParsedCommandModifiers::parseOptionIsUnsupported(
-    ParsedCommand *command, const std::string &workingDirectory,
-    const std::string &option)
+void ParsedCommandModifiers::parseOptionIsUnsupported(ParsedCommand *command,
+                                                      const std::string &,
+                                                      const std::string &)
 {
     command->d_containsUnsupportedOptions = true;
 
