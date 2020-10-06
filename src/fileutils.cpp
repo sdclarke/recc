@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <buildboxcommon_fileutils.h>
 #include <fileutils.h>
+
+#include <buildboxcommon_fileutils.h>
+#include <buildboxcommon_logging.h>
 
 #include <cstring>
 #include <env.h>
 #include <fstream>
-#include <logging.h>
 #include <sstream>
 #include <unistd.h>
 
@@ -27,7 +28,7 @@ namespace recc {
 
 void FileUtils::createDirectoryRecursive(const std::string &path)
 {
-    RECC_LOG_VERBOSE("Creating directory at " << path);
+    BUILDBOX_LOG_DEBUG("Creating directory at " << path);
     const char *path_p = path.c_str();
     if (mkdir(path_p, 0777) != 0) {
         if (errno == EEXIST) {
@@ -39,7 +40,7 @@ void FileUtils::createDirectoryRecursive(const std::string &path)
             if (lastSlash == nullptr) {
                 std::ostringstream error;
                 error << "no slash in \"" << path << "\"";
-                RECC_LOG_ERROR(error.str());
+                BUILDBOX_LOG_ERROR(error.str());
                 throw std::runtime_error(error.str());
             }
             std::string parent(path_p, static_cast<std::string::size_type>(
@@ -50,7 +51,7 @@ void FileUtils::createDirectoryRecursive(const std::string &path)
                 error << "error in mkdir for path \"" << path_p << "\""
                       << ", errno = [" << errno << ":" << strerror(errno)
                       << "]";
-                RECC_LOG_ERROR(error.str());
+                BUILDBOX_LOG_ERROR(error.str());
                 throw std::system_error(errno, std::system_category());
             }
         }
@@ -58,7 +59,7 @@ void FileUtils::createDirectoryRecursive(const std::string &path)
             std::ostringstream error;
             error << "error in mkdir for path \"" << path_p << "\""
                   << ", errno = [" << errno << ":" << strerror(errno) << "]";
-            RECC_LOG_ERROR(error.str());
+            BUILDBOX_LOG_ERROR(error.str());
             throw std::system_error(errno, std::system_category());
         }
     }
@@ -74,7 +75,7 @@ struct stat FileUtils::getStat(const std::string &path,
 {
     if (path.empty()) {
         const std::string error = "invalid args: path empty";
-        RECC_LOG_ERROR(error);
+        BUILDBOX_LOG_ERROR(error);
         throw std::runtime_error(error);
     }
 
@@ -82,11 +83,11 @@ struct stat FileUtils::getStat(const std::string &path,
     const int rc = (followSymlinks ? stat(path.c_str(), &statResult)
                                    : lstat(path.c_str(), &statResult));
     if (rc < 0) {
-        RECC_LOG_ERROR("Error calling "
-                       << (followSymlinks ? "stat()" : "lstat()")
-                       << " for path \"" << path << "\": "
-                       << "rc = " << rc << ", errno = [" << errno << ":"
-                       << strerror(errno) << "]");
+        BUILDBOX_LOG_ERROR("Error calling "
+                           << (followSymlinks ? "stat()" : "lstat()")
+                           << " for path \"" << path << "\": "
+                           << "rc = " << rc << ", errno = [" << errno << ":"
+                           << strerror(errno) << "]");
         throw std::system_error(errno, std::system_category());
     }
 
@@ -105,14 +106,14 @@ std::string FileUtils::getSymlinkContents(const std::string &path,
 {
     if (path.empty()) {
         const std::string error = "invalid args: path is empty";
-        RECC_LOG_ERROR(error);
+        BUILDBOX_LOG_ERROR(error);
         throw std::runtime_error(error);
     }
 
     if (!S_ISLNK(statResult.st_mode)) {
         std::ostringstream oss;
         oss << "file \"" << path << "\" is not a symlink";
-        RECC_LOG_ERROR(oss.str());
+        BUILDBOX_LOG_ERROR(oss.str());
         throw std::runtime_error(oss.str());
     }
 
@@ -122,7 +123,7 @@ std::string FileUtils::getSymlinkContents(const std::string &path,
         std::ostringstream oss;
         oss << "readlink failed for \"" << path << "\", rc = " << rc
             << ", errno = [" << errno << ":" << strerror(errno) << "]";
-        RECC_LOG_ERROR(oss.str());
+        BUILDBOX_LOG_ERROR(oss.str());
         throw std::runtime_error(oss.str());
     }
 
@@ -135,7 +136,7 @@ std::string FileUtils::getFileContents(const std::string &path,
     if (!S_ISREG(statResult.st_mode)) {
         std::ostringstream oss;
         oss << "file \"" << path << "\" is not a regular file";
-        RECC_LOG_ERROR(oss.str());
+        BUILDBOX_LOG_ERROR(oss.str());
         throw std::runtime_error(oss.str());
     }
 
@@ -336,8 +337,10 @@ std::string FileUtils::getCurrentWorkingDirectory()
             bufferSize *= 2;
         }
         else {
-            RECC_LOG_PERROR(
-                "Warning: could not get current working directory");
+            const std::string errorReason = strerror(errno);
+            BUILDBOX_LOG_ERROR(
+                "Warning: could not get current working directory: "
+                << errorReason);
             return std::string();
         }
     }

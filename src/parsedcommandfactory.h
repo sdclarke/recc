@@ -19,7 +19,6 @@
 #include <functional>
 #include <initializer_list>
 #include <list>
-#include <logging.h>
 #include <memory>
 #include <parsedcommand.h>
 #include <set>

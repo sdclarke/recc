@@ -17,9 +17,10 @@
 #include <fileutils.h>
 #include <grpcchannels.h>
 #include <grpccontext.h>
-#include <logging.h>
 #include <merklize.h>
 #include <reccfile.h>
+
+#include <buildboxcommon_logging.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -72,15 +73,15 @@ void uploadDirectory(const std::string &path, const proto::Digest &digest,
     assert(casClient != nullptr);
 
     try {
-        RECC_LOG_VERBOSE("Starting to upload merkle tree...");
+        BUILDBOX_LOG_DEBUG("Starting to upload merkle tree...");
         casClient->upload_resources(directoryBlobs,
                                     directoryDigestToFilecontents);
-        RECC_LOG("Uploaded \"" << path << "\": " << digest.hash() << "/"
-                               << digest.size_bytes());
+        BUILDBOX_LOG_INFO("Uploaded \"" << path << "\": " << digest.hash()
+                                        << "/" << digest.size_bytes());
     }
     catch (const std::runtime_error &e) {
-        RECC_LOG_ERROR("Uploading " << path
-                                    << " failed with error: " << e.what());
+        BUILDBOX_LOG_ERROR("Uploading " << path
+                                        << " failed with error: " << e.what());
         exit(1);
     }
 }
@@ -100,15 +101,15 @@ void processDirectory(const std::string &path, const bool followSymlinks,
         abspath.c_str(), &directoryDigestToFilecontents, followSymlinks);
     const auto digest = singleNestedDirectory.to_digest(&directoryBlobs);
 
-    RECC_LOG_VERBOSE("Finished building nested directory from \""
-                     << path << "\": " << digest.hash() << "/"
-                     << digest.size_bytes());
-    RECC_LOG_VERBOSE(singleNestedDirectory);
+    BUILDBOX_LOG_DEBUG("Finished building nested directory from \""
+                       << path << "\": " << digest.hash() << "/"
+                       << digest.size_bytes());
+    BUILDBOX_LOG_DEBUG(singleNestedDirectory);
 
     if (casClient == nullptr) {
-        RECC_LOG("Computed directory digest for \""
-                 << path << "\": " << digest.hash() << "/"
-                 << digest.size_bytes());
+        BUILDBOX_LOG_INFO("Computed directory digest for \""
+                          << path << "\": " << digest.hash() << "/"
+                          << digest.size_bytes());
     }
     else {
         uploadDirectory(path, digest, directoryBlobs,
@@ -131,9 +132,9 @@ void processPath(const std::string &path, const bool followSymlinks,
                  digest_string_umap *digestToFileContents,
                  const std::unique_ptr<CASClient> &casClient)
 {
-    RECC_LOG_VERBOSE("Starting to process \""
-                     << path << "\", followSymlinks = " << std::boolalpha
-                     << followSymlinks << std::noboolalpha);
+    BUILDBOX_LOG_DEBUG("Starting to process \""
+                       << path << "\", followSymlinks = " << std::boolalpha
+                       << followSymlinks << std::noboolalpha);
 
     const struct stat statResult = getStatOrExit(followSymlinks, path);
 
@@ -145,8 +146,8 @@ void processPath(const std::string &path, const bool followSymlinks,
     const std::shared_ptr<ReccFile> file =
         ReccFileFactory::createFile(path.c_str(), followSymlinks);
     if (!file) {
-        RECC_LOG_VERBOSE("Encountered unsupported file \""
-                         << path << "\", skipping...");
+        BUILDBOX_LOG_DEBUG("Encountered unsupported file \""
+                           << path << "\", skipping...");
         return;
     }
 
@@ -156,9 +157,11 @@ void processPath(const std::string &path, const bool followSymlinks,
 
 int main(int argc, char *argv[])
 {
+    buildboxcommon::logging::Logger::getLoggerInstance().initialize(argv[0]);
+
     if (argc == 1) {
-        RECC_LOG_ERROR(USAGE);
-        RECC_LOG_ERROR("(run \"casupload --help\" for details)");
+        BUILDBOX_LOG_ERROR(USAGE);
+        BUILDBOX_LOG_ERROR("(run \"casupload --help\" for details)");
         return 1;
     }
 
@@ -171,7 +174,7 @@ int main(int argc, char *argv[])
     for (auto i = 1; i < argc; i++) {
         const std::string argument_value(argv[i]);
         if (argument_value == "--help" || argument_value == "-h") {
-            RECC_LOG_WARNING(HELP);
+            BUILDBOX_LOG_WARNING(HELP);
             return 1;
         }
 
@@ -227,12 +230,13 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    RECC_LOG_VERBOSE("Building nested directory structure...");
+    BUILDBOX_LOG_DEBUG("Building nested directory structure...");
     digest_string_umap blobs;
     const auto directoryDigest = nestedDirectory.to_digest(&blobs);
 
-    RECC_LOG("Computed directory digest: " << directoryDigest.hash() << "/"
-                                           << directoryDigest.size_bytes());
+    BUILDBOX_LOG_INFO("Computed directory digest: "
+                      << directoryDigest.hash() << "/"
+                      << directoryDigest.size_bytes());
 
     if (dryRunMode) {
         return 0;
@@ -240,7 +244,7 @@ int main(int argc, char *argv[])
 
     try {
         casClient->upload_resources(blobs, digestToFileContents);
-        RECC_LOG_VERBOSE("Files uploaded successfully");
+        BUILDBOX_LOG_DEBUG("Files uploaded successfully");
         if (output_digest_file.length() > 0) {
             std::ofstream digest_file;
             digest_file.open(output_digest_file);
@@ -251,7 +255,7 @@ int main(int argc, char *argv[])
         return 0;
     }
     catch (const std::runtime_error &e) {
-        RECC_LOG_ERROR("Uploading files failed with error: " << e.what());
+        BUILDBOX_LOG_ERROR("Uploading files failed with error: " << e.what());
         return 1;
     }
 }

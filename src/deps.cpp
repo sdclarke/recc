@@ -16,10 +16,11 @@
 
 #include <compilerdefaults.h>
 #include <env.h>
-#include <logging.h>
 #include <subprocess.h>
 
 #include <buildboxcommon_fileutils.h>
+#include <buildboxcommon_logging.h>
+
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -112,7 +113,7 @@ std::string Deps::crtbegin_from_clang_v(const std::string &str)
         std::regex::extended);
     std::smatch m;
     if (!std::regex_search(str, m, re)) {
-        RECC_LOG_VERBOSE("Failed to locate crtbegin.o for clang");
+        BUILDBOX_LOG_DEBUG("Failed to locate crtbegin.o for clang");
         return "";
     }
 
@@ -125,7 +126,7 @@ std::string Deps::crtbegin_from_clang_v(const std::string &str)
     s << "/crtbegin.o";
 
     std::string crtbegin_file = s.str();
-    RECC_LOG_VERBOSE("Found crtbegin.o for clang: " << crtbegin_file);
+    BUILDBOX_LOG_DEBUG("Found crtbegin.o for clang: " << crtbegin_file);
 
     return crtbegin_file;
 }
@@ -143,10 +144,10 @@ CommandFileInfo Deps::get_file_info(const ParsedCommand &parsedCommand)
         for (const auto &token : parsedCommand.get_dependencies_command()) {
             errorMsg += (token + " ");
         }
-        RECC_LOG_ERROR(errorMsg);
-        RECC_LOG_ERROR("Exit status: " << subprocessResult.d_exitCode);
-        RECC_LOG_VERBOSE("stdout: " << subprocessResult.d_stdOut);
-        RECC_LOG_VERBOSE("stderr: " << subprocessResult.d_stdErr);
+        BUILDBOX_LOG_ERROR(errorMsg);
+        BUILDBOX_LOG_ERROR("Exit status: " << subprocessResult.d_exitCode);
+        BUILDBOX_LOG_DEBUG("stdout: " << subprocessResult.d_stdOut);
+        BUILDBOX_LOG_DEBUG("stderr: " << subprocessResult.d_stdErr);
         throw subprocess_failed_error(subprocessResult.d_exitCode);
     }
 

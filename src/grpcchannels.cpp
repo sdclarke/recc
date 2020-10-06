@@ -15,7 +15,6 @@
 
 #include <env.h>
 #include <grpcchannels.h>
-#include <logging.h>
 
 #include <sstream>
 #include <string>

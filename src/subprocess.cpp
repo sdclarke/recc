@@ -12,20 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <subprocess.h>
+
 #include <array>
 #include <cerrno>
 #include <cstring>
-#include <logging.h>
 #include <map>
 #include <memory>
 #include <sstream>
-#include <subprocess.h>
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <system_error>
 #include <unistd.h>
+
+#include <buildboxcommon_logging.h>
 
 namespace BloombergLP {
 namespace recc {
@@ -36,7 +38,7 @@ static std::array<int, 2> createPipe()
     std::array<int, 2> pipe_fds = {0, 0};
 
     if (pipe(pipe_fds.data()) == -1) {
-        RECC_LOG_ERROR("Error calling `pipe()`: " << strerror(errno));
+        BUILDBOX_LOG_ERROR("Error calling `pipe()`: " << strerror(errno));
         throw std::system_error(errno, std::system_category());
     }
     return pipe_fds;
@@ -63,7 +65,7 @@ Subprocess::execute(const std::vector<std::string> &command, bool pipeStdOut,
 
     const auto pid = fork();
     if (pid == -1) {
-        RECC_LOG_ERROR("Error calling `fork()`: " << strerror(errno));
+        BUILDBOX_LOG_ERROR("Error calling `fork()`: " << strerror(errno));
         throw std::system_error(errno, std::system_category());
     }
 

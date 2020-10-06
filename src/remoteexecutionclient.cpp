@@ -14,19 +14,19 @@
 
 #include <remoteexecutionclient.h>
 
-#include <buildboxcommonmetrics_durationmetrictimer.h>
-#include <buildboxcommonmetrics_metricguard.h>
 #include <digestgenerator.h>
 #include <fileutils.h>
 #include <grpcretry.h>
-#include <logging.h>
 #include <reccdefaults.h>
 #include <remoteexecutionsignals.h>
 
-#include <signal.h>
+#include <buildboxcommon_logging.h>
+#include <buildboxcommonmetrics_durationmetrictimer.h>
+#include <buildboxcommonmetrics_metricguard.h>
 
 #include <functional>
 #include <future>
+#include <signal.h>
 
 #define TIMER_NAME_FETCH_WRITE_RESULTS "recc.fetch_write_results"
 
@@ -68,12 +68,12 @@ void read_operation_async(ReaderPointer reader_ptr,
     bool logged = false;
     while (reader_ptr->Read(operation_ptr.get())) {
         if (!logged && !operation_ptr->name().empty()) {
-            RECC_LOG_VERBOSE(
+            BUILDBOX_LOG_DEBUG(
                 "Waiting for Operation: " << operation_ptr->name())
             logged = true;
         }
         if (operation_ptr->done()) {
-            RECC_LOG_VERBOSE("Operation done.");
+            BUILDBOX_LOG_DEBUG("Operation done.");
             break;
         }
     }
@@ -109,11 +109,12 @@ proto::ActionResult get_actionresult(const Operation &operation)
 
     const proto::ActionResult actionResult = executeResponse.result();
     if (actionResult.exit_code() == 0) {
-        RECC_LOG_VERBOSE("Execute response message: " +
-                         executeResponse.message());
+        BUILDBOX_LOG_DEBUG("Execute response message: " +
+                           executeResponse.message());
     }
     else if (!executeResponse.message().empty()) {
-        RECC_LOG("Remote execution message: " + executeResponse.message());
+        BUILDBOX_LOG_INFO("Remote execution message: " +
+                          executeResponse.message());
     }
 
     return actionResult;
@@ -147,7 +148,7 @@ void RemoteExecutionClient::read_operation(ReaderPointer &reader_ptr,
     do {
         status = future.wait_for(DEFAULT_RECC_POLL_WAIT);
         if (RemoteExecutionClient::s_sigint_received) {
-            RECC_LOG_WARNING(
+            BUILDBOX_LOG_WARNING(
                 "Cancelling job, operation name: " << operation_ptr->name());
             /* Cancel the operation if the execution service gave it a name */
             if (!operation_ptr->name().empty()) {
@@ -233,24 +234,24 @@ RemoteExecutionClient::execute_action(const proto::Digest &actionDigest,
 
     proto::ActionResult resultProto = get_actionresult(operation);
     if (RECC_VERBOSE) {
-        RECC_LOG_VERBOSE("Action result contains: [Files="
-                         << resultProto.output_files_size()
-                         << "], [Directories="
-                         << resultProto.output_directories_size() << "]");
+        BUILDBOX_LOG_DEBUG("Action result contains: [Files="
+                           << resultProto.output_files_size()
+                           << "], [Directories="
+                           << resultProto.output_directories_size() << "]");
 
         for (int i = 0; i < resultProto.output_files_size(); ++i) {
             auto fileProto = resultProto.output_files(i);
-            RECC_LOG_VERBOSE("File digest=["
-                             << fileProto.digest().hash() << "/"
-                             << fileProto.digest().size_bytes() << "] :"
-                             << " path=[" << fileProto.path() << "]");
+            BUILDBOX_LOG_DEBUG("File digest=["
+                               << fileProto.digest().hash() << "/"
+                               << fileProto.digest().size_bytes() << "] :"
+                               << " path=[" << fileProto.path() << "]");
         }
         for (int i = 0; i < resultProto.output_directories_size(); ++i) {
             auto dirProto = resultProto.output_directories(i);
-            RECC_LOG_VERBOSE("Directory tree digest=["
-                             << dirProto.tree_digest().hash() << "/"
-                             << dirProto.tree_digest().size_bytes() << "] :"
-                             << " path=[" << dirProto.path() << "]");
+            BUILDBOX_LOG_DEBUG("Directory tree digest=["
+                               << dirProto.tree_digest().hash() << "/"
+                               << dirProto.tree_digest().size_bytes() << "] :"
+                               << " path=[" << dirProto.path() << "]");
         }
     }
     return from_proto(resultProto);
@@ -270,11 +271,11 @@ void RemoteExecutionClient::cancel_operation(const std::string &operationName)
     grpc::Status s = d_operationsStub->CancelOperation(cancelContext.get(),
                                                        cancelRequest, &empty);
     if (!s.ok()) {
-        RECC_LOG_ERROR("Failed to cancel job " << operationName << ": "
-                                               << s.error_message());
+        BUILDBOX_LOG_ERROR("Failed to cancel job " << operationName << ": "
+                                                   << s.error_message());
     }
     else {
-        RECC_LOG("Cancelled job " << operationName);
+        BUILDBOX_LOG_INFO("Cancelled job " << operationName);
     }
 }
 
@@ -288,7 +289,7 @@ void RemoteExecutionClient::write_files_to_disk(const ActionResult &result,
 
     for (const auto &fileIter : result.d_outputFiles) {
         const std::string path = std::string(root) + "/" + fileIter.first;
-        RECC_LOG_VERBOSE("Writing " << path);
+        BUILDBOX_LOG_DEBUG("Writing " << path);
         FileUtils::writeFile(path, get_outputblob(fileIter.second));
         if (fileIter.second.d_executable) {
             buildboxcommon::FileUtils::makeExecutable(path.c_str());

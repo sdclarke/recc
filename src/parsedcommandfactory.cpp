@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <parsedcommandfactory.h>
+
+#include <compilerdefaults.h>
+#include <fileutils.h>
+
 #include <buildboxcommon_exception.h>
 #include <buildboxcommon_fileutils.h>
 #include <buildboxcommon_logging.h>
-#include <compilerdefaults.h>
-#include <fileutils.h>
-#include <parsedcommandfactory.h>
 
 namespace BloombergLP {
 namespace recc {
@@ -271,13 +273,13 @@ ParsedCommandFactory::vectorFromArgv(const char *const *argv)
     std::vector<std::string> result;
     int i = 0;
 
-    RECC_LOG_VERBOSE("Parsing command: ");
+    BUILDBOX_LOG_DEBUG("Parsing command: ");
 
     while (argv[i] != nullptr) {
         std::string argstr = std::string(argv[i]);
         ++i;
 
-        RECC_LOG_VERBOSE("argv[" << i << "] = " << argstr);
+        BUILDBOX_LOG_DEBUG("argv[" << i << "] = " << argstr);
         result.push_back(argstr);
     }
 

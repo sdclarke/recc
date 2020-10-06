@@ -16,6 +16,7 @@
 
 #include <buildboxcommon_exception.h>
 #include <buildboxcommon_fileutils.h>
+#include <buildboxcommon_logging.h>
 
 #include <algorithm>
 #include <cstring>
@@ -27,7 +28,6 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
-#include <logging.h>
 #include <reccdefaults.h>
 #include <sstream>
 #include <stdio.h>
@@ -334,7 +334,7 @@ _Pragma("GCC diagnostic pop")
         if (config.good()) {
             // append name of config file, defined by DEFAULT_RECC_CONFIG
             file_location = file_location + "/" + DEFAULT_RECC_CONFIG;
-            RECC_LOG_VERBOSE("Found recc config at: " << file_location);
+            BUILDBOX_LOG_DEBUG("Found recc config at: " << file_location);
             parse_config_files(file_location);
         }
     }
@@ -344,9 +344,10 @@ void Env::handle_special_defaults()
 {
     if (RECC_SERVER.empty()) {
         RECC_SERVER = DEFAULT_RECC_SERVER;
-        RECC_LOG_WARNING("Warning: no RECC_SERVER environment variable "
-                         "specified."
-                         << " Using default server (" << RECC_SERVER << ")");
+        BUILDBOX_LOG_WARNING("Warning: no RECC_SERVER environment variable "
+                             "specified."
+                             << " Using default server (" << RECC_SERVER
+                             << ")");
     }
     else {
         // Deprecate this in the future, allow old configs to work for now.
@@ -356,17 +357,17 @@ void Env::handle_special_defaults()
     if (RECC_CAS_SERVER.empty()) {
         if (RECC_ACTION_CACHE_SERVER.empty()) {
             RECC_CAS_SERVER = RECC_SERVER;
-            RECC_LOG_VERBOSE("No RECC_CAS_SERVER environment variable "
-                             "specified."
-                             << " Using the same as RECC_SERVER ("
-                             << RECC_CAS_SERVER << ")");
+            BUILDBOX_LOG_DEBUG("No RECC_CAS_SERVER environment variable "
+                               "specified."
+                               << " Using the same as RECC_SERVER ("
+                               << RECC_CAS_SERVER << ")");
         }
         else {
             // Since it makes most sense for the action cache and the CAS to
             // live together rather than the CAS living with the Execution
             // Service, using the AC endpoint.
             RECC_CAS_SERVER = RECC_ACTION_CACHE_SERVER;
-            RECC_LOG_VERBOSE(
+            BUILDBOX_LOG_DEBUG(
                 "No RECC_CAS_SERVER environment variable specified. Using the "
                 "same RECC_ACTION_CACHE_SERVER ("
                 << RECC_ACTION_CACHE_SERVER << ")");
@@ -379,10 +380,10 @@ void Env::handle_special_defaults()
 
     if (RECC_ACTION_CACHE_SERVER.empty()) {
         RECC_ACTION_CACHE_SERVER = RECC_CAS_SERVER;
-        RECC_LOG_VERBOSE("No RECC_ACTION_CACHE_SERVER environment variable "
-                         "specified."
-                         << " Using the same as RECC_CAS_SERVER ("
-                         << RECC_CAS_SERVER << ")");
+        BUILDBOX_LOG_DEBUG("No RECC_ACTION_CACHE_SERVER environment variable "
+                           "specified."
+                           << " Using the same as RECC_CAS_SERVER ("
+                           << RECC_CAS_SERVER << ")");
     }
     else {
         // Deprecate this in the future, allow old configs to work for now.
@@ -392,27 +393,27 @@ void Env::handle_special_defaults()
 
     if (!RECC_SERVER_AUTH_GOOGLEAPI) {
         if (!RECC_AUTH_UNCONFIGURED_MSG.empty()) {
-            RECC_LOG_WARNING(RECC_AUTH_UNCONFIGURED_MSG);
+            BUILDBOX_LOG_WARNING(RECC_AUTH_UNCONFIGURED_MSG);
         }
     }
 
     if (RECC_PROJECT_ROOT.empty()) {
         RECC_PROJECT_ROOT = FileUtils::getCurrentWorkingDirectory();
-        RECC_LOG_VERBOSE("No RECC_PROJECT_ROOT directory specified. "
-                         << "Defaulting to current working directory ("
-                         << RECC_PROJECT_ROOT << ")");
+        BUILDBOX_LOG_DEBUG("No RECC_PROJECT_ROOT directory specified. "
+                           << "Defaulting to current working directory ("
+                           << RECC_PROJECT_ROOT << ")");
     }
     else if (RECC_PROJECT_ROOT.front() != '/') {
         RECC_PROJECT_ROOT = buildboxcommon::FileUtils::makePathAbsolute(
             RECC_PROJECT_ROOT, FileUtils::getCurrentWorkingDirectory());
-        RECC_LOG_WARNING("Warning: RECC_PROJECT_ROOT was set to a relative "
-                         "path. "
-                         << "Rewriting to absolute path "
-                         << RECC_PROJECT_ROOT);
+        BUILDBOX_LOG_WARNING(
+            "Warning: RECC_PROJECT_ROOT was set to a relative "
+            "path. "
+            << "Rewriting to absolute path " << RECC_PROJECT_ROOT);
     }
 
     if (RECC_REMOTE_PLATFORM.empty()) {
-        RECC_LOG_WARNING("Warning: RECC_REMOTE_PLATFORM has no values.");
+        BUILDBOX_LOG_WARNING("Warning: RECC_REMOTE_PLATFORM has no values.");
     }
 
     if (RECC_METRICS_FILE.size() && RECC_METRICS_UDP_SERVER.size()) {
@@ -503,8 +504,9 @@ Env::vector_from_delimited_string(std::string prefix_map,
         // Extra check in case there is input with no second
         // delimiter.
         if (equal_pos == std::string::npos) {
-            RECC_LOG_WARNING("Incorrect path specification for key/value: ["
-                             << key_value << "] please see README for usage.")
+            BUILDBOX_LOG_WARNING(
+                "Incorrect path specification for key/value: ["
+                << key_value << "] please see README for usage.")
             return;
         }
         // Check if key/values are absolute paths
@@ -514,15 +516,15 @@ Env::vector_from_delimited_string(std::string prefix_map,
         value = buildboxcommon::FileUtils::normalizePath(value.c_str());
         if (!FileUtils::isAbsolutePath(key.c_str()) &&
             !FileUtils::isAbsolutePath(value.c_str())) {
-            RECC_LOG_WARNING("Input paths must be absolute: [" << key_value
-                                                               << "]");
+            BUILDBOX_LOG_WARNING("Input paths must be absolute: [" << key_value
+                                                                   << "]");
             return;
         }
         if (FileUtils::hasPathPrefix(RECC_PROJECT_ROOT, key)) {
-            RECC_LOG_WARNING("Path to replace: ["
-                             << key.c_str()
-                             << "] is a prefix of the project root: ["
-                             << RECC_PROJECT_ROOT << "]");
+            BUILDBOX_LOG_WARNING("Path to replace: ["
+                                 << key.c_str()
+                                 << "] is a prefix of the project root: ["
+                                 << RECC_PROJECT_ROOT << "]");
         }
         return_vector.emplace_back(std::make_pair(key, value));
     };

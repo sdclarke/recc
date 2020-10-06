@@ -16,6 +16,8 @@
 #include <env.h>
 #include <fileutils.h>
 
+#include <buildboxcommon_logging.h>
+
 #include <cstring>
 #include <iostream>
 #include <regex>
@@ -30,13 +32,15 @@ const std::string HELP(
 
 int main(int argc, char *argv[])
 {
+    buildboxcommon::logging::Logger::getLoggerInstance().initialize(argv[0]);
+
     Env::set_config_locations();
     Env::parse_config_variables();
     const std::string cwd = FileUtils::getCurrentWorkingDirectory();
 
     if (argc <= 1 || strcmp(argv[1], "--help") == 0 ||
         strcmp(argv[1], "-h") == 0) {
-        RECC_LOG_WARNING(HELP);
+        BUILDBOX_LOG_WARNING(HELP);
         return 0;
     }
     try {
@@ -44,7 +48,7 @@ int main(int argc, char *argv[])
             ParsedCommandFactory::createParsedCommand(&argv[1], cwd.c_str());
         const auto deps = Deps::get_file_info(parsedCommand).d_dependencies;
         for (const auto &dep : deps) {
-            RECC_LOG(dep);
+            BUILDBOX_LOG_INFO(dep);
         }
     }
     catch (const subprocess_failed_error &e) {

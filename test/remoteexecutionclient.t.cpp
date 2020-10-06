@@ -18,9 +18,9 @@
 #include <env.h>
 #include <fileutils.h>
 #include <grpccontext.h>
-#include <logging.h>
 #include <remoteexecutionclient.h>
 
+#include <buildboxcommon_logging.h>
 #include <buildboxcommon_temporarydirectory.h>
 
 #include <build/bazel/remote/execution/v2/remote_execution_mock.grpc.pb.h>
@@ -356,7 +356,7 @@ TEST_F(RemoteExecutionClientTestFixture, CancelOperation)
 
     int timingPipe[2];
     if (pipe(timingPipe)) {
-        RECC_LOG_ERROR("Failed to create pipe");
+        BUILDBOX_LOG_ERROR("Failed to create pipe");
         FAIL();
     }
 

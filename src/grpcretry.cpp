@@ -17,7 +17,8 @@
 #include <env.h>
 #include <grpcchannels.h>
 #include <grpccontext.h>
-#include <logging.h>
+
+#include <buildboxcommon_logging.h>
 
 #include <math.h>
 #include <thread>
@@ -59,7 +60,7 @@ void grpc_retry(
                     status.error_message() + ". Retrying in " +
                     std::to_string(time_delay) + " ms...";
 
-                RECC_LOG_ERROR(error_msg);
+                BUILDBOX_LOG_ERROR(error_msg);
                 std::this_thread::sleep_for(
                     std::chrono::milliseconds(time_delay));
             }

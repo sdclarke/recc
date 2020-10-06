@@ -13,16 +13,19 @@
 // limitations under the License.
 
 #include <actionbuilder.h>
-#include <buildboxcommonmetrics_durationmetrictimer.h>
-#include <buildboxcommonmetrics_metricguard.h>
+
 #include <digestgenerator.h>
 #include <env.h>
 #include <fileutils.h>
-#include <logging.h>
 #include <reccdefaults.h>
+#include <threadutils.h>
+
+#include <buildboxcommon_logging.h>
+#include <buildboxcommonmetrics_durationmetrictimer.h>
+#include <buildboxcommonmetrics_metricguard.h>
+
 #include <set>
 #include <thread>
-#include <threadutils.h>
 
 #define TIMER_NAME_COMPILER_DEPS "recc.compiler_deps"
 #define TIMER_NAME_BUILD_MERKLE_TREE "recc.build_merkle_tree"
@@ -130,7 +133,7 @@ void addFileToMerkleTreeHelper(const PathRewritePair &dep_paths,
     // don't include a dependency if it's exclusion is requested
     if (FileUtils::hasPathPrefixes(merklePath, RECC_DEPS_EXCLUDE_PATHS)) {
         const std::lock_guard<std::mutex> lock(LogWriteMutex);
-        RECC_LOG_VERBOSE("Skipping \"" << merklePath << "\"");
+        BUILDBOX_LOG_DEBUG("Skipping \"" << merklePath << "\"");
         return;
     }
 
@@ -138,8 +141,8 @@ void addFileToMerkleTreeHelper(const PathRewritePair &dep_paths,
         ReccFileFactory::createFile(dep_paths.first.c_str());
     if (!file) {
         const std::lock_guard<std::mutex> lock(LogWriteMutex);
-        RECC_LOG_VERBOSE("Encountered unsupported file \""
-                         << dep_paths.first << "\", skipping...");
+        BUILDBOX_LOG_DEBUG("Encountered unsupported file \""
+                           << dep_paths.first << "\", skipping...");
         return;
     }
 
@@ -161,7 +164,7 @@ void ActionBuilder::buildMerkleTree(DependencyPairs &dependency_paths,
         buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
         mt(TIMER_NAME_BUILD_MERKLE_TREE);
 
-    RECC_LOG_VERBOSE("Building Merkle tree");
+    BUILDBOX_LOG_DEBUG("Building Merkle tree");
 
     std::function<void(DependencyPairs::iterator, DependencyPairs::iterator)>
         createMerkleTreeFromIterators = [&](DependencyPairs::iterator start,
@@ -180,7 +183,7 @@ void ActionBuilder::getDependencies(const ParsedCommand &command,
                                     std::set<std::string> *products)
 {
 
-    RECC_LOG_VERBOSE("Getting dependencies using the command:");
+    BUILDBOX_LOG_DEBUG("Getting dependencies using the command:");
     if (RECC_VERBOSE == true) {
         for (auto &depc : command.get_dependencies_command()) {
             std::clog << depc << " ";
@@ -229,7 +232,7 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
 
     std::set<std::string> products = RECC_OUTPUT_FILES_OVERRIDE;
     if (!RECC_DEPS_DIRECTORY_OVERRIDE.empty()) {
-        RECC_LOG_VERBOSE("Building Merkle tree using directory override");
+        BUILDBOX_LOG_DEBUG("Building Merkle tree using directory override");
         // when RECC_DEPS_DIRECTORY_OVERRIDE is set, we will not follow
         // symlinks to help us avoid getting into endless loop
         nestedDirectory =
@@ -244,7 +247,7 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
                 getDependencies(command, &deps, &products);
             }
             catch (const subprocess_failed_error &) {
-                RECC_LOG_VERBOSE("Running locally to display the error.");
+                BUILDBOX_LOG_DEBUG("Running locally to display the error.");
                 return nullptr;
             }
         }
@@ -261,9 +264,9 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
                 modifiedDep = FileUtils::resolvePathFromPrefixMap(modifiedDep);
                 modifiedDep =
                     FileUtils::makePathRelative(modifiedDep, cwd.c_str());
-                RECC_LOG_VERBOSE("Mapping local path: ["
-                                 << dep << "] to remote path: [" << modifiedDep
-                                 << "]");
+                BUILDBOX_LOG_DEBUG("Mapping local path: ["
+                                   << dep << "] to remote path: ["
+                                   << modifiedDep << "]");
             }
             dep_path_pairs.push_back(std::make_pair(dep, modifiedDep));
         }
@@ -287,9 +290,10 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
 
     for (const auto &product : products) {
         if (!product.empty() && product[0] == '/') {
-            RECC_LOG_VERBOSE("Command produces file in a location unrelated "
-                             "to the current directory, so running locally.");
-            RECC_LOG_VERBOSE(
+            BUILDBOX_LOG_DEBUG(
+                "Command produces file in a location unrelated "
+                "to the current directory, so running locally.");
+            BUILDBOX_LOG_DEBUG(
                 "(use RECC_OUTPUT_[FILES|DIRECTORIES]_OVERRIDE to "
                 "override)");
             return nullptr;
@@ -301,7 +305,7 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
     const proto::Command commandProto = generateCommandProto(
         command.get_command(), products, RECC_OUTPUT_DIRECTORIES_OVERRIDE,
         RECC_REMOTE_ENV, RECC_REMOTE_PLATFORM, commandWorkingDirectory);
-    RECC_LOG_VERBOSE("Command: " << commandProto.ShortDebugString());
+    BUILDBOX_LOG_DEBUG("Command: " << commandProto.ShortDebugString());
 
     const auto commandDigest = DigestGenerator::make_digest(commandProto);
     (*blobs)[commandDigest] = commandProto.SerializeAsString();

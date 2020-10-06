@@ -24,7 +24,6 @@
 #include <fileutils.h>
 #include <grpcchannels.h>
 #include <grpccontext.h>
-#include <logging.h>
 #include <metricsconfig.h>
 #include <parsedcommandfactory.h>
 #include <reccdefaults.h>
@@ -39,6 +38,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <buildboxcommon_logging.h>
 #include <buildboxcommonmetrics_durationmetrictimer.h>
 #include <buildboxcommonmetrics_durationmetricvalue.h>
 #include <buildboxcommonmetrics_metricguard.h>
@@ -192,14 +192,21 @@ enum ReturnCode {
 
 int main(int argc, char *argv[])
 {
+    if (RECC_VERBOSE) {
+        buildboxcommon::logging::Logger::getLoggerInstance().setLogLevel(
+            buildboxcommon::LogLevel::DEBUG);
+    }
+
+    buildboxcommon::logging::Logger::getLoggerInstance().initialize(argv[0]);
+
     if (argc <= 1) {
-        RECC_LOG_ERROR("USAGE: recc <command>");
-        RECC_LOG_ERROR("(run \"recc --help\" for details)");
+        BUILDBOX_LOG_ERROR("USAGE: recc <command>");
+        BUILDBOX_LOG_ERROR("(run \"recc --help\" for details)");
         return RC_USAGE;
     }
     else if (argc == 2 &&
              (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)) {
-        RECC_LOG_WARNING(HELP);
+        BUILDBOX_LOG_WARNING(HELP);
         return RC_OK;
     }
     else if (argc == 2 && (strcmp(argv[1], "--version") == 0 ||
@@ -207,21 +214,22 @@ int main(int argc, char *argv[])
         const std::string version =
             RequestMetadataGenerator::RECC_METADATA_TOOL_VERSION;
         const std::string versionMessage = "recc version: " + version;
-        RECC_LOG_WARNING(versionMessage);
+        BUILDBOX_LOG_WARNING(versionMessage);
         return RC_OK;
     }
 
     Env::set_config_locations();
     Env::parse_config_variables();
 
-    RECC_LOG_VERBOSE("RECC_REAPI_VERSION == '" << RECC_REAPI_VERSION << "'");
+    BUILDBOX_LOG_DEBUG("RECC_REAPI_VERSION == '" << RECC_REAPI_VERSION << "'");
 
     std::shared_ptr<StatsDPublisherType> statsDPublisher;
     try {
         statsDPublisher = get_statsdpublisher_from_config();
     }
     catch (const std::runtime_error &e) {
-        RECC_LOG_ERROR("Could not initialize statsD publisher: " << e.what());
+        BUILDBOX_LOG_ERROR(
+            "Could not initialize statsD publisher: " << e.what());
         return RC_METRICS_PUBLISHER_INIT_FAILURE;
     }
 
@@ -243,7 +251,7 @@ int main(int argc, char *argv[])
                                                    &digest_to_filecontents);
         }
         catch (const std::invalid_argument &) {
-            RECC_LOG_ERROR(
+            BUILDBOX_LOG_ERROR(
                 "Invalid `argv[0]` value in command: \"" +
                 command.get_command().at(0) +
                 "\". The Remote Execution API requires it to specify "
@@ -252,8 +260,8 @@ int main(int argc, char *argv[])
         }
     }
     else {
-        RECC_LOG_VERBOSE("Not a compiler command, so running locally.");
-        RECC_LOG_VERBOSE(
+        BUILDBOX_LOG_DEBUG("Not a compiler command, so running locally.");
+        BUILDBOX_LOG_DEBUG(
             "(use RECC_FORCE_REMOTE=1 to force remote execution)");
     }
 
@@ -261,16 +269,18 @@ int main(int argc, char *argv[])
     // to running the command locally:
     if (!actionPtr) {
         execvp(argv[1], &argv[1]);
-        RECC_LOG_PERROR(argv[1]);
+        const std::string errorReason = strerror(errno);
+        BUILDBOX_LOG_ERROR("Error executing argv[1]: " << errorReason);
         return RC_EXEC_FAILURE;
     }
 
     const proto::Action action = *actionPtr;
     const proto::Digest actionDigest = DigestGenerator::make_digest(action);
 
-    RECC_LOG_VERBOSE("Action Digest: "
-                     << actionDigest.hash() << "/" << actionDigest.size_bytes()
-                     << " Action Contents: " << action.ShortDebugString());
+    BUILDBOX_LOG_DEBUG("Action Digest: " << actionDigest.hash() << "/"
+                                         << actionDigest.size_bytes()
+                                         << " Action Contents: "
+                                         << action.ShortDebugString());
 
     // Setting up the gRPC connections:
     std::unique_ptr<GrpcChannels> returnChannels;
@@ -279,7 +289,7 @@ int main(int argc, char *argv[])
             GrpcChannels::get_channels_from_config());
     }
     catch (const std::runtime_error &e) {
-        RECC_LOG_ERROR("Invalid argument in channel config: " << e.what());
+        BUILDBOX_LOG_ERROR("Invalid argument in channel config: " << e.what());
         return RC_INVALID_GRPC_CHANNELS;
     }
 
@@ -305,15 +315,16 @@ int main(int argc, char *argv[])
                     actionDigest, command.get_products(), RECC_INSTANCE,
                     &result);
                 if (action_in_cache) {
-                    RECC_LOG_VERBOSE("Action cache hit for "
-                                     << actionDigest.hash() << "/"
-                                     << actionDigest.size_bytes());
+                    BUILDBOX_LOG_DEBUG("Action cache hit for "
+                                       << actionDigest.hash() << "/"
+                                       << actionDigest.size_bytes());
                 }
             }
         }
         catch (const std::exception &e) {
-            RECC_LOG_ERROR("Error while querying action cache at \""
-                           << RECC_ACTION_CACHE_SERVER << "\": " << e.what());
+            BUILDBOX_LOG_ERROR("Error while querying action cache at \""
+                               << RECC_ACTION_CACHE_SERVER
+                               << "\": " << e.what());
         }
     }
 
@@ -322,7 +333,7 @@ int main(int argc, char *argv[])
     if (!action_in_cache) {
         blobs[actionDigest] = action.SerializeAsString();
 
-        RECC_LOG_VERBOSE("Uploading resources...");
+        BUILDBOX_LOG_DEBUG("Uploading resources...");
         try {
             // We are going to make a batch request to the CAS, setting up
             // the client's max. batch size according to what the server
@@ -334,16 +345,16 @@ int main(int argc, char *argv[])
             client.upload_resources(blobs, digest_to_filecontents);
         }
         catch (const std::exception &e) {
-            RECC_LOG_ERROR("Error while uploading resources to CAS at \""
-                           << RECC_CAS_SERVER << "\": " << e.what());
+            BUILDBOX_LOG_ERROR("Error while uploading resources to CAS at \""
+                               << RECC_CAS_SERVER << "\": " << e.what());
             return RC_INVALID_SERVER_CAPABILITIES;
         }
 
         // And call `Execute()`:
         try {
-            RECC_LOG_VERBOSE("Executing action... actionDigest: "
-                             << actionDigest.hash() << "/"
-                             << actionDigest.size_bytes());
+            BUILDBOX_LOG_DEBUG("Executing action... actionDigest: "
+                               << actionDigest.hash() << "/"
+                               << actionDigest.size_bytes());
             { // Timed block
                 buildboxcommon::buildboxcommonmetrics::MetricGuard<
                     buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
@@ -353,8 +364,8 @@ int main(int argc, char *argv[])
             }
         }
         catch (const std::exception &e) {
-            RECC_LOG_ERROR("Error while calling `Execute()` on \""
-                           << RECC_SERVER << "\": " << e.what());
+            BUILDBOX_LOG_ERROR("Error while calling `Execute()` on \""
+                               << RECC_SERVER << "\": " << e.what());
             return RC_EXEC_ACTIONS_FAILURE;
         }
     }
@@ -373,7 +384,7 @@ int main(int argc, char *argv[])
         return exitCode;
     }
     catch (const std::exception &e) {
-        RECC_LOG_ERROR(e.what());
+        BUILDBOX_LOG_ERROR(e.what());
         return (exitCode == 0 ? RC_SAVING_OUTPUT_FAILURE : exitCode);
     }
 }

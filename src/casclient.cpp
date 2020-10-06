@@ -15,6 +15,7 @@
 #include <casclient.h>
 #include <digestgenerator.h>
 
+#include <buildboxcommon_logging.h>
 #include <buildboxcommonmetrics_durationmetrictimer.h>
 #include <buildboxcommonmetrics_metricguard.h>
 #include <grpcretry.h>
@@ -107,8 +108,9 @@ void CASClient::setUpFromServerCapabilities()
         serverCapabilities = fetchServerCapabilities();
     }
     catch (const std::runtime_error &e) {
-        RECC_LOG_DEBUG("Error: Could not fetch capabilities, using defaults: "
-                       << e.what());
+        BUILDBOX_LOG_DEBUG(
+            "Error: Could not fetch capabilities, using defaults: "
+            << e.what());
         return;
     }
 
@@ -138,7 +140,7 @@ void CASClient::setUpFromServerCapabilities()
             "CAS server does not support the configured digest function: " +
             RECC_CAS_DIGEST_FUNCTION;
 
-        RECC_LOG_ERROR(error_message);
+        BUILDBOX_LOG_ERROR(error_message);
         throw std::runtime_error(error_message);
     }
 }
@@ -264,7 +266,7 @@ proto::FindMissingBlobsResponse CASClient::findMissingBlobs(
 {
     proto::FindMissingBlobsResponse response;
 
-    RECC_LOG_VERBOSE(
+    BUILDBOX_LOG_DEBUG(
         "Sending FindMissingBlobsRequest with a total number of blobs: "
         << request.blob_digests_size());
 
@@ -280,7 +282,7 @@ proto::FindMissingBlobsResponse CASClient::findMissingBlobs(
         grpc_retry(missing_blobs_lambda, d_grpcContext);
     }
 
-    RECC_LOG_VERBOSE(
+    BUILDBOX_LOG_DEBUG(
         "Received FindMissingBlobsResponse with a total number of blobs: "
         << response.missing_blob_digests_size());
 
@@ -370,7 +372,7 @@ void CASClient::batchUpdateBlobs(
 
         if (digest.size_bytes() + batchSize > s_maxTotalBatchSizeBytes) {
             // Batch is full, flushing the request:
-            RECC_LOG_VERBOSE("Sending batch update request");
+            BUILDBOX_LOG_DEBUG("Sending batch update request");
             batchUpdateBlobs(batchUpdateRequest);
 
             batchUpdateRequest.clear_requests();
@@ -387,7 +389,7 @@ void CASClient::batchUpdateBlobs(
     }
 
     if (!batchUpdateRequest.requests().empty()) {
-        RECC_LOG_VERBOSE("Sending final update request");
+        BUILDBOX_LOG_DEBUG("Sending final update request");
         batchUpdateBlobs(batchUpdateRequest);
     }
 }

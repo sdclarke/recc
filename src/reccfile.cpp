@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <buildboxcommon_fileutils.h>
+#include <reccfile.h>
+
 #include <digestgenerator.h>
 #include <fileutils.h>
-#include <logging.h>
-#include <reccfile.h>
+
+#include <buildboxcommon_fileutils.h>
+#include <buildboxcommon_logging.h>
 
 namespace BloombergLP {
 namespace recc {
@@ -75,19 +77,19 @@ ReccFileFactory::createFile(const char *path, const bool followSymlinks)
         const proto::Digest file_digest =
             DigestGenerator::make_digest(file_contents);
 
-        RECC_LOG_VERBOSE("Creating"
-                         << (executable ? " " : " non-")
-                         << "executable file object"
-                         << " with digest \"" << file_digest.ShortDebugString()
-                         << "\" and path \"" << path
-                         << "\", symlink = " << std::boolalpha << symlink);
+        BUILDBOX_LOG_DEBUG(
+            "Creating" << (executable ? " " : " non-")
+                       << "executable file object"
+                       << " with digest \"" << file_digest.ShortDebugString()
+                       << "\" and path \"" << path
+                       << "\", symlink = " << std::boolalpha << symlink);
 
         return std::make_shared<ReccFile>(
             ReccFile(std::string(path), file_name, file_contents, file_digest,
                      executable, symlink));
     }
     else {
-        RECC_LOG_ERROR("Path is not valid");
+        BUILDBOX_LOG_ERROR("Path is not valid");
         return nullptr;
     }
 }

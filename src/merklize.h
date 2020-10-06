@@ -16,8 +16,8 @@
 #define INCLUDED_MERKLIZE
 
 #include <buildboxcommon_fileutils.h>
+
 #include <env.h>
-#include <logging.h>
 #include <protos.h>
 #include <reccfile.h>
 

@@ -16,7 +16,8 @@
 
 #include <digestgenerator.h>
 #include <fileutils.h>
-#include <logging.h>
+
+#include <buildboxcommon_logging.h>
 
 #include <cerrno>
 #include <cstring>
@@ -78,9 +79,9 @@ void NestedDirectory::add(std::shared_ptr<ReccFile> file,
     if (!checkedPrefix) {
         replacedDirectory =
             FileUtils::resolvePathFromPrefixMap(std::string(relativePath));
-        RECC_LOG_VERBOSE("Replacing and normalized path: ["
-                         << relativePath << "] with newpath: ["
-                         << replacedDirectory << "]");
+        BUILDBOX_LOG_DEBUG("Replacing and normalized path: ["
+                           << relativePath << "] with newpath: ["
+                           << replacedDirectory << "]");
         checkedPrefix = true;
     }
 
@@ -112,9 +113,9 @@ void NestedDirectory::addSymlink(const std::string &target,
     if (!checkedPrefix) {
         replacedDirectory =
             FileUtils::resolvePathFromPrefixMap(std::string(relativePath));
-        RECC_LOG_VERBOSE("Replacing and normalized path: ["
-                         << relativePath << "] with newpath: ["
-                         << replacedDirectory << "]");
+        BUILDBOX_LOG_DEBUG("Replacing and normalized path: ["
+                           << relativePath << "] with newpath: ["
+                           << replacedDirectory << "]");
         checkedPrefix = true;
     }
 
@@ -156,9 +157,9 @@ void NestedDirectory::addDirectory(const char *directory, bool checkedPrefix)
     if (!checkedPrefix) {
         replacedDirectory =
             FileUtils::resolvePathFromPrefixMap(std::string(directory));
-        RECC_LOG_VERBOSE("Replacing and normalized path: ["
-                         << directory << "] with newpath: ["
-                         << replacedDirectory << "]");
+        BUILDBOX_LOG_DEBUG("Replacing and normalized path: ["
+                           << directory << "] with newpath: ["
+                           << replacedDirectory << "]");
         checkedPrefix = true;
     }
 
@@ -263,7 +264,7 @@ void make_nesteddirectoryhelper(
     std::unordered_map<std::shared_ptr<ReccFile>, std::string> *filePathMap,
     std::unordered_set<std::string> *emptyDirSet, const bool followSymlinks)
 {
-    RECC_LOG_VERBOSE("Iterating through " << path);
+    BUILDBOX_LOG_DEBUG("Iterating through " << path);
 
     // dir is used to iterate through subdirectories in path
     auto dir = opendir(path);
@@ -300,8 +301,8 @@ void make_nesteddirectoryhelper(
             const std::shared_ptr<ReccFile> file = ReccFileFactory::createFile(
                 entityPath.c_str(), followSymlinks);
             if (!file) {
-                RECC_LOG_VERBOSE("Encountered unsupported file \""
-                                 << entityPath << "\", skipping...");
+                BUILDBOX_LOG_DEBUG("Encountered unsupported file \""
+                                   << entityPath << "\", skipping...");
                 continue;
             }
 
@@ -309,10 +310,10 @@ void make_nesteddirectoryhelper(
                 const std::string normalizedReplacedRoot =
                     normalize_replace_root(entityPath);
 
-                RECC_LOG_VERBOSE("Mapping local file path: ["
-                                 << entityPath
-                                 << "] to normalized-relative (if)updated: ["
-                                 << normalizedReplacedRoot << "]");
+                BUILDBOX_LOG_DEBUG("Mapping local file path: ["
+                                   << entityPath
+                                   << "] to normalized-relative (if)updated: ["
+                                   << normalizedReplacedRoot << "]");
 
                 // Store the digest, and the file contents.
                 fileMap->emplace(file->getDigest(), file->getFileContents());
@@ -326,10 +327,10 @@ void make_nesteddirectoryhelper(
         const std::string normalizedReplacedDir =
             normalize_replace_root(pathString);
 
-        RECC_LOG_VERBOSE("Mapping local empty directory: ["
-                         << pathString
-                         << "] to normalized-relative (if)updated: ["
-                         << normalizedReplacedDir << "]");
+        BUILDBOX_LOG_DEBUG("Mapping local empty directory: ["
+                           << pathString
+                           << "] to normalized-relative (if)updated: ["
+                           << normalizedReplacedDir << "]");
 
         // Store the updated/replaced path to directory in emptyDirSet.
         // Which will be used to construct the NestedDirectory later
