@@ -31,7 +31,8 @@ namespace proto {
 using namespace buildboxcommon; // REAPI and ByteStream protos
 using namespace google::longrunning;
 
-static const std::set<std::string> s_reapiSupportedVersions = {"2.0", "2.1"};
+static const std::set<std::string> s_reapiSupportedVersions = {"2.0", "2.1",
+                                                               "2.2"};
 
 inline std::string reapiSupportedVersionsList()
 {
