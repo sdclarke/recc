@@ -58,21 +58,24 @@ proto::Command ActionBuilder::populateCommandProto(
 
     // REAPI v2.1 deprecated the `output_files` and `output_directories` fields
     // of the `Command` message, replacing them with `output_paths`.
+    const bool outputPathsSupported =
+        Env::configured_reapi_version_equal_to_or_newer_than("2.1");
+
     for (const auto &file : outputFiles) {
-        if (RECC_REAPI_VERSION == "2.0") {
-            commandProto.add_output_files(file);
+        if (outputPathsSupported) {
+            commandProto.add_output_paths(file);
         }
         else {
-            commandProto.add_output_paths(file);
+            commandProto.add_output_files(file);
         }
     }
 
     for (const auto &directory : outputDirectories) {
-        if (RECC_REAPI_VERSION == "2.0") {
-            commandProto.add_output_directories(directory);
+        if (outputPathsSupported) {
+            commandProto.add_output_paths(directory);
         }
         else {
-            commandProto.add_output_paths(directory);
+            commandProto.add_output_directories(directory);
         }
     }
 
@@ -314,6 +317,13 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
     action.mutable_command_digest()->CopyFrom(commandDigest);
     action.mutable_input_root_digest()->CopyFrom(directoryDigest);
     action.set_do_not_cache(RECC_ACTION_UNCACHEABLE);
+
+    // REAPI v2.2 allows setting the platform property list in the `Action`
+    // message, which allows servers to immediately read it without having to
+    // dereference the corresponding `Command`.
+    if (Env::configured_reapi_version_equal_to_or_newer_than("2.2")) {
+        action.mutable_platform()->CopyFrom(commandProto.platform());
+    }
 
     return std::make_shared<proto::Action>(action);
 }

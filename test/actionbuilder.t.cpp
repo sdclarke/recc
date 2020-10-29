@@ -47,6 +47,7 @@ class ActionBuilderTestFixture
         d_previous_deps_exclude_paths = RECC_DEPS_EXCLUDE_PATHS;
         d_previous_working_dir_prefix = RECC_WORKING_DIR_PREFIX;
         d_previous_reapi_version = RECC_REAPI_VERSION;
+        d_previous_remote_platform = RECC_REMOTE_PLATFORM;
     }
 
     void TearDown() override
@@ -58,6 +59,7 @@ class ActionBuilderTestFixture
         RECC_DEPS_EXCLUDE_PATHS = d_previous_deps_exclude_paths;
         RECC_WORKING_DIR_PREFIX = d_previous_working_dir_prefix;
         RECC_REAPI_VERSION = d_previous_reapi_version;
+        RECC_REMOTE_PLATFORM = d_previous_remote_platform;
     }
 
     void writeDependenciesToTempFile(const std::string &dependency_file_name)
@@ -84,6 +86,7 @@ class ActionBuilderTestFixture
     bool d_previous_deps_global_path;
     std::string d_previous_working_dir_prefix;
     std::string d_previous_reapi_version;
+    std::map<std::string, std::string> d_previous_remote_platform;
 };
 
 TEST_F(ActionBuilderTestFixture, BuildSimpleCommand)
@@ -135,6 +138,30 @@ TEST_P(ActionBuilderTestFixture, BuildSimpleCommandWithOutputPaths)
 
     ASSERT_TRUE(command_proto.output_files().empty());
     ASSERT_TRUE(command_proto.output_directories().empty());
+}
+
+TEST_F(ActionBuilderTestFixture, PlatformPropertiesInActionWhenSupported)
+{
+    RECC_REAPI_VERSION = "2.2";
+    // v2.2 adds the `Action.platform` field.
+
+    RECC_REMOTE_PLATFORM = {{"OS", "linux"}, {"ISA", "x86"}};
+
+    const std::vector<std::string> recc_args = {"./gcc", "-c", "hello.cpp",
+                                                "-o", "hello.o"};
+    const auto command =
+        ParsedCommandFactory::createParsedCommand(recc_args, cwd.c_str());
+
+    const auto actionPtr = ActionBuilder::BuildAction(command, cwd, &blobs,
+                                                      &digest_to_filecontents);
+
+    ASSERT_NE(actionPtr, nullptr);
+
+    ASSERT_EQ(actionPtr->platform().properties_size(), 2);
+    for (const auto &property : actionPtr->platform().properties()) {
+        ASSERT_TRUE(RECC_REMOTE_PLATFORM.count(property.name()));
+        EXPECT_EQ(RECC_REMOTE_PLATFORM.at(property.name()), property.value());
+    }
 }
 
 TEST_F(ActionBuilderTestFixture, GetDependenciesAIX)
