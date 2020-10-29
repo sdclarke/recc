@@ -19,6 +19,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace BloombergLP {
@@ -355,6 +356,12 @@ struct Env {
      * handle_special_defaults
      */
     static void parse_config_variables();
+
+    static std::pair<int, int>
+    version_string_to_pair(const std::string &version);
+
+    static bool configured_reapi_version_equal_to_or_newer_than(
+        const std::string &version);
 };
 
 } // namespace recc

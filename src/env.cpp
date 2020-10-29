@@ -17,6 +17,7 @@
 #include <buildboxcommon_exception.h>
 #include <buildboxcommon_fileutils.h>
 #include <buildboxcommon_logging.h>
+#include <buildboxcommon_protos.h>
 
 #include <algorithm>
 #include <cstring>
@@ -29,6 +30,7 @@
 #include <functional>
 #include <iostream>
 #include <reccdefaults.h>
+#include <regex>
 #include <sstream>
 #include <stdio.h>
 #include <string>
@@ -610,6 +612,28 @@ void Env::parse_config_variables()
     Env::handle_special_defaults();
     Env::assert_reapi_version_is_valid();
     Env::verify_files_writeable();
+}
+
+std::pair<int, int> Env::version_string_to_pair(const std::string &version)
+{
+    static const std::regex regex("^(\\d)\\.(\\d)$");
+
+    std::smatch matches;
+    if (std::regex_search(version, matches, regex) && matches.size() == 3) {
+        const int major = std::stoi(matches[1]);
+        const int minor = std::stoi(matches[2]);
+        return std::make_pair(major, minor);
+    }
+
+    throw std::invalid_argument("Could not parse X.Y version from: '" +
+                                version + "'");
+}
+
+bool Env::configured_reapi_version_equal_to_or_newer_than(
+    const std::string &version)
+{
+    return version_string_to_pair(RECC_REAPI_VERSION) >=
+           version_string_to_pair(version);
 }
 
 } // namespace recc
