@@ -159,6 +159,9 @@ int main(int argc, char *argv[])
 {
     buildboxcommon::logging::Logger::getLoggerInstance().initialize(argv[0]);
 
+    Env::set_config_locations();
+    Env::parse_config_variables();
+
     if (argc == 1) {
         BUILDBOX_LOG_ERROR(USAGE);
         BUILDBOX_LOG_ERROR("(run \"casupload --help\" for details)");
@@ -192,9 +195,6 @@ int main(int argc, char *argv[])
             paths.push_back(argument_value);
         }
     }
-
-    Env::set_config_locations();
-    Env::parse_config_variables();
 
     // gRPC connection objects (we don't initialize them if `dryRunMode` is
     // set):

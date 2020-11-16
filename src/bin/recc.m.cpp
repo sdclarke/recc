@@ -192,12 +192,10 @@ enum ReturnCode {
 
 int main(int argc, char *argv[])
 {
-    if (RECC_VERBOSE) {
-        buildboxcommon::logging::Logger::getLoggerInstance().setLogLevel(
-            buildboxcommon::LogLevel::DEBUG);
-    }
-
     buildboxcommon::logging::Logger::getLoggerInstance().initialize(argv[0]);
+
+    Env::set_config_locations();
+    Env::parse_config_variables();
 
     if (argc <= 1) {
         BUILDBOX_LOG_ERROR("USAGE: recc <command>");
@@ -217,9 +215,6 @@ int main(int argc, char *argv[])
         BUILDBOX_LOG_WARNING(versionMessage);
         return RC_OK;
     }
-
-    Env::set_config_locations();
-    Env::parse_config_variables();
 
     BUILDBOX_LOG_DEBUG("RECC_REAPI_VERSION == '" << RECC_REAPI_VERSION << "'");
 

@@ -336,7 +336,6 @@ _Pragma("GCC diagnostic pop")
         if (config.good()) {
             // append name of config file, defined by DEFAULT_RECC_CONFIG
             file_location = file_location + "/" + DEFAULT_RECC_CONFIG;
-            BUILDBOX_LOG_DEBUG("Found recc config at: " << file_location);
             parse_config_files(file_location);
         }
     }
@@ -609,6 +608,12 @@ void Env::parse_config_variables()
 {
     Env::find_and_parse_config_files();
     Env::parse_config_variables(environ);
+
+    // Update the log-level if verbose was set before continuing
+    if (RECC_VERBOSE) {
+        BUILDBOX_LOG_SET_LEVEL(buildboxcommon::LogLevel::DEBUG);
+    }
+
     Env::handle_special_defaults();
     Env::assert_reapi_version_is_valid();
     Env::verify_files_writeable();
