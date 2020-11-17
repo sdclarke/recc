@@ -273,15 +273,16 @@ ParsedCommandFactory::vectorFromArgv(const char *const *argv)
     std::vector<std::string> result;
     int i = 0;
 
-    BUILDBOX_LOG_DEBUG("Parsing command: ");
-
+    std::ostringstream arg_string;
+    arg_string << "Parsing command:" << std::endl;
     while (argv[i] != nullptr) {
         std::string argstr = std::string(argv[i]);
         ++i;
 
-        BUILDBOX_LOG_DEBUG("argv[" << i << "] = " << argstr);
+        arg_string << "argv[" << i << "] = " << argstr << std::endl;
         result.push_back(argstr);
     }
+    BUILDBOX_LOG_DEBUG(arg_string.str());
 
     return result;
 }

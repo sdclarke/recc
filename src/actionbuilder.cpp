@@ -188,10 +188,11 @@ void ActionBuilder::getDependencies(const ParsedCommand &command,
 
     BUILDBOX_LOG_DEBUG("Getting dependencies using the command:");
     if (RECC_VERBOSE == true) {
+        std::ostringstream dep_command;
         for (auto &depc : command.get_dependencies_command()) {
-            std::clog << depc << " ";
+            dep_command << depc << " ";
         }
-        std::clog << "\n";
+        BUILDBOX_LOG_DEBUG(dep_command.str());
     }
 
     CommandFileInfo fileInfo;
