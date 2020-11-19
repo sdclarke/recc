@@ -243,3 +243,69 @@ TEST(PathReplacement, modifyRemotePathPrefixAndRelativeMatch)
 
     EXPECT_EQ("test", replacedPath);
 }
+
+/*
+The next section of helpers/variables is used explicitly for the
+CompilerOptionMatch tests.
+*/
+static const ParsedCommandFactory::CompilerOptionToFuncMapType testRules = {
+    {"-BBB", ParsedCommandModifiers::parseIsInputPathOption},
+    {"-B", ParsedCommandModifiers::parseOptionRedirectsOutput},
+    {"-BT", ParsedCommandModifiers::parseInterfersWithDepsOption},
+};
+
+// Helper method to get the underlying address of the function target of a
+// std::function.
+// Source:
+// https://stackoverflow.com/questions/18039723/c-trying-to-get-function-address-from-a-stdfunction
+template <typename T, typename... U>
+size_t getAddress(std::function<T(U...)> f)
+{
+    typedef T(fnType)(U...);
+    fnType **fnPointer = f.template target<fnType *>();
+    return (size_t)*fnPointer;
+}
+
+TEST(CompilerOptionMatch, simpleMatches)
+{
+    auto flag = "-B";
+    auto funcPtr =
+        ParsedCommandModifiers::matchCompilerOptions(flag, testRules);
+
+    ASSERT_NE(funcPtr.second, nullptr);
+    EXPECT_EQ(getAddress(funcPtr.second), getAddress(testRules.at(flag)));
+
+    auto equalFlag = "-B=";
+    funcPtr =
+        ParsedCommandModifiers::matchCompilerOptions(equalFlag, testRules);
+    ASSERT_NE(funcPtr.second, nullptr);
+    EXPECT_EQ(getAddress(funcPtr.second), getAddress(testRules.at(flag)));
+
+    // Make sure the function pointer is unique, and doesn't match the other
+    // flags.
+    EXPECT_NE(getAddress(funcPtr.second), getAddress(testRules.at("-BBB")));
+}
+
+TEST(CompilerOptionMatch, moreComplexMatches)
+{
+    auto flag = "-B hello -C";
+    auto funcPtr =
+        ParsedCommandModifiers::matchCompilerOptions(flag, testRules);
+
+    ASSERT_NE(funcPtr.second, nullptr);
+    EXPECT_EQ(getAddress(funcPtr.second), getAddress(testRules.at("-B")));
+
+    flag = "-B.../usr/bin";
+    funcPtr = ParsedCommandModifiers::matchCompilerOptions(flag, testRules);
+
+    ASSERT_NE(funcPtr.second, nullptr);
+    EXPECT_EQ(getAddress(funcPtr.second), getAddress(testRules.at("-B")));
+
+    funcPtr = ParsedCommandModifiers::matchCompilerOptions("B", testRules);
+    EXPECT_EQ(funcPtr.second, nullptr);
+
+    flag = "-B = hi ";
+    funcPtr = ParsedCommandModifiers::matchCompilerOptions(flag, testRules);
+    EXPECT_EQ(getAddress(funcPtr.second), getAddress(testRules.at("-B")));
+    EXPECT_EQ(funcPtr.first, "-B");
+}

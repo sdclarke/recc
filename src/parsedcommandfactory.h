@@ -19,6 +19,7 @@
 #include <functional>
 #include <initializer_list>
 #include <list>
+#include <map>
 #include <memory>
 #include <parsedcommand.h>
 #include <set>
@@ -33,11 +34,13 @@ namespace recc {
 class ParsedCommandFactory {
   public:
     /**
-     * An unordered_map from a string to a function pointer.
+     * An map from a string to a function pointer, lexigraphically sorted in
+     * decending order.
      */
-    typedef std::unordered_map<
-        std::string, std::function<void(ParsedCommand *, const std::string &,
-                                        const std::string &)>>
+    typedef std::map<std::string,
+                     std::function<void(ParsedCommand *, const std::string &,
+                                        const std::string &)>,
+                     std::greater<std::string>>
         CompilerOptionToFuncMapType;
     /**
      * An unordered_map from a set of strings to a CompilerOptionToFuncMapType.
@@ -112,6 +115,17 @@ struct ParsedCommandModifiers {
     static void parseOptionIsUnsupported(ParsedCommand *command,
                                          const std::string &workingDirectory,
                                          const std::string &option);
+    /**
+     * Match command option passed in, to compiler options in compiler option
+     * map. Return a pair including the function or an empty function depending
+     * on if there was a match.
+     */
+    static std::pair<std::string,
+                     std::function<void(ParsedCommand *, const std::string &,
+                                        const std::string &)>>
+    matchCompilerOptions(
+        const std::string &option,
+        const ParsedCommandFactory::CompilerOptionToFuncMapType &options);
 
     /**
      * This helper deals with gcc options parsing, which can have a space after

@@ -243,19 +243,17 @@ void ParsedCommandFactory::parseCommand(
     // Iterate through the options map, comparing the options in the
     // command to each option, if matching, applying the coresponding option
     // function.
-    bool foundMatch = false;
     while (!command->d_originalCommand.empty()) {
         const auto &curr_val = command->d_originalCommand.front();
-        for (const auto &option_map_val : options) {
-            const auto val = curr_val.substr(0, option_map_val.first.length());
-            if (val == option_map_val.first) {
-                option_map_val.second(command, workingDirectory,
-                                      option_map_val.first);
-                foundMatch = true;
-                break;
-            }
-        } // end inner for
-        if (!foundMatch) {
+
+        const auto &optionModifier =
+            ParsedCommandModifiers::matchCompilerOptions(curr_val, options);
+
+        if (optionModifier.second) {
+            optionModifier.second(command, workingDirectory,
+                                  optionModifier.first);
+        }
+        else {
             const std::string replacedPath =
                 ParsedCommandModifiers::modifyRemotePath(curr_val,
                                                          workingDirectory);
@@ -263,7 +261,6 @@ void ParsedCommandFactory::parseCommand(
             command->d_dependenciesCommand.push_back(curr_val);
             command->d_originalCommand.pop_front();
         }
-        foundMatch = false;
     } // end while
 }
 
@@ -285,6 +282,43 @@ ParsedCommandFactory::vectorFromArgv(const char *const *argv)
     BUILDBOX_LOG_DEBUG(arg_string.str());
 
     return result;
+}
+
+std::pair<std::string, std::function<void(ParsedCommand *, const std::string &,
+                                          const std::string &)>>
+ParsedCommandModifiers::matchCompilerOptions(
+    const std::string &option,
+    const ParsedCommandFactory::CompilerOptionToFuncMapType &options)
+{
+    auto tempOption = option;
+
+    if (!tempOption.empty() && tempOption.front() == '-') {
+
+        // Check for an equal sign, if any, return left side.
+        tempOption = tempOption.substr(0, tempOption.find("="));
+
+        // First try finding an exact match, removing and parsing until an
+        // equal sign. Remove any spaces from the option.
+        tempOption.erase(
+            remove_if(tempOption.begin(), tempOption.end(), ::isspace),
+            tempOption.end());
+
+        if (options.count(tempOption) > 0) {
+            return std::make_pair(tempOption, options.at(tempOption));
+        }
+
+        // Second, try a substring search, iterating through all the
+        // options in the map.
+        for (const auto &option_map_val : options) {
+            const auto val = option.substr(0, option_map_val.first.length());
+            if (val == option_map_val.first) {
+                return std::make_pair(option_map_val.first,
+                                      option_map_val.second);
+            }
+        }
+    }
+
+    return std::make_pair("", nullptr);
 }
 
 void ParsedCommandModifiers::parseInterfersWithDepsOption(
@@ -417,8 +451,8 @@ void ParsedCommandModifiers::appendAndRemoveOption(
         const std::string replacedPath =
             ParsedCommandModifiers::modifyRemotePath(option, workingDirectory);
 
-        // If pushing back to dependencies command, do not replace the path
-        // since this will be run locally.
+        // If pushing back to dependencies command, do not replace the
+        // path since this will be run locally.
         if (toDeps) {
             command->d_dependenciesCommand.push_back(option);
         }
