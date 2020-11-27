@@ -89,3 +89,28 @@ e2e:
     dependencies: []
     script:
         - RECC_SOURCE_ROOT=`pwd` end-to-end-test.sh
+
+docker-image:
+  image: docker:stable
+  stage: release
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+    VERSIONED_IMAGE_NAME: ${CI_REGISTRY_IMAGE}/recc:${CI_COMMIT_SHORT_SHA}
+    LATEST_IMAGE_NAME: ${CI_REGISTRY_IMAGE}/recc:latest
+  before_script:
+    - >
+      docker login
+      --username gitlab-ci-token
+      --password ${CI_JOB_TOKEN}
+      ${CI_REGISTRY}
+    - docker info
+  script:
+    - docker build --pull -t ${VERSIONED_IMAGE_NAME} -t ${LATEST_IMAGE_NAME} .
+  after_script:
+    - docker push ${VERSIONED_IMAGE_NAME}
+    - docker push ${LATEST_IMAGE_NAME}
+  only:
+    - master
