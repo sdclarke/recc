@@ -25,6 +25,7 @@ class EnvTest : public ::testing::Test {
         RECC_SERVER = RECC_CAS_SERVER = RECC_ACTION_CACHE_SERVER = "";
         RECC_SERVER_SSL = false;
         RECC_FORCE_REMOTE = false;
+        RECC_CACHE_ONLY = false;
         RECC_DEPS_OVERRIDE = RECC_OUTPUT_FILES_OVERRIDE = {};
         RECC_REMOTE_ENV.clear();
         RECC_DEPS_EXCLUDE_PATHS.clear();
@@ -159,4 +160,42 @@ TEST_F(EnvTest, EnvTestServerBackwardCompatibleSeparate)
     EXPECT_EQ(expectedServer, RECC_SERVER);
     EXPECT_EQ(expectedCasServer, RECC_CAS_SERVER);
     EXPECT_EQ(expectedACServer, RECC_ACTION_CACHE_SERVER);
+}
+
+TEST_F(EnvTest, EnvTestCacheOnly)
+{
+    const char *testEnviron[] = {"RECC_CAS_SERVER=http://casserver:123456",
+                                 "RECC_CACHE_ONLY=1", nullptr};
+
+    const std::string expectedServer = "http://localhost:8085";
+    const std::string expectedCasServer = "http://casserver:123456";
+    const std::string expectedACServer = "http://casserver:123456";
+
+    Env::parse_config_variables(testEnviron);
+    Env::handle_special_defaults();
+
+    EXPECT_EQ(expectedServer, RECC_SERVER);
+    EXPECT_EQ(expectedCasServer, RECC_CAS_SERVER);
+    EXPECT_EQ(expectedACServer, RECC_ACTION_CACHE_SERVER);
+
+    EXPECT_EQ(true, RECC_CACHE_ONLY);
+}
+
+TEST_F(EnvTest, EnvTestCacheOnlyForceFalse)
+{
+    const char *testEnviron[] = {"RECC_CAS_SERVER=http://casserver:123456",
+                                 nullptr};
+
+    const std::string expectedServer = "http://localhost:8085";
+    const std::string expectedCasServer = "http://casserver:123456";
+    const std::string expectedACServer = "http://casserver:123456";
+
+    Env::parse_config_variables(testEnviron);
+    Env::handle_special_defaults();
+
+    EXPECT_EQ(expectedServer, RECC_SERVER);
+    EXPECT_EQ(expectedCasServer, RECC_CAS_SERVER);
+    EXPECT_EQ(expectedACServer, RECC_ACTION_CACHE_SERVER);
+
+    EXPECT_EQ(false, RECC_CACHE_ONLY);
 }

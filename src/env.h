@@ -108,6 +108,12 @@ extern bool RECC_ENABLE_METRICS;
 extern bool RECC_FORCE_REMOTE;
 
 /**
+ * Only try to fetch from the cache, and build locally if no results
+ * are available.
+ */
+extern bool RECC_CACHE_ONLY;
+
+/**
  * Sets the `do_not_cache` flag in the Action to indicate that it can never be
  * cached.
  */

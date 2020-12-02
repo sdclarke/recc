@@ -67,6 +67,7 @@ std::string RECC_WORKING_DIR_PREFIX = DEFAULT_RECC_WORKING_DIR_PREFIX;
 
 bool RECC_ENABLE_METRICS = DEFAULT_RECC_ENABLE_METRICS;
 bool RECC_FORCE_REMOTE = DEFAULT_RECC_FORCE_REMOTE;
+bool RECC_CACHE_ONLY = DEFAULT_RECC_CACHE_ONLY;
 bool RECC_ACTION_UNCACHEABLE = DEFAULT_RECC_ACTION_UNCACHEABLE;
 bool RECC_SKIP_CACHE = DEFAULT_RECC_SKIP_CACHE;
 bool RECC_DONT_SAVE_OUTPUT = DEFAULT_RECC_DONT_SAVE_OUTPUT;
@@ -303,6 +304,7 @@ void Env::parse_config_variables(const char *const *env)
         BOOLVAR(RECC_VERBOSE)
         BOOLVAR(RECC_ENABLE_METRICS)
         BOOLVAR(RECC_FORCE_REMOTE)
+        BOOLVAR(RECC_CACHE_ONLY)
         BOOLVAR(RECC_ACTION_UNCACHEABLE)
         BOOLVAR(RECC_SKIP_CACHE)
         BOOLVAR(RECC_DONT_SAVE_OUTPUT)
@@ -343,8 +345,11 @@ _Pragma("GCC diagnostic pop")
 
 void Env::handle_special_defaults()
 {
-    if (RECC_SERVER.empty()) {
+    if (RECC_SERVER.empty() || RECC_CACHE_ONLY) {
         RECC_SERVER = DEFAULT_RECC_SERVER;
+    }
+
+    if (RECC_SERVER.empty() && !RECC_CACHE_ONLY) {
         BUILDBOX_LOG_WARNING("Warning: no RECC_SERVER environment variable "
                              "specified."
                              << " Using default server (" << RECC_SERVER
