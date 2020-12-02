@@ -24,44 +24,30 @@ namespace recc {
 
 GrpcChannels GrpcChannels::get_channels_from_config()
 {
-    buildboxcommon::ConnectionOptions connection_options_server;
-    buildboxcommon::ConnectionOptions connection_options_cas;
-    buildboxcommon::ConnectionOptions connection_options_action_cache;
+    buildboxcommon::ConnectionOptions options[3];
 
-    connection_options_server.setUrl(RECC_SERVER);
-    connection_options_cas.setUrl(RECC_CAS_SERVER);
-    connection_options_action_cache.setUrl(RECC_ACTION_CACHE_SERVER);
+    options[0].setUrl(RECC_SERVER);
+    options[1].setUrl(RECC_CAS_SERVER);
+    options[2].setUrl(RECC_ACTION_CACHE_SERVER);
 
-    connection_options_server.setInstanceName(RECC_INSTANCE);
-    connection_options_cas.setInstanceName(RECC_INSTANCE);
-    connection_options_action_cache.setInstanceName(RECC_INSTANCE);
+    for (auto &option : options) {
+        const std::string retryLimitStr = std::to_string(RECC_RETRY_LIMIT);
+        const std::string retryDelayStr = std::to_string(RECC_RETRY_DELAY);
 
-    const std::string retryLimitStr = std::to_string(RECC_RETRY_LIMIT);
-    connection_options_server.setRetryLimit(retryLimitStr);
-    connection_options_cas.setRetryLimit(retryLimitStr);
-    connection_options_action_cache.setRetryLimit(retryLimitStr);
+        option.setInstanceName(RECC_INSTANCE);
 
-    const std::string retryDelayStr = std::to_string(RECC_RETRY_DELAY);
-    connection_options_server.setRetryDelay(retryDelayStr);
-    connection_options_cas.setRetryDelay(retryDelayStr);
-    connection_options_action_cache.setRetryDelay(retryDelayStr);
+        option.setRetryLimit(retryLimitStr);
+        option.setRetryDelay(retryDelayStr);
 
-    if (RECC_ACCESS_TOKEN_PATH.size()) {
-        connection_options_server.setAccessTokenPath(RECC_ACCESS_TOKEN_PATH);
-        connection_options_cas.setAccessTokenPath(RECC_ACCESS_TOKEN_PATH);
-        connection_options_action_cache.setAccessTokenPath(
-            RECC_ACCESS_TOKEN_PATH);
+        if (!RECC_ACCESS_TOKEN_PATH.empty()) {
+            option.setAccessTokenPath(RECC_ACCESS_TOKEN_PATH);
+        }
+
+        option.setUseGoogleApiAuth(RECC_SERVER_AUTH_GOOGLEAPI);
     }
 
-    if (RECC_SERVER_AUTH_GOOGLEAPI) {
-        connection_options_server.setUseGoogleApiAuth(true);
-        connection_options_cas.setUseGoogleApiAuth(true);
-        connection_options_action_cache.setUseGoogleApiAuth(true);
-    }
-
-    return GrpcChannels(connection_options_server.createChannel(),
-                        connection_options_cas.createChannel(),
-                        connection_options_action_cache.createChannel());
+    return GrpcChannels(options[0].createChannel(), options[1].createChannel(),
+                        options[2].createChannel());
 }
 
 } // namespace recc
