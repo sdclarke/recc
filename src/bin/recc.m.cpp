@@ -190,6 +190,14 @@ enum ReturnCode {
 
 } // namespace
 
+int exec_locally(char *argv[])
+{
+    execvp(argv[1], &argv[1]);
+    const std::string errorReason = strerror(errno);
+    BUILDBOX_LOG_ERROR("Error executing argv[1]: " << errorReason);
+    return RC_EXEC_FAILURE;
+}
+
 int main(int argc, char *argv[])
 {
     buildboxcommon::logging::Logger::getLoggerInstance().initialize(argv[0]);
@@ -262,10 +270,7 @@ int main(int argc, char *argv[])
     // If we don't need to build an `Action` or if the process fails, we defer
     // to running the command locally:
     if (!actionPtr) {
-        execvp(argv[1], &argv[1]);
-        const std::string errorReason = strerror(errno);
-        BUILDBOX_LOG_ERROR("Error executing argv[1]: " << errorReason);
-        return RC_EXEC_FAILURE;
+        return exec_locally(argv);
     }
 
     const proto::Action action = *actionPtr;
@@ -323,6 +328,13 @@ int main(int argc, char *argv[])
     // If the results for the action are not cached, we upload the
     // necessary resources to CAS:
     if (!action_in_cache) {
+        if (RECC_CACHE_ONLY) {
+            BUILDBOX_LOG_INFO(
+                "Action not cached and running in cache-only mode, "
+                "executing locally");
+            return exec_locally(argv);
+        }
+
         blobs[actionDigest] = action.SerializeAsString();
 
         BUILDBOX_LOG_INFO("Executing action remotely... [actionDigest="
