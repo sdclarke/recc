@@ -312,7 +312,7 @@ Once you've started the server and set the environment variables, you're ready
 to call `recc` with a compile command:
 
 ```sh
-$ recc gcc -c hello.c -o hello.o
+$ recc /usr/bin/gcc -c hello.c -o hello.o
 ```
 
 `recc` only supports compilation, not linking, so be sure to include the `-c`
@@ -320,9 +320,9 @@ argument in your command. If `recc` doesn't think your command is a compile
 command, it'll just run it locally:
 
 ```sh
-$ recc echo hello
+$ recc /usr/bin/echo hello
 hello
-$ RECC_VERBOSE=1 recc echo hello
+$ RECC_VERBOSE=1 recc /usr/bin/echo hello
 Not a compiler command, so running locally.
 (use RECC_FORCE_REMOTE=1 to force remote execution)
 hello
