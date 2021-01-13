@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <casclient.h>
 #include <env.h>
 #include <fileutils.h>
-#include <grpccontext.h>
 #include <merklize.h>
 #include <reccfile.h>
 
+#include <buildboxcommon_client.h>
 #include <buildboxcommon_logging.h>
 #include <buildboxcommon_systemutils.h>
 
@@ -66,17 +65,54 @@ const std::string HELP(
     "If `--output-digest-file=<FILE>` is set, the output digest will be \n"
     "written to <FILE> in the form \"<HASH>/<SIZE_BYTES>\".");
 
+void uploadResources(const digest_string_umap &blobs,
+                     const digest_string_umap &digest_to_filecontents,
+                     const std::unique_ptr<buildboxcommon::Client> &casClient)
+{
+    std::vector<proto::Digest> digestsToUpload;
+    for (const auto &i : blobs) {
+        digestsToUpload.push_back(i.first);
+    }
+    for (const auto &i : digest_to_filecontents) {
+        digestsToUpload.push_back(i.first);
+    }
+
+    const auto missingDigests = casClient->findMissingBlobs(digestsToUpload);
+
+    std::vector<buildboxcommon::Client::UploadRequest> upload_requests;
+    upload_requests.reserve(missingDigests.size());
+    for (const auto &digest : missingDigests) {
+        // Finding the data in one of the source maps:
+        std::string blob;
+        if (blobs.count(digest)) {
+            blob = blobs.at(digest);
+        }
+        else if (digest_to_filecontents.count(digest)) {
+            blob = digest_to_filecontents.at(digest);
+        }
+        else {
+            throw std::runtime_error(
+                "FindMissingBlobs returned non-existent digest");
+        }
+
+        upload_requests.emplace_back(
+            buildboxcommon::Client::UploadRequest(digest, blob));
+    }
+
+    casClient->uploadBlobs(upload_requests);
+}
+
 void uploadDirectory(const std::string &path, const proto::Digest &digest,
                      const digest_string_umap &directoryBlobs,
                      const digest_string_umap &directoryDigestToFilecontents,
-                     const std::unique_ptr<CASClient> &casClient)
+                     const std::unique_ptr<buildboxcommon::Client> &casClient)
 {
     assert(casClient != nullptr);
 
     try {
         BUILDBOX_LOG_DEBUG("Starting to upload merkle tree...");
-        casClient->upload_resources(directoryBlobs,
-                                    directoryDigestToFilecontents);
+        uploadResources(directoryBlobs, directoryDigestToFilecontents,
+                        casClient);
         BUILDBOX_LOG_INFO("Uploaded \"" << path << "\": " << digest.hash()
                                         << "/" << digest.size_bytes());
     }
@@ -88,7 +124,7 @@ void uploadDirectory(const std::string &path, const proto::Digest &digest,
 }
 
 void processDirectory(const std::string &path, const bool followSymlinks,
-                      const std::unique_ptr<CASClient> &casClient)
+                      const std::unique_ptr<buildboxcommon::Client> &casClient)
 {
     digest_string_umap directoryBlobs;
     digest_string_umap directoryDigestToFilecontents;
@@ -131,7 +167,7 @@ struct stat getStatOrExit(const bool followSymlinks, const std::string &path)
 void processPath(const std::string &path, const bool followSymlinks,
                  NestedDirectory *nestedDirectory,
                  digest_string_umap *digestToFileContents,
-                 const std::unique_ptr<CASClient> &casClient)
+                 const std::unique_ptr<buildboxcommon::Client> &casClient)
 {
     BUILDBOX_LOG_DEBUG("Starting to process \""
                        << path << "\", followSymlinks = " << std::boolalpha
@@ -205,10 +241,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    // gRPC connection objects (we don't initialize them if `dryRunMode` is
-    // set):
-    std::unique_ptr<GrpcContext> grpcContext;
-    std::unique_ptr<CASClient> casClient;
+    // CAS client object (we don't initialize it if `dryRunMode` is set):
+    std::unique_ptr<buildboxcommon::Client> casClient;
 
     if (!dryRunMode) {
         if (casServerAddress.empty()) {
@@ -222,16 +256,8 @@ int main(int argc, char *argv[])
         connectionOptions.d_url = casServerAddress.c_str();
         connectionOptions.d_instanceName = instance.c_str();
 
-        auto grpcChannel = connectionOptions.createChannel();
-
-        grpcContext = std::make_unique<GrpcContext>();
-
-        casClient = std::make_unique<CASClient>(
-            grpcChannel, connectionOptions.d_instanceName, grpcContext.get());
-
-        if (RECC_CAS_GET_CAPABILITIES) {
-            casClient->setUpFromServerCapabilities();
-        }
+        casClient = std::make_unique<buildboxcommon::Client>();
+        casClient->init(connectionOptions);
     }
 
     NestedDirectory nestedDirectory;
@@ -261,7 +287,7 @@ int main(int argc, char *argv[])
     }
 
     try {
-        casClient->upload_resources(blobs, digestToFileContents);
+        uploadResources(blobs, digestToFileContents, casClient);
         BUILDBOX_LOG_DEBUG("Files uploaded successfully");
         if (output_digest_file.length() > 0) {
             std::ofstream digest_file;
