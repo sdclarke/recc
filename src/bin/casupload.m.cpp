@@ -15,7 +15,6 @@
 #include <casclient.h>
 #include <env.h>
 #include <fileutils.h>
-#include <grpcchannels.h>
 #include <grpccontext.h>
 #include <merklize.h>
 #include <reccfile.h>
@@ -35,7 +34,8 @@
 using namespace BloombergLP::recc;
 
 const std::string
-    USAGE("USAGE: casupload  [--follow-symlinks | -f] [--dry-run | -d] "
+    USAGE("USAGE: casupload --cas-server=ADDRESS [--instance=INSTANCE] "
+          "[--follow-symlinks | -f] [--dry-run | -d] "
           "[--output-digest-file=<FILE>] <paths>\n");
 
 const std::string HELP(
@@ -54,11 +54,11 @@ const std::string HELP(
     "within the directory.\n"
     "\n"
     "The server and instance to write to are controlled by the "
-    "RECC_CAS_SERVER\n"
-    "and RECC_INSTANCE environment variables.\n"
+    "ADDRESS\n"
+    "and INSTANCE arguments.\n"
     "\n"
     "By default 'casupload' will not follow symlinks. Use option -f or \n"
-    "'--follow-symlinks' to alter this behavior\n"
+    "'--links' to alter this behavior\n"
     "\n"
     "If `--dry-run` is set, digests will be calculated and printed but \n"
     "no transfers to the remote will take place.\n"
@@ -174,6 +174,7 @@ int main(int argc, char *argv[])
     bool dryRunMode = false;             // If set, do not upload contents.
     std::string output_digest_file = ""; // Output the digest to this file
     std::vector<std::string> paths;
+    std::string casServerAddress, instance;
 
     for (auto i = 1; i < argc; i++) {
         const std::string argument_value(argv[i]);
@@ -182,7 +183,14 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        if (argument_value == "--follow-symlinks" || argument_value == "-f") {
+        if (argument_value.find("--instance=") == 0) {
+            instance = argument_value.substr(strlen("--instance="));
+        }
+        else if (argument_value.find("--cas-server=") == 0) {
+            casServerAddress = argument_value.substr(strlen("--cas-server="));
+        }
+        else if (argument_value == "--follow-symlinks" ||
+                 argument_value == "-f") {
             followSymlinks = true;
         }
         else if (argument_value == "--dry-run" || argument_value == "-d") {
@@ -199,18 +207,27 @@ int main(int argc, char *argv[])
 
     // gRPC connection objects (we don't initialize them if `dryRunMode` is
     // set):
-    std::unique_ptr<GrpcChannels> returnChannels;
     std::unique_ptr<GrpcContext> grpcContext;
     std::unique_ptr<CASClient> casClient;
 
     if (!dryRunMode) {
-        returnChannels = std::make_unique<GrpcChannels>(
-            GrpcChannels::get_channels_from_config());
+        if (casServerAddress.empty()) {
+            std::cerr << "Error: missing --cas-server argument" << std::endl
+                      << std::endl
+                      << HELP << std::endl;
+            return 1;
+        }
+
+        buildboxcommon::ConnectionOptions connectionOptions;
+        connectionOptions.d_url = casServerAddress.c_str();
+        connectionOptions.d_instanceName = instance.c_str();
+
+        auto grpcChannel = connectionOptions.createChannel();
 
         grpcContext = std::make_unique<GrpcContext>();
 
         casClient = std::make_unique<CASClient>(
-            returnChannels->cas(), RECC_INSTANCE, grpcContext.get());
+            grpcChannel, connectionOptions.d_instanceName, grpcContext.get());
 
         if (RECC_CAS_GET_CAPABILITIES) {
             casClient->setUpFromServerCapabilities();
