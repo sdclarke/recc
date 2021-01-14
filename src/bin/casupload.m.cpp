@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <env.h>
-
 #include <buildboxcommon_client.h>
 #include <buildboxcommon_fileutils.h>
 #include <buildboxcommon_logging.h>
@@ -25,10 +23,7 @@
 #include <grpcpp/create_channel.h>
 #include <grpcpp/security/credentials.h>
 #include <iostream>
-#include <reccdefaults.h>
 #include <sys/stat.h>
-
-using namespace BloombergLP::recc;
 
 const std::string
     USAGE("USAGE: casupload --cas-server=ADDRESS [--instance=INSTANCE] "
@@ -194,9 +189,6 @@ void processPath(const std::string &path, const bool followSymlinks,
 int main(int argc, char *argv[])
 {
     buildboxcommon::logging::Logger::getLoggerInstance().initialize(argv[0]);
-
-    Env::set_config_locations();
-    Env::parse_config_variables();
 
     if (argc == 1) {
         BUILDBOX_LOG_ERROR(USAGE);
