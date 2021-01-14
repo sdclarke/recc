@@ -14,12 +14,11 @@
 
 #include <env.h>
 #include <fileutils.h>
-#include <merklize.h>
-#include <reccfile.h>
 
 #include <buildboxcommon_client.h>
+#include <buildboxcommon_fileutils.h>
 #include <buildboxcommon_logging.h>
-#include <buildboxcommon_systemutils.h>
+#include <buildboxcommon_merklize.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -65,15 +64,16 @@ const std::string HELP(
     "If `--output-digest-file=<FILE>` is set, the output digest will be \n"
     "written to <FILE> in the form \"<HASH>/<SIZE_BYTES>\".");
 
-void uploadResources(const digest_string_umap &blobs,
-                     const digest_string_umap &digest_to_filecontents,
-                     const std::unique_ptr<buildboxcommon::Client> &casClient)
+void uploadResources(
+    const buildboxcommon::digest_string_map &blobs,
+    const buildboxcommon::digest_string_map &digest_to_filepaths,
+    const std::unique_ptr<buildboxcommon::Client> &casClient)
 {
-    std::vector<proto::Digest> digestsToUpload;
+    std::vector<buildboxcommon::Digest> digestsToUpload;
     for (const auto &i : blobs) {
         digestsToUpload.push_back(i.first);
     }
-    for (const auto &i : digest_to_filecontents) {
+    for (const auto &i : digest_to_filepaths) {
         digestsToUpload.push_back(i.first);
     }
 
@@ -83,36 +83,35 @@ void uploadResources(const digest_string_umap &blobs,
     upload_requests.reserve(missingDigests.size());
     for (const auto &digest : missingDigests) {
         // Finding the data in one of the source maps:
-        std::string blob;
         if (blobs.count(digest)) {
-            blob = blobs.at(digest);
+            upload_requests.emplace_back(buildboxcommon::Client::UploadRequest(
+                digest, blobs.at(digest)));
         }
-        else if (digest_to_filecontents.count(digest)) {
-            blob = digest_to_filecontents.at(digest);
+        else if (digest_to_filepaths.count(digest)) {
+            upload_requests.emplace_back(
+                buildboxcommon::Client::UploadRequest::from_path(
+                    digest, digest_to_filepaths.at(digest)));
         }
         else {
             throw std::runtime_error(
                 "FindMissingBlobs returned non-existent digest");
         }
-
-        upload_requests.emplace_back(
-            buildboxcommon::Client::UploadRequest(digest, blob));
     }
 
     casClient->uploadBlobs(upload_requests);
 }
 
-void uploadDirectory(const std::string &path, const proto::Digest &digest,
-                     const digest_string_umap &directoryBlobs,
-                     const digest_string_umap &directoryDigestToFilecontents,
-                     const std::unique_ptr<buildboxcommon::Client> &casClient)
+void uploadDirectory(
+    const std::string &path, const buildboxcommon::Digest &digest,
+    const buildboxcommon::digest_string_map &directoryBlobs,
+    const buildboxcommon::digest_string_map &directoryDigestToFilepaths,
+    const std::unique_ptr<buildboxcommon::Client> &casClient)
 {
     assert(casClient != nullptr);
 
     try {
         BUILDBOX_LOG_DEBUG("Starting to upload merkle tree...");
-        uploadResources(directoryBlobs, directoryDigestToFilecontents,
-                        casClient);
+        uploadResources(directoryBlobs, directoryDigestToFilepaths, casClient);
         BUILDBOX_LOG_INFO("Uploaded \"" << path << "\": " << digest.hash()
                                         << "/" << digest.size_bytes());
     }
@@ -126,16 +125,11 @@ void uploadDirectory(const std::string &path, const proto::Digest &digest,
 void processDirectory(const std::string &path, const bool followSymlinks,
                       const std::unique_ptr<buildboxcommon::Client> &casClient)
 {
-    digest_string_umap directoryBlobs;
-    digest_string_umap directoryDigestToFilecontents;
+    buildboxcommon::digest_string_map directoryBlobs;
+    buildboxcommon::digest_string_map directoryDigestToFilepaths;
 
-    // set project root to the fully resolved path of this directory
-    // to ensure it's the root in the merkle tree
-    const std::string abspath = buildboxcommon::FileUtils::makePathAbsolute(
-        path, buildboxcommon::SystemUtils::get_current_working_directory());
-    RECC_PROJECT_ROOT = abspath.c_str();
-    const auto singleNestedDirectory = make_nesteddirectory(
-        abspath.c_str(), &directoryDigestToFilecontents, followSymlinks);
+    const auto singleNestedDirectory = buildboxcommon::make_nesteddirectory(
+        path.c_str(), &directoryDigestToFilepaths, followSymlinks);
     const auto digest = singleNestedDirectory.to_digest(&directoryBlobs);
 
     BUILDBOX_LOG_DEBUG("Finished building nested directory from \""
@@ -150,7 +144,7 @@ void processDirectory(const std::string &path, const bool followSymlinks,
     }
     else {
         uploadDirectory(path, digest, directoryBlobs,
-                        directoryDigestToFilecontents, casClient);
+                        directoryDigestToFilepaths, casClient);
     }
 }
 
@@ -165,8 +159,8 @@ struct stat getStatOrExit(const bool followSymlinks, const std::string &path)
 }
 
 void processPath(const std::string &path, const bool followSymlinks,
-                 NestedDirectory *nestedDirectory,
-                 digest_string_umap *digestToFileContents,
+                 buildboxcommon::NestedDirectory *nestedDirectory,
+                 buildboxcommon::digest_string_map *digestToFilePaths,
                  const std::unique_ptr<buildboxcommon::Client> &casClient)
 {
     BUILDBOX_LOG_DEBUG("Starting to process \""
@@ -177,19 +171,26 @@ void processPath(const std::string &path, const bool followSymlinks,
 
     if (S_ISDIR(statResult.st_mode)) {
         processDirectory(path, followSymlinks, casClient);
-        return;
     }
+    else if (S_ISLNK(statResult.st_mode)) {
+        std::string target(static_cast<size_t>(statResult.st_size), '\0');
 
-    const std::shared_ptr<ReccFile> file =
-        ReccFileFactory::createFile(path.c_str(), followSymlinks);
-    if (!file) {
+        if (readlink(path.c_str(), &target[0], target.size()) < 0) {
+            BUILDBOX_LOG_ERROR("Error reading target of symbolic link \""
+                               << path << "\": " << strerror(errno));
+            exit(1);
+        }
+        nestedDirectory->addSymlink(target, path.c_str());
+    }
+    else if (S_ISREG(statResult.st_mode)) {
+        const buildboxcommon::File file(path.c_str());
+        nestedDirectory->add(file, path.c_str());
+        digestToFilePaths->emplace(file.d_digest, path);
+    }
+    else {
         BUILDBOX_LOG_DEBUG("Encountered unsupported file \""
                            << path << "\", skipping...");
-        return;
     }
-
-    nestedDirectory->add(file, path.c_str());
-    digestToFileContents->emplace(file->getDigest(), file->getFileContents());
 }
 
 int main(int argc, char *argv[])
@@ -260,22 +261,22 @@ int main(int argc, char *argv[])
         casClient->init(connectionOptions);
     }
 
-    NestedDirectory nestedDirectory;
-    digest_string_umap digestToFileContents;
+    buildboxcommon::NestedDirectory nestedDirectory;
+    buildboxcommon::digest_string_map digestToFilePaths;
 
     // Upload directories individually, and aggregate files to upload as single
     // merkle tree
     for (const auto &path : paths) {
-        processPath(path, followSymlinks, &nestedDirectory,
-                    &digestToFileContents, casClient);
+        processPath(path, followSymlinks, &nestedDirectory, &digestToFilePaths,
+                    casClient);
     }
 
-    if (digestToFileContents.empty()) {
+    if (digestToFilePaths.empty()) {
         return 0;
     }
 
     BUILDBOX_LOG_DEBUG("Building nested directory structure...");
-    digest_string_umap blobs;
+    buildboxcommon::digest_string_map blobs;
     const auto directoryDigest = nestedDirectory.to_digest(&blobs);
 
     BUILDBOX_LOG_INFO("Computed directory digest: "
@@ -287,7 +288,7 @@ int main(int argc, char *argv[])
     }
 
     try {
-        uploadResources(blobs, digestToFileContents, casClient);
+        uploadResources(blobs, digestToFilePaths, casClient);
         BUILDBOX_LOG_DEBUG("Files uploaded successfully");
         if (output_digest_file.length() > 0) {
             std::ofstream digest_file;
