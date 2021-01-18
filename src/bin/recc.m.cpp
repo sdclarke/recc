@@ -255,9 +255,8 @@ int main(int argc, char *argv[])
         }
     }
     else {
-        BUILDBOX_LOG_DEBUG("Not a compiler command, so running locally.");
-        BUILDBOX_LOG_DEBUG(
-            "(use RECC_FORCE_REMOTE=1 to force remote execution)");
+        BUILDBOX_LOG_INFO("Not a compiler command, so running locally. (Use "
+                          "RECC_FORCE_REMOTE=1 to force remote execution)");
     }
 
     // If we don't need to build an `Action` or if the process fails, we defer
@@ -272,8 +271,7 @@ int main(int argc, char *argv[])
     const proto::Action action = *actionPtr;
     const proto::Digest actionDigest = DigestGenerator::make_digest(action);
 
-    BUILDBOX_LOG_DEBUG("Action Digest: " << actionDigest.hash() << "/"
-                                         << actionDigest.size_bytes()
+    BUILDBOX_LOG_DEBUG("Action Digest: " << actionDigest
                                          << " Action Contents: "
                                          << action.ShortDebugString());
 
@@ -310,9 +308,8 @@ int main(int argc, char *argv[])
                     actionDigest, command.get_products(), RECC_INSTANCE,
                     &result);
                 if (action_in_cache) {
-                    BUILDBOX_LOG_DEBUG("Action cache hit for "
-                                       << actionDigest.hash() << "/"
-                                       << actionDigest.size_bytes());
+                    BUILDBOX_LOG_INFO("Action Cache hit for [" << actionDigest
+                                                               << "]");
                 }
             }
         }
@@ -327,6 +324,9 @@ int main(int argc, char *argv[])
     // necessary resources to CAS:
     if (!action_in_cache) {
         blobs[actionDigest] = action.SerializeAsString();
+
+        BUILDBOX_LOG_INFO("Executing action remotely... [actionDigest="
+                          << actionDigest << "]");
 
         BUILDBOX_LOG_DEBUG("Uploading resources...");
         try {
@@ -347,16 +347,14 @@ int main(int argc, char *argv[])
 
         // And call `Execute()`:
         try {
-            BUILDBOX_LOG_DEBUG("Executing action... actionDigest: "
-                               << actionDigest.hash() << "/"
-                               << actionDigest.size_bytes());
-            { // Timed block
-                buildboxcommon::buildboxcommonmetrics::MetricGuard<
-                    buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
-                    mt(TIMER_NAME_EXECUTE_ACTION);
+            // Timed block
+            buildboxcommon::buildboxcommonmetrics::MetricGuard<
+                buildboxcommon::buildboxcommonmetrics::DurationMetricTimer>
+                mt(TIMER_NAME_EXECUTE_ACTION);
 
-                result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
-            }
+            result = client.execute_action(actionDigest, RECC_SKIP_CACHE);
+            BUILDBOX_LOG_INFO("Remote execution finished with exit code "
+                              << result.d_exitCode);
         }
         catch (const std::exception &e) {
             BUILDBOX_LOG_ERROR("Error while calling `Execute()` on \""
