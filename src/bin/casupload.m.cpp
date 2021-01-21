@@ -21,6 +21,7 @@
 #include <reccfile.h>
 
 #include <buildboxcommon_logging.h>
+#include <buildboxcommon_systemutils.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -95,7 +96,7 @@ void processDirectory(const std::string &path, const bool followSymlinks,
     // set project root to the fully resolved path of this directory
     // to ensure it's the root in the merkle tree
     const std::string abspath = buildboxcommon::FileUtils::makePathAbsolute(
-        path, FileUtils::getCurrentWorkingDirectory());
+        path, buildboxcommon::SystemUtils::get_current_working_directory());
     RECC_PROJECT_ROOT = abspath.c_str();
     const auto singleNestedDirectory = make_nesteddirectory(
         abspath.c_str(), &directoryDigestToFilecontents, followSymlinks);
