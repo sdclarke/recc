@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include <env.h>
-#include <fileutils.h>
 
 #include <buildboxcommon_client.h>
 #include <buildboxcommon_fileutils.h>
@@ -148,16 +147,6 @@ void processDirectory(const std::string &path, const bool followSymlinks,
     }
 }
 
-struct stat getStatOrExit(const bool followSymlinks, const std::string &path)
-{
-    try {
-        return FileUtils::getStat(path, followSymlinks);
-    }
-    catch (const std::system_error &) {
-        exit(1); // `get_stat()` logged the error.
-    }
-}
-
 void processPath(const std::string &path, const bool followSymlinks,
                  buildboxcommon::NestedDirectory *nestedDirectory,
                  buildboxcommon::digest_string_map *digestToFilePaths,
@@ -167,7 +156,16 @@ void processPath(const std::string &path, const bool followSymlinks,
                        << path << "\", followSymlinks = " << std::boolalpha
                        << followSymlinks << std::noboolalpha);
 
-    const struct stat statResult = getStatOrExit(followSymlinks, path);
+    struct stat statResult;
+    int statFlags = 0;
+    if (!followSymlinks) {
+        statFlags = AT_SYMLINK_NOFOLLOW;
+    }
+    if (fstatat(AT_FDCWD, path.c_str(), &statResult, statFlags) != 0) {
+        BUILDBOX_LOG_ERROR("Error getting file status for path \""
+                           << path << "\": " << strerror(errno));
+        exit(1);
+    }
 
     if (S_ISDIR(statResult.st_mode)) {
         processDirectory(path, followSymlinks, casClient);
