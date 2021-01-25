@@ -349,9 +349,6 @@ them in the `bin` subdirectory of the project root.
   command. (`recc` uses this to decide which files to send to the Remote
   Execution server.)
 
-- `casupload [files]` - Upload the given files to CAS, then print the digest
-  hash and size of the resulting Directory message.
-
 <!-- Reference links -->
 [buildbox-common]: https://gitlab.com/BuildGrid/buildbox/buildbox-common
 [grpc]: https://grpc.io/

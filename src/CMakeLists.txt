@@ -29,10 +29,6 @@ endif ()
 add_executable(${BINARY} bin/${BINARY}.m.cpp)
 target_link_libraries(${BINARY} remoteexecution)
 
-# casupload
-add_executable(casupload bin/casupload.m.cpp)
-target_link_libraries(casupload remoteexecution)
-
 # deps
 add_executable(deps deps.cpp bin/deps.m.cpp)
 target_link_libraries(deps remoteexecution)
@@ -44,6 +40,5 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU"
 else()
     target_compile_options(remoteexecution PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
     target_compile_options(${BINARY} PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
-    target_compile_options(casupload PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
     target_compile_options(deps PRIVATE -Wall -Werror=shadow ${DEBUG_FLAGS})
 endif()
