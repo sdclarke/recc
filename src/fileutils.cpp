@@ -91,36 +91,6 @@ std::string FileUtils::getSymlinkContents(const std::string &path,
     return contents;
 }
 
-std::string FileUtils::getFileContents(const std::string &path,
-                                       const struct stat &statResult)
-{
-    if (!S_ISREG(statResult.st_mode)) {
-        std::ostringstream oss;
-        oss << "file \"" << path << "\" is not a regular file";
-        BUILDBOX_LOG_ERROR(oss.str());
-        throw std::runtime_error(oss.str());
-    }
-
-    std::string contents;
-    std::ifstream fileStream;
-    fileStream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    fileStream.open(path.c_str(), std::ios::in | std::ios::binary);
-
-    auto start = fileStream.tellg();
-    fileStream.seekg(0, std::ios::end);
-    auto size = fileStream.tellg() - start;
-
-    contents.resize(static_cast<std::string::size_type>(size));
-    fileStream.seekg(start);
-
-    if (fileStream) {
-        fileStream.read(&contents[0],
-                        static_cast<std::streamsize>(contents.length()));
-    }
-
-    return contents;
-}
-
 void FileUtils::writeFile(const std::string &path, const std::string &contents)
 {
     const char *path_p = path.c_str();

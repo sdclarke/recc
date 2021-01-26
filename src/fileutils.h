@@ -48,15 +48,6 @@ struct FileUtils {
                                           const struct stat &statResult);
 
     /**
-     * Given the path to a file, return a std::string with its contents.
-     *
-     * The path must be a path to a file that exists on disk. It can be
-     * absolute or relative to the current directory.
-     */
-    static std::string getFileContents(const std::string &path,
-                                       const struct stat &statResult);
-
-    /**
      * Overwrite the given file with the given contents.
      */
     static void writeFile(const std::string &path,
