@@ -70,9 +70,8 @@ ReccFileFactory::createFile(const char *path, const bool followSymlinks)
         const std::string file_name =
             buildboxcommon::FileUtils::pathBasename(path);
         const std::string file_contents =
-            (symlink
-                 ? FileUtils::getSymlinkContents(path, statResult)
-                 : FileUtils::getFileContents(std::string(path), statResult));
+            (symlink ? FileUtils::getSymlinkContents(path, statResult)
+                     : buildboxcommon::FileUtils::getFileContents(path));
 
         const proto::Digest file_digest =
             DigestGenerator::make_digest(file_contents);
