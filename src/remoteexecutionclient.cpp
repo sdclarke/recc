@@ -290,10 +290,16 @@ void RemoteExecutionClient::write_files_to_disk(const ActionResult &result,
     for (const auto &fileIter : result.d_outputFiles) {
         const std::string path = std::string(root) + "/" + fileIter.first;
         BUILDBOX_LOG_DEBUG("Writing " << path);
-        FileUtils::writeFile(path, get_outputblob(fileIter.second));
+
+        const std::string parent_path = path.substr(0, path.rfind('/'));
+        buildboxcommon::FileUtils::createDirectory(parent_path.c_str());
+
+        mode_t mode = 0644;
         if (fileIter.second.d_executable) {
-            buildboxcommon::FileUtils::makeExecutable(path.c_str());
+            mode |= S_IXUSR | S_IXGRP | S_IXOTH;
         }
+        buildboxcommon::FileUtils::writeFileAtomically(
+            path, get_outputblob(fileIter.second), mode);
     }
 }
 
