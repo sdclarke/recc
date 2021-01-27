@@ -26,45 +26,6 @@
 namespace BloombergLP {
 namespace recc {
 
-void FileUtils::createDirectoryRecursive(const std::string &path)
-{
-    BUILDBOX_LOG_DEBUG("Creating directory at " << path);
-    const char *path_p = path.c_str();
-    if (mkdir(path_p, 0777) != 0) {
-        if (errno == EEXIST) {
-            // The directory already exists, so return.
-            return;
-        }
-        else if (errno == ENOENT) {
-            auto lastSlash = strrchr(path_p, '/');
-            if (lastSlash == nullptr) {
-                std::ostringstream error;
-                error << "no slash in \"" << path << "\"";
-                BUILDBOX_LOG_ERROR(error.str());
-                throw std::runtime_error(error.str());
-            }
-            std::string parent(path_p, static_cast<std::string::size_type>(
-                                           lastSlash - path_p));
-            createDirectoryRecursive(parent);
-            if (mkdir(path_p, 0777) != 0) {
-                std::ostringstream error;
-                error << "error in mkdir for path \"" << path_p << "\""
-                      << ", errno = [" << errno << ":" << strerror(errno)
-                      << "]";
-                BUILDBOX_LOG_ERROR(error.str());
-                throw std::system_error(errno, std::system_category());
-            }
-        }
-        else {
-            std::ostringstream error;
-            error << "error in mkdir for path \"" << path_p << "\""
-                  << ", errno = [" << errno << ":" << strerror(errno) << "]";
-            BUILDBOX_LOG_ERROR(error.str());
-            throw std::system_error(errno, std::system_category());
-        }
-    }
-}
-
 bool FileUtils::isRegularFileOrSymlink(const struct stat &s)
 {
     return (S_ISREG(s.st_mode) || S_ISLNK(s.st_mode));
@@ -171,7 +132,7 @@ void FileUtils::writeFile(const std::string &path, const std::string &contents)
                 path_p, static_cast<std::string::size_type>(slash - path_p));
             slashPath =
                 buildboxcommon::FileUtils::normalizePath(slashPath.c_str());
-            createDirectoryRecursive(slashPath);
+            buildboxcommon::FileUtils::createDirectory(slashPath.c_str());
             fileStream.open(path_p, std::ios::trunc | std::ios::binary);
         }
     }

@@ -589,7 +589,7 @@ TEST(NestedDirectoryTest, EmptyDirTest)
     std::string dirTree = topDir + "/" + subDir;
     std::string filePath = topDir + "/hello.txt";
     std::string fileContents = "hello!";
-    FileUtils::createDirectoryRecursive((cwd + "/" + dirTree).c_str());
+    buildboxcommon::FileUtils::createDirectory((cwd + "/" + dirTree).c_str());
     FileUtils::writeFile((cwd + "/" + filePath).c_str(), fileContents.c_str());
 
     std::string dirPath = cwd + "/" + topDir;

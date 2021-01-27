@@ -30,19 +30,6 @@
 #include <vector>
 using namespace BloombergLP::recc;
 
-TEST(FileUtilsTest, CreateDirectoryRecursive)
-{
-    buildboxcommon::TemporaryDirectory tempDir;
-    const std::string name =
-        tempDir.name() + std::string("/some/directory/path");
-
-    FileUtils::createDirectoryRecursive(name);
-
-    struct stat statResult;
-    ASSERT_EQ(stat(name.c_str(), &statResult), 0);
-    ASSERT_TRUE(S_ISDIR(statResult.st_mode));
-}
-
 TEST(FileUtilsTest, FileContents)
 {
     buildboxcommon::TemporaryDirectory tempDir;

@@ -29,12 +29,6 @@ namespace recc {
 
 struct FileUtils {
     /**
-     * Create a directory if it doesn't already exist, creating parent
-     * directories as needed.
-     */
-    static void createDirectoryRecursive(const std::string &path);
-
-    /**
      * Return the 'struct stat' given an absolute file path
      */
     static struct stat getStat(const std::string &path,
