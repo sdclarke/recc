@@ -37,24 +37,14 @@ TEST(FileUtilsTest, FileContents)
 
     EXPECT_THROW(buildboxcommon::FileUtils::getFileContents(fileName.c_str()),
                  std::exception);
-    FileUtils::writeFile(fileName, "File contents");
+    buildboxcommon::FileUtils::writeFileAtomically(fileName, "File contents");
     EXPECT_EQ(buildboxcommon::FileUtils::getFileContents(fileName.c_str()),
               "File contents");
 
-    FileUtils::writeFile(fileName, "Overwrite, don't append");
+    buildboxcommon::FileUtils::writeFileAtomically(fileName,
+                                                   "Overwrite, don't append");
     EXPECT_EQ(buildboxcommon::FileUtils::getFileContents(fileName.c_str()),
               "Overwrite, don't append");
-}
-
-TEST(FileUtilsTest, FileContentsCreatesDirectory)
-{
-    buildboxcommon::TemporaryDirectory tempDir;
-    const std::string fileName =
-        tempDir.name() + std::string("/some/subdirectory/file.txt");
-
-    FileUtils::writeFile(fileName, "File contents");
-    EXPECT_EQ(buildboxcommon::FileUtils::getFileContents(fileName.c_str()),
-              "File contents");
 }
 
 TEST(HasPathPrefixTest, AbsolutePaths)

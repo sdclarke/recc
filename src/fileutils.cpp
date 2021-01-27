@@ -91,25 +91,6 @@ std::string FileUtils::getSymlinkContents(const std::string &path,
     return contents;
 }
 
-void FileUtils::writeFile(const std::string &path, const std::string &contents)
-{
-    const char *path_p = path.c_str();
-    std::ofstream fileStream(path_p, std::ios::trunc | std::ios::binary);
-    if (!fileStream) {
-        const auto slash = strrchr(path_p, '/');
-        if (slash != nullptr) {
-            std::string slashPath(
-                path_p, static_cast<std::string::size_type>(slash - path_p));
-            slashPath =
-                buildboxcommon::FileUtils::normalizePath(slashPath.c_str());
-            buildboxcommon::FileUtils::createDirectory(slashPath.c_str());
-            fileStream.open(path_p, std::ios::trunc | std::ios::binary);
-        }
-    }
-    fileStream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
-    fileStream << contents << std::flush;
-}
-
 bool FileUtils::hasPathPrefix(const std::string &path,
                               const std::string &prefix)
 {

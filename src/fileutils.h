@@ -48,12 +48,6 @@ struct FileUtils {
                                           const struct stat &statResult);
 
     /**
-     * Overwrite the given file with the given contents.
-     */
-    static void writeFile(const std::string &path,
-                          const std::string &contents);
-
-    /**
      * Returns true if "path" has "prefix" as a prefix.
      *
      * Before performing the check, a trailing slash is appended to prefix if

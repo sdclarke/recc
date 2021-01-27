@@ -590,7 +590,8 @@ TEST(NestedDirectoryTest, EmptyDirTest)
     std::string filePath = topDir + "/hello.txt";
     std::string fileContents = "hello!";
     buildboxcommon::FileUtils::createDirectory((cwd + "/" + dirTree).c_str());
-    FileUtils::writeFile((cwd + "/" + filePath).c_str(), fileContents.c_str());
+    buildboxcommon::FileUtils::writeFileAtomically(
+        (cwd + "/" + filePath).c_str(), fileContents.c_str());
 
     std::string dirPath = cwd + "/" + topDir;
     digest_string_umap fileMap;

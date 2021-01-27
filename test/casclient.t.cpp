@@ -128,7 +128,7 @@ TEST_F(CasClientFixture, AlreadyUploadedFile)
 {
     buildboxcommon::TemporaryDirectory tmpdir;
     std::string path = tmpdir.name() + std::string("/abc.txt");
-    FileUtils::writeFile(path, "abc");
+    buildboxcommon::FileUtils::writeFileAtomically(path, "abc");
 
     digest_string_umap digest_to_filecontents;
     digest_to_filecontents[make_digest(abc)] = path;
@@ -172,7 +172,7 @@ TEST_F(CasClientFixture, NewFileUpload)
 {
     buildboxcommon::TemporaryDirectory tmpdir;
     std::string path = tmpdir.name() + std::string("/abc.txt");
-    FileUtils::writeFile(path, "abc");
+    buildboxcommon::FileUtils::writeFileAtomically(path, "abc");
 
     digest_string_umap digest_to_filecontents;
     digest_to_filecontents[make_digest(abc)] =
