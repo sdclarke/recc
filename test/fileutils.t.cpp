@@ -325,32 +325,6 @@ TEST(FileUtilsTest, LastNSegments)
     EXPECT_ANY_THROW(FileUtils::lastNSegments("/a/bb/c/dd/e/", 6));
 }
 
-TEST(FileUtilsTest, JoinNormalizePath)
-{
-    const std::string base = "base/";
-    const std::string extension = "/extension";
-    const std::string proper = "base/extension";
-    const int bLast = base.size() - 1;
-
-    // Both base & extension have slashes
-    EXPECT_EQ(FileUtils::joinNormalizePath(base, extension), proper);
-    // neither have slashes
-    EXPECT_EQ(FileUtils::joinNormalizePath(base.substr(0, bLast),
-                                           extension.substr(1)),
-              proper);
-    // only base has slash
-    EXPECT_EQ(FileUtils::joinNormalizePath(base, extension.substr(1)), proper);
-    // only extension has slash
-    EXPECT_EQ(FileUtils::joinNormalizePath(base.substr(0, bLast), extension),
-              proper);
-    // extension empty, should just normalize base
-    EXPECT_EQ(FileUtils::joinNormalizePath(base, ""), base.substr(0, bLast));
-    // base empty, should just normalize extension
-    EXPECT_EQ(FileUtils::joinNormalizePath("", extension), extension);
-    // both empty, should return the current directory
-    EXPECT_EQ(FileUtils::joinNormalizePath("", ""), ".");
-}
-
 TEST(FileUtilsTest, AbsolutePaths)
 {
     EXPECT_EQ(false, FileUtils::isAbsolutePath("../hello"));

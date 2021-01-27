@@ -93,18 +93,6 @@ struct FileUtils {
                                         const char *workingDirectory);
 
     /**
-     * Joins two paths, and removes an extraneous slash or adds one if needed
-     * Calls normalize_path on concatenated path, removing trailing slashes
-     *
-     * base can be an absolute or relative path. Extension should be a path
-     * ending s.t path+base make a proper path. This function only properly
-     * concatenates two paths and normalizes the result. It does not check if
-     * the resulting path exists.
-     */
-    static std::string joinNormalizePath(const std::string &base,
-                                         const std::string &extension);
-
-    /**
      * Return the current working directory.
      *
      * If the current working directory cannot be determined (if the user does

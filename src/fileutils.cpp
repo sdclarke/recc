@@ -280,32 +280,6 @@ std::string FileUtils::makePathRelative(std::string path,
     return result;
 }
 
-std::string FileUtils::joinNormalizePath(const std::string &base,
-                                         const std::string &extension)
-{
-    std::ostringstream catPath;
-    catPath << base;
-    const char SLASH = '/';
-    const bool extStartSlash = (extension.front() == SLASH);
-    const bool baseEndSlash = (base.back() == SLASH);
-
-    // "/a/" + "b" -> nothing
-    // "/a" + "b" -> << add "/"
-    // "/a/" + "/b"-> << remove "/"
-    // "/a" + "/b" ->  nothing
-    size_t index = 0;
-    // add slash if neither base nor extension have slash
-    if (!base.empty() && !baseEndSlash && !extStartSlash)
-        catPath << SLASH;
-    // remove slash if both base and extension have slash
-    else if (!extension.empty() && baseEndSlash && extStartSlash)
-        index = 1;
-
-    catPath << extension.substr(index);
-    std::string catPathStr = catPath.str();
-    return buildboxcommon::FileUtils::normalizePath(catPathStr.c_str());
-}
-
 std::string FileUtils::getCurrentWorkingDirectory()
 {
     unsigned int bufferSize = 1024;
