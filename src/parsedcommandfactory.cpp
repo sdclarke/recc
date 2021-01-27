@@ -15,6 +15,7 @@
 #include <parsedcommandfactory.h>
 
 #include <compilerdefaults.h>
+#include <env.h>
 #include <fileutils.h>
 
 #include <buildboxcommon_exception.h>
@@ -479,7 +480,13 @@ ParsedCommandModifiers::modifyRemotePath(const std::string &path,
                                          const std::string &workingDirectory)
 {
     const auto replacedPath = FileUtils::resolvePathFromPrefixMap(path);
-    return FileUtils::makePathRelative(replacedPath, workingDirectory.c_str());
+    if (FileUtils::hasPathPrefix(replacedPath, RECC_PROJECT_ROOT)) {
+        return buildboxcommon::FileUtils::makePathRelative(replacedPath,
+                                                           workingDirectory);
+    }
+    else {
+        return replacedPath;
+    }
 }
 
 void ParsedCommandModifiers::parseStageOptionList(

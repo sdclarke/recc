@@ -266,8 +266,10 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
             std::string modifiedDep(dep);
             if (modifiedDep[0] == '/') {
                 modifiedDep = FileUtils::resolvePathFromPrefixMap(modifiedDep);
-                modifiedDep =
-                    FileUtils::makePathRelative(modifiedDep, cwd.c_str());
+                if (FileUtils::hasPathPrefix(modifiedDep, RECC_PROJECT_ROOT)) {
+                    modifiedDep = buildboxcommon::FileUtils::makePathRelative(
+                        modifiedDep, cwd);
+                }
                 BUILDBOX_LOG_DEBUG("Mapping local path: ["
                                    << dep << "] to remote path: ["
                                    << modifiedDep << "]");
