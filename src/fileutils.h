@@ -105,13 +105,6 @@ struct FileUtils {
                                          const std::string &extension);
 
     /**
-     * Expand the ~ to home directory and normalizes If the path begins with ~.
-     * Throws an error if path[0] == ~ and $HOME not set. Just Normalizes path
-     * if it doesn't begin with ~.
-     */
-    static std::string expandPath(const std::string &path);
-
-    /**
      * Return the current working directory.
      *
      * If the current working directory cannot be determined (if the user does

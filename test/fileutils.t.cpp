@@ -351,27 +351,6 @@ TEST(FileUtilsTest, JoinNormalizePath)
     EXPECT_EQ(FileUtils::joinNormalizePath("", ""), ".");
 }
 
-TEST(FileUtilsTest, ExpandPath)
-{
-    const std::string home = getenv("HOME");
-    const std::string newHome = "tmp";
-    setenv("HOME", newHome.c_str(), true);
-
-    EXPECT_EQ(FileUtils::expandPath("~/"), newHome);
-    EXPECT_EQ(FileUtils::expandPath("~/fake_file"), newHome + "/fake_file");
-    EXPECT_EQ(FileUtils::expandPath("fake_dir/fake_file"),
-              "fake_dir/fake_file");
-
-    setenv("HOME", "", true);
-    ASSERT_THROW(FileUtils::expandPath("~/"), std::runtime_error);
-    EXPECT_EQ(FileUtils::expandPath("fake_dir/fake_file"),
-              "fake_dir/fake_file");
-    EXPECT_EQ(FileUtils::expandPath(""), ".");
-    // make sure $HOME is reset so other tests don't break
-    setenv("HOME", home.c_str(), true);
-    EXPECT_EQ(getenv("HOME"), home);
-}
-
 TEST(FileUtilsTest, AbsolutePaths)
 {
     EXPECT_EQ(false, FileUtils::isAbsolutePath("../hello"));

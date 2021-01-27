@@ -306,23 +306,6 @@ std::string FileUtils::joinNormalizePath(const std::string &base,
     return buildboxcommon::FileUtils::normalizePath(catPathStr.c_str());
 }
 
-std::string FileUtils::expandPath(const std::string &path)
-{
-    std::string home = "";
-    std::string newPath = path;
-    if (!path.empty() && path[0] == '~') {
-        home = getenv("HOME");
-        if (home.c_str() == nullptr or home[0] == '\0') {
-            std::ostringstream errorMsg;
-            errorMsg << "Could not expand path: " << path << " $HOME not set";
-            throw std::runtime_error(errorMsg.str());
-        }
-        newPath = path.substr(1);
-    }
-    std::string expandPath = joinNormalizePath(home, newPath);
-    return expandPath;
-}
-
 std::string FileUtils::getCurrentWorkingDirectory()
 {
     unsigned int bufferSize = 1024;
