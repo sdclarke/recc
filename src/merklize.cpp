@@ -228,7 +228,8 @@ proto::Digest NestedDirectory::to_digest(digest_string_umap *digestMap) const
     const auto digest = DigestGenerator::make_digest(blob);
 
     if (digestMap != nullptr) {
-        digestMap->emplace(digest, blob);
+      digestMap->emplace(digest.SerializeAsString(), blob);
+      
     }
 
     return digest;
@@ -322,7 +323,7 @@ void make_nesteddirectoryhelper(
                                    << normalizedReplacedRoot << "]");
 
                 // Store the digest, and the file contents.
-                fileMap->emplace(file->getDigest(), file->getFileContents());
+                fileMap->emplace(file->getDigest().SerializeAsString(), file->getFileContents());
                 // Store the updated/replaced path in the filePathMap, which
                 // will be used to construct the NestedDirectory later.
                 filePathMap->emplace(file, normalizedReplacedRoot);

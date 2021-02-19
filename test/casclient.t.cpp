@@ -249,7 +249,7 @@ TEST_F(CasClientFixture, LargeBlobUpload)
     std::string uploadNameRegex("uploads\\/"
                                 "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{"
                                 "4}-[0-9a-f]{12}\\/blobs\\/");
-    uploadNameRegex += bigBlobDigest.hash();
+    uploadNameRegex += bigBlobDigest.hash_other();
     uploadNameRegex += "\\/";
     uploadNameRegex += std::to_string(bigBlobDigest.size_bytes());
     EXPECT_TRUE(regex_match(name, std::regex(uploadNameRegex)));
@@ -259,7 +259,7 @@ TEST_F(CasClientFixture, FetchBlob)
 {
     const auto digest = make_digest(abc);
     google::bytestream::ReadRequest expectedRequest;
-    expectedRequest.set_resource_name("blobs/" + digest.hash() + "/3");
+    expectedRequest.set_resource_name("blobs/" + digest.hash_other() + "/3");
 
     google::bytestream::ReadResponse response;
     response.set_data(abc);
@@ -284,10 +284,10 @@ TEST_F(CasClientFixture, FetchBlobResumeDownload)
 
     auto digest = make_digest(abc);
     google::bytestream::ReadRequest firstRequest;
-    firstRequest.set_resource_name("blobs/" + digest.hash() + "/3");
+    firstRequest.set_resource_name("blobs/" + digest.hash_other() + "/3");
 
     google::bytestream::ReadRequest secondRequest;
-    secondRequest.set_resource_name("blobs/" + digest.hash() + "/3");
+    secondRequest.set_resource_name("blobs/" + digest.hash_other() + "/3");
     secondRequest.set_read_offset(1);
 
     google::bytestream::ReadResponse responseAB;

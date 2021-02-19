@@ -296,7 +296,7 @@ int main(int argc, char *argv[])
     }
 
     GrpcContext grpcContext;
-    grpcContext.set_action_id(actionDigest.hash());
+    grpcContext.set_action_id(actionDigest.hash_other());
 
     RemoteExecutionClient client(
         returnChannels->server(), returnChannels->cas(),
@@ -339,7 +339,7 @@ int main(int argc, char *argv[])
             return exec_locally(argv);
         }
 
-        blobs[actionDigest] = action.SerializeAsString();
+        blobs[actionDigest.SerializeAsString()] = action.SerializeAsString();
 
         BUILDBOX_LOG_INFO("Executing action remotely... [actionDigest="
                           << actionDigest << "]");

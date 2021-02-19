@@ -94,7 +94,7 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
 
         // Construct the Digest we're passing in, and the ExecuteRequest we
         // expect the RemoteExecutionClient to send as a result.
-        actionDigest.set_hash("Action digest hash here");
+        actionDigest.set_hash_other("Action digest hash here");
         *expectedExecuteRequest.mutable_action_digest() = actionDigest;
 
         // Begin constructing a fake ExecuteResponse to return to the client.
@@ -109,26 +109,26 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
         // Add an output file to the response.
         proto::OutputFile outputFile;
         outputFile.set_path("some/path/with/slashes.txt");
-        outputFile.mutable_digest()->set_hash("File hash goes here");
+        outputFile.mutable_digest()->set_hash_other("File hash goes here");
         outputFile.mutable_digest()->set_size_bytes(1);
         *actionResultProto->add_output_files() = outputFile;
 
         // Add an output tree (with nested subdirectories) to the response.
         proto::Tree tree;
         auto treeRootFile = tree.mutable_root()->add_files();
-        treeRootFile->mutable_digest()->set_hash("File hash goes here");
+        treeRootFile->mutable_digest()->set_hash_other("File hash goes here");
         treeRootFile->mutable_digest()->set_size_bytes(1);
         treeRootFile->set_name("out.txt");
         auto childDirectory = tree.add_children();
         auto childDirectoryFile = childDirectory->add_files();
         childDirectoryFile->set_name("a.out");
-        childDirectoryFile->mutable_digest()->set_hash("Executable file hash");
+        childDirectoryFile->mutable_digest()->set_hash_other("Executable file hash");
         childDirectoryFile->mutable_digest()->set_size_bytes(1);
         childDirectoryFile->set_is_executable(true);
         auto nestedChildDirectory = tree.add_children();
         auto nestedChildDirectoryFile = nestedChildDirectory->add_files();
         nestedChildDirectoryFile->set_name("q.mk");
-        nestedChildDirectoryFile->mutable_digest()->set_hash("q.mk file hash");
+        nestedChildDirectoryFile->mutable_digest()->set_hash_other("q.mk file hash");
         nestedChildDirectoryFile->mutable_digest()->set_size_bytes(1);
         *childDirectory->add_directories()->mutable_digest() =
             DigestGenerator::make_digest(*nestedChildDirectory);
@@ -154,7 +154,7 @@ class RemoteExecutionClientTestFixture : public ::testing::Test {
 
         // Allow the client to fetch the output tree from CAS.
         expectedByteStreamRequest.set_resource_name(
-            "blobs/" + treeDigest.hash() + "/" +
+            "blobs/" + treeDigest.hash_other() + "/" +
             std::to_string(treeDigest.size_bytes()));
         readResponse.set_data(tree.SerializeAsString());
     }
@@ -193,24 +193,24 @@ TEST_F(RemoteExecutionClientTestFixture, ExecuteActionTest)
     EXPECT_TRUE(actionResult.d_stdOut.d_inlined);
     EXPECT_FALSE(actionResult.d_stdErr.d_inlined);
     EXPECT_EQ(actionResult.d_stdOut.d_blob, "Raw stdout.");
-    EXPECT_EQ(actionResult.d_stdErr.d_digest.hash(), stdErrDigest.hash());
+    EXPECT_EQ(actionResult.d_stdErr.d_digest.hash_other(), stdErrDigest.hash_other());
 
     EXPECT_EQ(actionResult.d_outputFiles.at("some/path/with/slashes.txt")
-                  .d_digest.hash(),
+                  .d_digest.hash_other(),
               "File hash goes here");
     EXPECT_EQ(actionResult.d_outputFiles.at("output/directory/out.txt")
-                  .d_digest.hash(),
+                  .d_digest.hash_other(),
               "File hash goes here");
     EXPECT_TRUE(
         actionResult.d_outputFiles.at("output/directory/subdirectory/a.out")
             .d_executable);
     EXPECT_EQ(
         actionResult.d_outputFiles.at("output/directory/subdirectory/a.out")
-            .d_digest.hash(),
+            .d_digest.hash_other(),
         "Executable file hash");
     EXPECT_EQ(actionResult.d_outputFiles
                   .at("output/directory/subdirectory/nested/q.mk")
-                  .d_digest.hash(),
+                  .d_digest.hash_other(),
               "q.mk file hash");
 }
 
@@ -260,7 +260,7 @@ TEST_F(RemoteExecutionClientTestFixture, WriteFilesToDisk)
 
     ActionResult testResult;
     proto::Digest d;
-    d.set_hash("Test file hash");
+    d.set_hash_other("Test file hash");
     d.set_size_bytes(18);
     auto testFile = OutputBlob(std::string(), d, true);
     testResult.d_outputFiles["test.txt"] = testFile;
@@ -268,7 +268,7 @@ TEST_F(RemoteExecutionClientTestFixture, WriteFilesToDisk)
     // Allow the client to fetch the file from CAS.
     google::bytestream::ReadRequest expectedByteStreamRequest;
     expectedByteStreamRequest.set_resource_name(
-        "blobs/" + testFile.d_digest.hash() + "/" +
+        "blobs/" + testFile.d_digest.hash_other() + "/" +
         std::to_string(testFile.d_digest.size_bytes()));
     google::bytestream::ReadResponse readResponse;
     readResponse.set_data("Test file content!");
@@ -294,7 +294,7 @@ TEST_F(RemoteExecutionClientTestFixture, VerifyMetricsWriteFilesToDisk)
 
     ActionResult testResult;
     proto::Digest d;
-    d.set_hash("Test file hash");
+    d.set_hash_other("Test file hash");
     d.set_size_bytes(18);
     auto testFile = OutputBlob(std::string(), d, true);
     testResult.d_outputFiles["test.txt"] = testFile;
@@ -302,7 +302,7 @@ TEST_F(RemoteExecutionClientTestFixture, VerifyMetricsWriteFilesToDisk)
     // Allow the client to fetch the file from CAS.
     google::bytestream::ReadRequest expectedByteStreamRequest;
     expectedByteStreamRequest.set_resource_name(
-        "blobs/" + testFile.d_digest.hash() + "/" +
+        "blobs/" + testFile.d_digest.hash_other() + "/" +
         std::to_string(testFile.d_digest.size_bytes()));
     google::bytestream::ReadResponse readResponse;
     readResponse.set_data("Test file content!");

@@ -154,7 +154,7 @@ void addFileToMerkleTreeHelper(const PathRewritePair &dep_paths,
         // All necessary merkle path path transformations have already been
         // applied, don't have nestedDirectory apply any additional ones.
         nestedDirectory->add(file, merklePath.c_str(), true);
-        (*digest_to_filecontents)[file->getDigest()] = file->getFileContents();
+        (*digest_to_filecontents)[file->getDigest().SerializeAsString()] = file->getFileContents();
     }
 }
 
@@ -314,7 +314,7 @@ ActionBuilder::BuildAction(const ParsedCommand &command,
     BUILDBOX_LOG_DEBUG("Command: " << commandProto.ShortDebugString());
 
     const auto commandDigest = DigestGenerator::make_digest(commandProto);
-    (*blobs)[commandDigest] = commandProto.SerializeAsString();
+    (*blobs)[commandDigest.SerializeAsString()] = commandProto.SerializeAsString();
 
     proto::Action action;
     action.mutable_command_digest()->CopyFrom(commandDigest);

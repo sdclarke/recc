@@ -30,7 +30,8 @@
 namespace BloombergLP {
 namespace recc {
 
-typedef std::unordered_map<proto::Digest, std::string> digest_string_umap;
+typedef std::unordered_map<std::string, std::string> digest_string_umap;
+//typedef std::unordered_map<proto::Digest, std::string> digest_string_umap;
 
 /**
  * Represents a directory that, optionally, has other directories inside.

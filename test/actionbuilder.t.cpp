@@ -418,12 +418,12 @@ TEST_P(ActionBuilderTestFixture, ActionCompileCommandGoldenDigests)
     if (working_dir_prefix.empty()) {
         EXPECT_EQ(
             "2751b2f369c793ec389e54410db4b2eeddbcbbff3adc004e4283b81f254ffa14",
-            actionPtr->command_digest().hash());
+            actionPtr->command_digest().hash_other());
     }
     else {
         EXPECT_EQ(
             "df731385d14c9c5080f1cc8e84a41c0ec9391b88d3b0e11a05e63835be03e30b",
-            actionPtr->command_digest().hash());
+            actionPtr->command_digest().hash_other());
     }
 }
 
@@ -452,12 +452,12 @@ TEST_P(ActionBuilderTestFixture, ActionNonCompileCommandGoldenDigests)
     if (working_dir_prefix.empty()) {
         EXPECT_EQ(
             "87c8a7778c3fc31f5b15bbe34d5f49e0d6bb1dbcc00551e8f14927bf23fe6536",
-            actionPtr->command_digest().hash());
+            actionPtr->command_digest().hash_other());
     }
     else {
         EXPECT_EQ(
             "1a54c359f6bcdcc7f70fd201645bd829c8c689c77af5de5d0104d31490563dad",
-            actionPtr->command_digest().hash());
+            actionPtr->command_digest().hash_other());
     }
 }
 
@@ -476,7 +476,7 @@ void verify_merkle_tree(const proto::Digest &digest,
     auto currentLevel = expected[index];
     const auto current_blob = blobs.find(digest);
     ASSERT_NE(current_blob, blobs.end())
-        << "No blob found for digest " << digest.hash();
+        << "No blob found for digest " << digest.hash_other();
 
     proto::Directory directory;
     ASSERT_TRUE(directory.ParseFromString(current_blob->second));
@@ -550,14 +550,14 @@ TEST_P(ActionBuilderTestFixture, ActionContainsExpectedMerkleTree)
     if (working_dir_prefix.empty()) {
         EXPECT_EQ(
             "05a73e8a93752c197cb58e4bdb43bd1d696fa02ecff899a339c4ecacbab2c14b",
-            actionPtr->input_root_digest().hash());
+            actionPtr->input_root_digest().hash_other());
         // The expected result is a single file at the root
         expected_tree = {{{"files", {"hello.cpp"}}}};
     }
     else {
         EXPECT_EQ(
             "edd3e49326719324c5af290089e30ec58f11dd9eb2feb029930c95fb8ca32eea",
-            actionPtr->input_root_digest().hash());
+            actionPtr->input_root_digest().hash_other());
 
         // The expected result is a single file, under the working_dir_prefix
         // directory
@@ -593,13 +593,13 @@ TEST_P(ActionBuilderTestFixture, ActionBuiltGoldenDigests)
         EXPECT_EQ(140, actionDigest.size_bytes());
         EXPECT_EQ(
             "6a0949be163692a6a9e51530e31a5c3721246f350fe2d6c00e5cfd90d749e6b3",
-            actionDigest.hash());
+            actionDigest.hash_other());
     }
     else {
         EXPECT_EQ(140, actionDigest.size_bytes());
         EXPECT_EQ(
             "1ce0771dfafdd22d59bdf0ac6a6c9fd6e00a183b0cd17fc09fec0bad1b460345",
-            actionDigest.hash());
+            actionDigest.hash_other());
     }
 }
 
@@ -649,7 +649,7 @@ TEST_P(ActionBuilderTestFixture, NonCompileCommandForceRemoteMerkleTree)
     if (working_dir_prefix.empty()) {
         EXPECT_EQ(
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            actionPtr->input_root_digest().hash());
+            actionPtr->input_root_digest().hash_other());
         // No input files, so the tree/working-dir is empty
         expected_tree = {{{}}};
         expected_working_dir = "";
@@ -657,7 +657,7 @@ TEST_P(ActionBuilderTestFixture, NonCompileCommandForceRemoteMerkleTree)
     else {
         EXPECT_EQ(
             "eadd312151cd61b24291b3f0d4ec461476354e8147379246c7024903cf17cdbb",
-            actionPtr->input_root_digest().hash());
+            actionPtr->input_root_digest().hash_other());
 
         // Expect a single top level directory equal to RECC_WORKING_DIR_PREFIX
         expected_tree = {{{"directories", {working_dir_prefix}}},
@@ -695,13 +695,13 @@ TEST_P(ActionBuilderTestFixture, NonCompileCommandForceRemoteGoldenDigests)
         EXPECT_EQ(138, digest.size_bytes());
         EXPECT_EQ(
             "fed2b8c46fe8c65c4893272eedade57ab20f7aab728eeaaade9931df9062313e",
-            digest.hash());
+            digest.hash_other());
     }
     else {
         EXPECT_EQ(140, digest.size_bytes());
         EXPECT_EQ(
             "823044cf5ff94e3b4f86f8224ca331d3cc19f91f7e36a197f041895233514e0d",
-            digest.hash());
+            digest.hash_other());
     }
 }
 

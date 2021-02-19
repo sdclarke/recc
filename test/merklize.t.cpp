@@ -32,7 +32,7 @@ TEST(FileTest, TrivialFile)
     EXPECT_EQ(3, file->getDigest().size_bytes());
     EXPECT_EQ(
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-        file->getDigest().hash());
+        file->getDigest().hash_other());
     EXPECT_FALSE(file->isExecutable());
 }
 
@@ -43,21 +43,21 @@ TEST(FileTest, ExecutableFile)
     EXPECT_EQ(41, file->getDigest().size_bytes());
     EXPECT_EQ(
         "a56e86eefe699eb6a759ff6ddf94ca54efc2f6463946b9585858511e07c88b8c",
-        file->getDigest().hash());
+        file->getDigest().hash_other());
     EXPECT_TRUE(file->isExecutable());
 }
 
 TEST(FileTest, ToFilenode)
 {
     proto::Digest d;
-    d.set_hash("HASH HERE");
+    d.set_hash_other("HASH HERE");
     d.set_size_bytes(123);
     ReccFile file("", "", "", d, true);
 
     auto fileNode = file.getFileNode(std::string("file.name"));
 
     EXPECT_EQ(fileNode.name(), "file.name");
-    EXPECT_EQ(fileNode.digest().hash(), "HASH HERE");
+    EXPECT_EQ(fileNode.digest().hash_other(), "HASH HERE");
     EXPECT_EQ(fileNode.digest().size_bytes(), 123);
     EXPECT_TRUE(fileNode.is_executable());
 }
@@ -78,7 +78,7 @@ TEST(NestedDirectoryTest, EmptyNestedDirectory)
 TEST(NestedDirectoryTest, TrivialNestedDirectory)
 {
     proto::Digest d;
-    d.set_hash("DIGESTHERE");
+    d.set_hash_other("DIGESTHERE");
     ReccFile file("", "", "", d, false);
 
     NestedDirectory directory;
@@ -94,17 +94,17 @@ TEST(NestedDirectoryTest, TrivialNestedDirectory)
     EXPECT_EQ(0, message.directories_size());
     ASSERT_EQ(1, message.files_size());
     EXPECT_EQ("sample", message.files(0).name());
-    EXPECT_EQ("DIGESTHERE", message.files(0).digest().hash());
+    EXPECT_EQ("DIGESTHERE", message.files(0).digest().hash_other());
 }
 
 TEST(NestedDirectoryTest, Subdirectories)
 {
     proto::Digest d;
-    d.set_hash("HASH1");
+    d.set_hash_other("HASH1");
     ReccFile file("", "", "", d, true);
 
     proto::Digest d2;
-    d2.set_hash("HASH2");
+    d2.set_hash_other("HASH2");
     ReccFile file2("", "", "", d2, true);
 
     NestedDirectory directory;
@@ -122,7 +122,7 @@ TEST(NestedDirectoryTest, Subdirectories)
 
     EXPECT_EQ(1, message.files_size());
     EXPECT_EQ("sample", message.files(0).name());
-    EXPECT_EQ("HASH1", message.files(0).digest().hash());
+    EXPECT_EQ("HASH1", message.files(0).digest().hash_other());
     ASSERT_EQ(1, message.directories_size());
     EXPECT_EQ("subdir", message.directories(0).name());
 
@@ -139,7 +139,7 @@ TEST(NestedDirectoryTest, Subdirectories)
     EXPECT_EQ(0, subdir2.directories_size());
     ASSERT_EQ(1, subdir2.files_size());
     EXPECT_EQ("sample2", subdir2.files(0).name());
-    EXPECT_EQ("HASH2", subdir2.files(0).digest().hash());
+    EXPECT_EQ("HASH2", subdir2.files(0).digest().hash_other());
 }
 
 TEST(NestedDirectoryTest, AddSingleDirectory)
@@ -217,7 +217,7 @@ TEST(NestedDirectoryTest, EmptySubdirectories)
 TEST(NestedDirectoryTest, AddDirsToExistingNestedDirectory)
 {
     proto::Digest d;
-    d.set_hash("DIGESTHERE");
+    d.set_hash_other("DIGESTHERE");
     ReccFile file("", "", "", d, true);
 
     NestedDirectory directory;
@@ -298,7 +298,7 @@ TEST(NestedDirectoryTest, ConsistentDigestRegardlessOfFileOrder)
     // Get us some mock digests
     proto::Digest digests[N];
     for (int i = 0; i < N; i++) {
-        digests[i].set_hash("HASH_" + std::to_string(i));
+        digests[i].set_hash_other("HASH_" + std::to_string(i));
     }
 
     // Make files
@@ -325,7 +325,7 @@ TEST(NestedDirectoryTest, ConsistentDigestRegardlessOfFileOrder)
     }
 
     // Make sure the actual digests of those two directories are identical
-    EXPECT_EQ(directory1.to_digest().hash(), directory2.to_digest().hash());
+    EXPECT_EQ(directory1.to_digest().hash_other(), directory2.to_digest().hash_other());
 }
 
 // Make sure digests of directories containing different files are different
@@ -337,8 +337,8 @@ TEST(NestedDirectoryTest, NestedDirectoryDigestsReallyBasedOnFiles)
     proto::Digest digests2[N];
 
     for (int i = 0; i < N; i++) {
-        digests1[i].set_hash("HASH_DIR1_" + std::to_string(i));
-        digests2[i].set_hash("HASH_DIR2_" + std::to_string(i));
+        digests1[i].set_hash_other("HASH_DIR1_" + std::to_string(i));
+        digests2[i].set_hash_other("HASH_DIR2_" + std::to_string(i));
     }
 
     // Get us some mock files
@@ -362,7 +362,7 @@ TEST(NestedDirectoryTest, NestedDirectoryDigestsReallyBasedOnFiles)
     }
 
     // Make sure the digests are different
-    EXPECT_NE(directory1.to_digest().hash(), directory2.to_digest().hash());
+    EXPECT_NE(directory1.to_digest().hash_other(), directory2.to_digest().hash_other());
 }
 
 TEST(NestedDirectoryTest, NestedDirectoryPathReplacement)

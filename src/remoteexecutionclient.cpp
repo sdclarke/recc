@@ -242,14 +242,14 @@ RemoteExecutionClient::execute_action(const proto::Digest &actionDigest,
         for (int i = 0; i < resultProto.output_files_size(); ++i) {
             auto fileProto = resultProto.output_files(i);
             BUILDBOX_LOG_DEBUG("File digest=["
-                               << fileProto.digest().hash() << "/"
+                               << fileProto.digest().hash_other() << "/"
                                << fileProto.digest().size_bytes() << "] :"
                                << " path=[" << fileProto.path() << "]");
         }
         for (int i = 0; i < resultProto.output_directories_size(); ++i) {
             auto dirProto = resultProto.output_directories(i);
             BUILDBOX_LOG_DEBUG("Directory tree digest=["
-                               << dirProto.tree_digest().hash() << "/"
+                               << dirProto.tree_digest().hash_other() << "/"
                                << dirProto.tree_digest().size_bytes() << "] :"
                                << " path=[" << dirProto.path() << "]");
         }

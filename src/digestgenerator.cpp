@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <blake3.h>
 #include <digestgenerator.h>
+#include <hashtohex.h>
 
 #include <buildboxcommonmetrics_metricguard.h>
 #include <buildboxcommonmetrics_totaldurationmetrictimer.h>
@@ -60,7 +62,7 @@ typedef std::unique_ptr<EVP_MD_CTX, decltype(&deleteDigestContext)>
     EVP_MD_CTX_ptr;
 
 // Create and initialize an OpenSSL digest context to be used during a
-// call to `hash()`.
+// call to `hash_other()`.
 EVP_MD_CTX_ptr createDigestContext(const EVP_MD *digestFunctionStruct)
 {
     EVP_MD_CTX_ptr digest_context(EVP_MD_CTX_create(), &deleteDigestContext);
@@ -82,15 +84,15 @@ EVP_MD_CTX_ptr createDigestContext(const EVP_MD *digestFunctionStruct)
 
 // Take a hash value produced by OpenSSL and return a string with its
 // representation in hexadecimal.
-std::string hashToHex(const unsigned char *hash_buffer, unsigned int hash_size)
-{
-    std::ostringstream ss;
-    for (unsigned int i = 0; i < hash_size; i++) {
-        ss << std::hex << std::setw(2) << std::setfill('0')
-           << static_cast<int>(hash_buffer[i]);
-    }
-    return ss.str();
-}
+//std::string hashToHex(const unsigned char *hash_buffer, unsigned int hash_size)
+//{
+    //std::ostringstream ss;
+    //for (unsigned int i = 0; i < hash_size; i++) {
+        //ss << std::hex << std::setw(2) << std::setfill('0')
+           //<< static_cast<int>(hash_buffer[i]);
+    //}
+    //return ss.str();
+//}
 
 // Get the OpenSSL MD struct for the digest function specified in the
 // configuration. (Throws `out_of_range` for values not defined.)
@@ -110,7 +112,8 @@ const EVP_MD *getDigestFunctionStruct()
             {proto::DigestFunction_Value_SHA1, EVP_sha1()},
             {proto::DigestFunction_Value_SHA256, EVP_sha256()},
             {proto::DigestFunction_Value_SHA384, EVP_sha384()},
-            {proto::DigestFunction_Value_SHA512, EVP_sha512()}};
+            {proto::DigestFunction_Value_SHA512, EVP_sha512()},
+            {proto::DigestFunction_Value_BLAKE3ZCC, NULL}};
 
     return digestValueToOpenSslStructMap.at(digestValue);
 }
@@ -129,10 +132,24 @@ proto::Digest DigestGenerator::make_digest(const std::string &blob)
     }
 
     std::string hash;
-    { // Timed block
+    proto::Digest result;
+    if (!hashAlgorithm) {
+      blake3_hasher b;
+      blake3_hasher_init(&b);
+      blake3_hasher_update(&b, &blob[0], blob.length());
+      unsigned char hashBuffer[BLAKE3_OUT_LEN];
+      blake3_hasher_finalize(&b, hashBuffer, BLAKE3_OUT_LEN);
+      result.set_hash_blake3zcc((const void *)&hashBuffer, BLAKE3_OUT_LEN);
+      //for (int i = 0; i < BLAKE3_OUT_LEN; i++) {
+        //printf("%d ", (int)hashBuffer[i]);
+      //}
+      //printf("\n");
+    }
+    else {
+      { // Timed block
         buildboxcommon::buildboxcommonmetrics::MetricGuard<
-            buildboxcommon::buildboxcommonmetrics::TotalDurationMetricTimer>
-            mt(TIMER_NAME_CALCULATE_DIGESTS_TOTAL);
+          buildboxcommon::buildboxcommonmetrics::TotalDurationMetricTimer>
+          mt(TIMER_NAME_CALCULATE_DIGESTS_TOTAL);
 
         // Initialize context:
         EVP_MD_CTX_ptr hashContext = createDigestContext(hashAlgorithm);
@@ -151,10 +168,10 @@ proto::Digest DigestGenerator::make_digest(const std::string &blob)
 
         // Generate hash string:
         hash = hashToHex(hashBuffer, static_cast<unsigned int>(messageLength));
-    }
+      }
 
-    proto::Digest result;
-    result.set_hash(hash);
+      result.set_hash_other(hash);
+    }
     result.set_size_bytes(static_cast<google::protobuf::int64>(blob.size()));
     return result;
 }
@@ -173,7 +190,8 @@ DigestGenerator::stringToDigestFunctionMap()
                                {"SHA1", proto::DigestFunction_Value_SHA1},
                                {"SHA256", proto::DigestFunction_Value_SHA256},
                                {"SHA384", proto::DigestFunction_Value_SHA384},
-                               {"SHA512", proto::DigestFunction_Value_SHA512}};
+                               {"SHA512", proto::DigestFunction_Value_SHA512},
+                               {"BLAKE3ZCC", proto::DigestFunction_Value_BLAKE3ZCC}};
 
     return stringToFunctionMap;
 }

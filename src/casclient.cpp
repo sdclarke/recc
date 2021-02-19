@@ -14,6 +14,7 @@
 
 #include <casclient.h>
 #include <digestgenerator.h>
+#include <hashtohex.h>
 
 #include <buildboxcommon_logging.h>
 #include <buildboxcommonmetrics_durationmetrictimer.h>
@@ -161,6 +162,17 @@ proto::ServerCapabilities CASClient::fetchServerCapabilities() const
     return serverCapabilities;
 }
 
+//std::string hashToHex(const unsigned char *hash_buffer, unsigned int hash_size)
+//{
+    //std::ostringstream ss;
+    //for (unsigned int i = 0; i < hash_size; i++) {
+        //ss << std::hex << std::setw(2) << std::setfill('0')
+           //<< static_cast<int>(hash_buffer[i]);
+    //}
+    //return ss.str();
+//}
+
+
 std::string CASClient::uploadResourceName(const proto::Digest &digest) const
 {
     std::string resourceName = this->d_instanceName;
@@ -168,8 +180,13 @@ std::string CASClient::uploadResourceName(const proto::Digest &digest) const
         resourceName += "/";
     }
 
-    resourceName += "uploads/" + s_guid + "/blobs/" + digest.hash() + "/" +
-                    std::to_string(digest.size_bytes());
+    if (digest.hash_other().length() == 0) {
+      resourceName += "uploads/" + s_guid + "/blobs/B3Z:" + hashToHex((const unsigned char*)digest.hash_blake3zcc().c_str(), static_cast<unsigned int>(32)) + "/" + std::to_string(digest.size_bytes());
+    }
+    else {
+      resourceName += "uploads/" + s_guid + "/blobs/" + digest.hash_other() + "/" +
+        std::to_string(digest.size_bytes());
+    }
 
     return resourceName;
 }
@@ -181,8 +198,13 @@ std::string CASClient::downloadResourceName(const proto::Digest &digest) const
         resourceName += "/";
     }
 
-    resourceName +=
-        "blobs/" + digest.hash() + "/" + std::to_string(digest.size_bytes());
+    if (digest.hash_other().length() == 0) {
+      resourceName +=
+        "blobs/B3Z:" + hashToHex((const unsigned char*)digest.hash_blake3zcc().c_str(), static_cast<unsigned int>(32)) + "/" + std::to_string(digest.size_bytes());
+    } else {
+      resourceName +=
+        "blobs/" + digest.hash_other() + "/" + std::to_string(digest.size_bytes());
+    }
     return resourceName;
 }
 
@@ -239,6 +261,7 @@ void CASClient::upload_blob(const proto::Digest &digest,
 std::string CASClient::fetch_blob(const proto::Digest &digest) const
 {
     const auto resourceName = downloadResourceName(digest);
+    std::cout << resourceName << std::endl;
 
     std::string result;
 
@@ -289,10 +312,10 @@ proto::FindMissingBlobsResponse CASClient::findMissingBlobs(
     return response;
 }
 
-std::unordered_set<proto::Digest> CASClient::findMissingBlobs(
-    const std::unordered_set<proto::Digest> &digests) const
+std::unordered_set<std::string> CASClient::findMissingBlobs(
+    const std::unordered_set<std::string> &digests) const
 {
-    std::unordered_set<proto::Digest> missingDigests;
+    std::unordered_set<std::string> missingDigests;
 
     auto digestIter = digests.cbegin();
     while (digestIter != digests.cend()) {
@@ -303,16 +326,23 @@ std::unordered_set<proto::Digest> CASClient::findMissingBlobs(
         while (missingBlobsRequest.blob_digests_size() <
                    s_maxMissingBlobsRequestItems &&
                digestIter != digests.cend()) {
-            *missingBlobsRequest.add_blob_digests() = *digestIter;
+            proto::Digest d;
+            d.ParseFromString(*digestIter);
+            *missingBlobsRequest.add_blob_digests() = d;
             ++digestIter;
         }
 
         const proto::FindMissingBlobsResponse missingBlobsResponse =
             findMissingBlobs(missingBlobsRequest);
 
-        missingDigests.insert(
-            missingBlobsResponse.missing_blob_digests().cbegin(),
-            missingBlobsResponse.missing_blob_digests().cend());
+        //missingDigests.insert(
+            //missingBlobsResponse.missing_blob_digests().cbegin(),
+            //missingBlobsResponse.missing_blob_digests().cend());
+        auto missingDigestIter = missingBlobsResponse.missing_blob_digests().cbegin();
+        while (missingDigestIter != missingBlobsResponse.missing_blob_digests().cend()) {
+          missingDigests.insert((*missingDigestIter).SerializeAsString());
+          ++missingDigestIter;
+        }
     }
 
     return missingDigests;
@@ -337,7 +367,7 @@ proto::BatchUpdateBlobsResponse CASClient::batchUpdateBlobs(
 }
 
 void CASClient::batchUpdateBlobs(
-    const std::unordered_set<proto::Digest> &digests,
+    const std::unordered_set<std::string> &digests,
     const digest_string_umap &blobs,
     const digest_string_umap &digest_to_filecontents) const
 {
@@ -365,12 +395,14 @@ void CASClient::batchUpdateBlobs(
 
         // If the blob is too large to batch we must upload it individually
         // using the ByteStream API:
-        if (digest.size_bytes() > s_maxTotalBatchSizeBytes) {
-            upload_blob(digest, blob);
+        proto::Digest d;
+        d.ParseFromString(digest);
+        if (d.size_bytes() > s_maxTotalBatchSizeBytes) {
+            upload_blob(d, blob);
             continue;
         }
 
-        if (digest.size_bytes() + batchSize > s_maxTotalBatchSizeBytes) {
+        if (d.size_bytes() + batchSize > s_maxTotalBatchSizeBytes) {
             // Batch is full, flushing the request:
             BUILDBOX_LOG_DEBUG("Sending batch update request");
             batchUpdateBlobs(batchUpdateRequest);
@@ -381,11 +413,12 @@ void CASClient::batchUpdateBlobs(
 
         proto::BatchUpdateBlobsRequest_Request *updateRequest =
             batchUpdateRequest.add_requests();
-        *updateRequest->mutable_digest() = digest;
+        *updateRequest->mutable_digest() = d;
         updateRequest->set_data(blob);
 
-        batchSize += digest.size_bytes();
-        batchSize += static_cast<size_t>(digest.hash().size());
+        batchSize += d.size_bytes();
+        batchSize += static_cast<size_t>(d.hash_other().size());
+        batchSize += static_cast<size_t>(d.hash_blake3zcc().size());
     }
 
     if (!batchUpdateRequest.requests().empty()) {
@@ -398,7 +431,7 @@ void CASClient::upload_resources(
     const digest_string_umap &blobs,
     const digest_string_umap &digest_to_filecontents) const
 {
-    std::unordered_set<proto::Digest> digestsToUpload;
+    std::unordered_set<std::string> digestsToUpload;
     for (const auto &i : blobs) {
         digestsToUpload.insert(i.first);
     }

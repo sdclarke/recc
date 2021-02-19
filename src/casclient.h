@@ -133,14 +133,14 @@ class CASClient {
     std::string uploadResourceName(const proto::Digest &digest) const;
     std::string downloadResourceName(const proto::Digest &digest) const;
 
-    std::unordered_set<proto::Digest>
-    findMissingBlobs(const std::unordered_set<proto::Digest> &digests) const;
+    std::unordered_set<std::string>
+    findMissingBlobs(const std::unordered_set<std::string> &digests) const;
 
     proto::FindMissingBlobsResponse
     findMissingBlobs(const proto::FindMissingBlobsRequest &request) const;
 
     void
-    batchUpdateBlobs(const std::unordered_set<proto::Digest> &digests,
+    batchUpdateBlobs(const std::unordered_set<std::string> &digests,
                      const digest_string_umap &blobs,
                      const digest_string_umap &digest_to_filecontents) const;
 
